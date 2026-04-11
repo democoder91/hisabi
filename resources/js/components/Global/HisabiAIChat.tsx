@@ -9,6 +9,7 @@ import { Suggestions, Suggestion } from '@/components/ui/shadcn-io/ai/suggestion
 import { Loader } from '@/components/ui/shadcn-io/ai/loader';
 import AIChartRenderer from './AIChartRenderer';
 import AIFinancialWidget from './AIFinancialWidget';
+import VoiceRecorder from './VoiceRecorder';
 
 interface HisabiAIChatProps {
   onClose: () => void;
@@ -47,7 +48,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
   };
 
   useEffect(() => {
-    if(chatHistory[chatHistory.length-1]?.role === 'user') {
+    if (chatHistory[chatHistory.length - 1]?.role === 'user') {
       submit(chatHistory);
     }
   }, [chatHistory]);
@@ -118,7 +119,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
           </button>
         </div>
       </div>
-      
+
       {/* Conversation Area */}
       <Conversation className="flex-1 border-r">
         <ConversationContent>
@@ -130,12 +131,12 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
               </div>
             </div>
           )}
-          
+
           {chatHistory.map((msg) => (
             <Message key={msg.id} from={msg.role}>
               <MessageContent>
                 <Response>{msg.content}</Response>
-                
+
                 {/* Render charts if present */}
                 {msg.charts && msg.charts.length > 0 && (
                   <div className="mt-4 space-y-4">
@@ -144,7 +145,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
                     ))}
                   </div>
                 )}
-                
+
                 {/* Render components if present */}
                 {msg.components && msg.components.length > 0 && (
                   <div className="mt-4 space-y-4">
@@ -156,7 +157,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
               </MessageContent>
             </Message>
           ))}
-          
+
           {loading && (
             <div className="flex items-center gap-2 py-4">
               <Loader size={20} />
@@ -186,8 +187,11 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
             placeholder="Ask about your finances..."
           />
           <PromptInputToolbar>
-            <div />
-            <PromptInputSubmit 
+            <VoiceRecorder
+              onTranscript={(text) => setMessage(text)}
+              disabled={loading}
+            />
+            <PromptInputSubmit
               disabled={loading || message.trim() === ''}
               status={loading ? 'streaming' : 'idle'}
             />

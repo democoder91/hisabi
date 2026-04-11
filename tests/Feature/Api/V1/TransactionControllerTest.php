@@ -439,11 +439,23 @@ class TransactionControllerTest extends TestCase
             ->assertJsonValidationErrors(['amount']);
     }
 
-    public function test_create_validates_required_brand_id(): void
+    public function test_create_allows_missing_brand_id(): void
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
                 'amount' => 100.50,
+                'created_at' => now()->format('Y-m-d')
+            ]);
+
+        $response->assertStatus(201);
+    }
+
+    public function test_create_validates_brand_id_exists(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/transactions', [
+                'amount' => 100.50,
+                'brand_id' => 99999,
                 'created_at' => now()->format('Y-m-d')
             ]);
 
@@ -656,13 +668,27 @@ class TransactionControllerTest extends TestCase
             ->assertJsonValidationErrors(['amount']);
     }
 
-    public function test_update_validates_required_brand_id(): void
+    public function test_update_allows_missing_brand_id(): void
     {
         $transaction = Transaction::factory()->create();
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/transactions/{$transaction->id}", [
                 'amount' => 200.75,
+                'created_at' => now()->format('Y-m-d')
+            ]);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_update_validates_brand_id_exists(): void
+    {
+        $transaction = Transaction::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/transactions/{$transaction->id}", [
+                'amount' => 200.75,
+                'brand_id' => 99999,
                 'created_at' => now()->format('Y-m-d')
             ]);
 

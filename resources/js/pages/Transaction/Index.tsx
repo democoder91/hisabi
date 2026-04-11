@@ -260,10 +260,11 @@ export default function Index({ auth }: { auth: any }) {
 
                     <div className="grid gap-2">
                         {transactions.length > 0 && transactions.map((transaction) => {
-                            const CategoryIcon = transaction.brand.category?.icon
+                            const hasBrand = transaction.brand !== null;
+                            const CategoryIcon = transaction.brand?.category?.icon
                                 ? getCategoryIcon(transaction.brand.category.icon)
                                 : null;
-                            const hasCategory = transaction.brand.category !== null;
+                            const hasCategory = hasBrand && transaction.brand.category !== null;
                             const isUncategorized = !hasCategory;
                             const categoryType = hasCategory ? transaction.brand.category.type : null;
                             const isIncomeTransaction = categoryType === "INCOME";
@@ -278,12 +279,11 @@ export default function Index({ auth }: { auth: any }) {
                                                 </div>
                                             ) : (
                                                 <Avatar className='size-10'>
-                                                    <AvatarImage src={transaction.brand.image} />
-                                                    <AvatarFallback>{transaction.brand.name.charAt(0)}</AvatarFallback>
+                                                    <AvatarFallback>{hasBrand ? transaction.brand.name.charAt(0) : '?'}</AvatarFallback>
                                                 </Avatar>
                                             )}
                                             <div>
-                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{transaction.brand.name} </button>
+                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{hasBrand ? transaction.brand.name : 'No Brand'} </button>
                                                 <div className='flex gap-1 text-muted-foreground items-center'>
                                                     <ArrowElbowDownRightIcon size={10} weight="bold" />
                                                     <p className=' text-xs'>{hasCategory ? <span>{transaction.brand.category.name} -</span> : ''} {transaction.created_at}</p>

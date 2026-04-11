@@ -43,7 +43,7 @@
     <body>
         @inertia
         <script>
-            window.AppCurrency = "{{ config('hisabi.currency') }}";
+            window.AppCurrency = "{{ auth()->user()?->default_currency ?? config('hisabi.currency') }}";
         </script>
     </body>
 </html>

@@ -29,21 +29,21 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
     }, [transaction]);
 
     const handleUpdate = () => {
-        if (!transaction || !brand) return;
+        if (!transaction) return;
 
         const transactionId = transaction.id;
         updateTransaction({
             id: transactionId,
             amount,
-            brandId: brand.id,
+            brandId: brand?.id,
             createdAt,
             note
         })
-        .then(({ data }) => {
-            onUpdate(data.transaction);
-            onClose();
-        })
-        .catch(console.error);
+            .then(({ data }) => {
+                onUpdate(data.transaction);
+                onClose();
+            })
+            .catch(console.error);
     };
 
     const handleDelete = () => {

@@ -20,6 +20,10 @@ class TransactionResource extends JsonResource
             'note' => $this->note,
             'created_at' => $this->created_at?->format('Y-m-d'),
             'brand' => $this->whenLoaded('brand', function () {
+                if (!$this->brand) {
+                    return null;
+                }
+
                 return [
                     'id' => $this->brand->id,
                     'name' => $this->brand->name,

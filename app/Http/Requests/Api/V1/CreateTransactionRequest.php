@@ -15,8 +15,9 @@ class CreateTransactionRequest extends FormRequest
     {
         return [
             'amount' => 'required|numeric|min:0',
-            'brand_id' => 'required|integer|exists:brands,id',
+            'brand_id' => 'nullable|integer|exists:brands,id',
             'created_at' => 'required|date',
+            'currency' => 'nullable|string|size:3',
             'note' => 'nullable|string|max:1000',
         ];
     }

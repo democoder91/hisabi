@@ -15,6 +15,8 @@ class FinancialAnalyzer
     {
         $timeRange = now()->subMonths(3);
         
+        $currency = $this->resolveCurrency($user);
+
         // Get basic metrics
         $totalIncome = Transaction::income()
             ->where('created_at', '>=', $timeRange)
@@ -33,16 +35,14 @@ class FinancialAnalyzer
             ->sum('amount');
         
         // Get category breakdown
-        $expensesByCategory = $this->getExpensesByCategory($timeRange);
-        $incomeByCategory = $this->getIncomeByCategory($timeRange);
+        $expensesByCategory = $this->getExpensesByCategory($timeRange, $currency);
+        $incomeByCategory = $this->getIncomeByCategory($timeRange, $currency);
         
         // Get monthly trends
-        $monthlyTrends = $this->getMonthlyTrends($timeRange);
+        $monthlyTrends = $this->getMonthlyTrends($timeRange, $currency);
         
         // Get top spending brands
-        $topBrands = $this->getTopBrands($timeRange, 5);
-        
-        $currency = config('hisabi.currency', 'AED');
+        $topBrands = $this->getTopBrands($timeRange, 5, $currency);
         
         // Build summary text
         $summary = <<<SUMMARY
@@ -74,7 +74,7 @@ SUMMARY;
     /**
      * Get expenses grouped by category
      */
-    protected function getExpensesByCategory($sinceDate): string
+    protected function getExpensesByCategory($sinceDate, string $currency): string
     {
         $expenses = Transaction::select('categories.name', DB::raw('SUM(transactions.amount) as total'))
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
@@ -89,7 +89,6 @@ SUMMARY;
             return "No expense data available.";
         }
         
-        $currency = config('hisabi.currency', 'AED');
         return $expenses->map(fn($exp) => "  - {$exp->name}: {$currency} {$this->formatNumber($exp->total)}")
             ->join("\n");
     }
@@ -97,7 +96,7 @@ SUMMARY;
     /**
      * Get income grouped by category
      */
-    protected function getIncomeByCategory($sinceDate): string
+    protected function getIncomeByCategory($sinceDate, string $currency): string
     {
         $income = Transaction::select('categories.name', DB::raw('SUM(transactions.amount) as total'))
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
@@ -112,7 +111,6 @@ SUMMARY;
             return "No income data available.";
         }
         
-        $currency = config('hisabi.currency', 'AED');
         return $income->map(fn($inc) => "  - {$inc->name}: {$currency} {$this->formatNumber($inc->total)}")
             ->join("\n");
     }
@@ -120,10 +118,15 @@ SUMMARY;
     /**
      * Get monthly spending trends
      */
-    protected function getMonthlyTrends($sinceDate): string
+    protected function getMonthlyTrends($sinceDate, string $currency): string
     {
+        $driver = DB::connection()->getDriverName();
+        $monthExpr = $driver === 'sqlite'
+            ? "strftime('%Y-%m', transactions.created_at)"
+            : 'DATE_FORMAT(transactions.created_at, "%Y-%m")';
+
         $trends = Transaction::select(
-                DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m") as month'),
+                DB::raw("{$monthExpr} as month"),
                 DB::raw('SUM(CASE WHEN categories.type = "EXPENSES" THEN transactions.amount ELSE 0 END) as expenses'),
                 DB::raw('SUM(CASE WHEN categories.type = "INCOME" THEN transactions.amount ELSE 0 END) as income')
             )
@@ -138,7 +141,6 @@ SUMMARY;
             return "No trend data available.";
         }
         
-        $currency = config('hisabi.currency', 'AED');
         return $trends->map(function($trend) use ($currency) {
             return "  - {$trend->month}: Income {$currency} {$this->formatNumber($trend->income)}, Expenses {$currency} {$this->formatNumber($trend->expenses)}";
         })->join("\n");
@@ -147,7 +149,7 @@ SUMMARY;
     /**
      * Get top spending brands
      */
-    protected function getTopBrands($sinceDate, int $limit = 5): string
+    protected function getTopBrands($sinceDate, int $limit = 5, string $currency = 'AED'): string
     {
         $brands = Transaction::select('brands.name', DB::raw('SUM(transactions.amount) as total'))
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
@@ -163,12 +165,23 @@ SUMMARY;
             return "No brand data available.";
         }
         
-        $currency = config('hisabi.currency', 'AED');
         return $brands->map(fn($brand, $index) => 
             "  " . ($index + 1) . ". {$brand->name}: {$currency} {$this->formatNumber($brand->total)}"
         )->join("\n");
     }
     
+    /**
+     * Resolve currency from user preference or system config
+     */
+    protected function resolveCurrency($user): string
+    {
+        if ($user && isset($user->default_currency) && $user->default_currency) {
+            return $user->default_currency;
+        }
+
+        return config('hisabi.currency', 'AED');
+    }
+
     /**
      * Format number with thousands separator
      */
@@ -177,4 +190,3 @@ SUMMARY;
         return number_format($number, 2);
     }
 }
-

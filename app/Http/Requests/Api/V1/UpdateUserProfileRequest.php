@@ -28,6 +28,7 @@ class UpdateUserProfileRequest extends FormRequest
                     ->letters()
                     ->numbers(),
             ],
+            'default_currency' => 'sometimes|nullable|string|size:3',
         ];
     }
 }

@@ -52,7 +52,7 @@ export const createTransaction = async ({amount, brandId, createdAt, note}) => {
         credentials: 'same-origin',
         body: JSON.stringify({
             amount,
-            brand_id: brandId,
+            brand_id: brandId || null,
             created_at: createdAt,
             note
         })
@@ -80,7 +80,7 @@ export const updateTransaction = async ({id, amount, brandId, createdAt, note}) 
         credentials: 'same-origin',
         body: JSON.stringify({
             amount,
-            brand_id: brandId,
+            brand_id: brandId || null,
             created_at: createdAt,
             note
         })

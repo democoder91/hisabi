@@ -26,7 +26,7 @@ Route::middleware(['auth'])->group(function () {
 
         $data = [
             'sections' => app(ReportManager::class)->generate($start_date, $end_date),
-            'currency' => config('hisabi.currency'),
+            'currency' => auth()->user()->default_currency ?? config('hisabi.currency'),
             'range' => $start_date && $end_date ? $start_date . ' - ' . $end_date : now()->format('F Y')
         ];
 
@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/categories/{id}', [\App\Http\Controllers\Api\V1\CategoryController::class, 'destroy']);
         Route::get('/budgets', [\App\Http\Controllers\Api\V1\BudgetController::class, 'index']);
         Route::post('/ai/chat', [\App\Http\Controllers\Api\V1\AIController::class, 'chat']);
+        Route::post('/ai/transcribe/token', [\App\Http\Controllers\Api\V1\TranscriptionController::class, 'token']);
         Route::put('/user/profile', [\App\Http\Controllers\Api\V1\UserController::class, 'updateProfile']);
 
         Route::prefix('metrics')->group(function () {

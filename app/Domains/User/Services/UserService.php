@@ -33,6 +33,10 @@ class UserService
             $updateData['password'] = Hash::make($data['password']);
         }
 
+        if (array_key_exists('default_currency', $data)) {
+            $updateData['default_currency'] = $data['default_currency'];
+        }
+
         $user->update($updateData);
 
         return $user->fresh();

@@ -1,7 +1,13 @@
 <?php
 
 return [
-    'currency' => 'AED',
+    'currency' => 'EGP',
+    'supported_currencies' => [
+        'AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR', 'PKR', 'EGP',
+        'QAR', 'KWD', 'BHD', 'OMR', 'JOD', 'TRY', 'CAD', 'AUD',
+        'JPY', 'CNY', 'CHF', 'SGD', 'MYR', 'PHP', 'THB', 'IDR',
+        'BRL', 'ZAR', 'NGN', 'KES', 'GHS', 'MAD',
+    ],
     'sms_templates' => [
         'Purchase of AED {amount} with {card} at {brand},',
         'Payment of AED {amount} to {brand} with {card}.',

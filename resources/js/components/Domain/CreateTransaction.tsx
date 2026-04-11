@@ -20,17 +20,17 @@ export default function Create({ brands, showCreate, onClose, onCreate }) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        setIsReady(amount != 0 && brand != null && createdAt != '' ? true : false);
-    }, [amount, brand, createdAt]);
+        setIsReady(amount != 0 && createdAt != '' ? true : false);
+    }, [amount, createdAt]);
 
     const handleCreate = () => {
-        if (loading || !isReady || !brand) return;
+        if (loading || !isReady) return;
 
         setLoading(true);
 
         createTransaction({
             amount,
-            brandId: brand.id,
+            brandId: brand?.id,
             createdAt,
             note
         })

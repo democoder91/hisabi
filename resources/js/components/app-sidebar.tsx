@@ -5,7 +5,8 @@ import {
   Receipt,
   StorefrontIcon,
   CirclesThreeIcon,
-  ChartDonutIcon
+  ChartDonutIcon,
+  ChartLineIcon,
 } from "@phosphor-icons/react"
 
 import {
@@ -50,6 +51,11 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       title: t('navigation.transactions'),
       url: "transactions",
       icon: Receipt,
+    },
+    {
+      title: t('navigation.budgets'),
+      url: "budgets",
+      icon: ChartLineIcon,
     },
     {
       title: t('navigation.brands'),

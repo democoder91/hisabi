@@ -14,7 +14,7 @@ class AccountResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->getLocalizedName(),
-            'name_translations' => $this->getTranslations('name'),
+            'name_translations' => $this->getSafeNameTranslations(),
             'balance' => (float) $this->balance,
             'transactionsCount' => $this->transactions_count ?? 0,
             'created_at' => $this->created_at?->format('Y-m-d'),

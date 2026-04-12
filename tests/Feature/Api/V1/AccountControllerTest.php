@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Domains\Account\Models\Account;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AccountControllerTest extends TestCase
@@ -117,6 +118,40 @@ class AccountControllerTest extends TestCase
             ->assertJsonPath('paginatorInfo.total', 1)
             ->assertJsonPath('data.0.name', 'Emergency Fund')
             ->assertJsonPath('data.0.name_translations.ar', 'صندوق الطوارئ');
+    }
+
+    public function test_it_handles_legacy_plain_string_account_names(): void
+    {
+        DB::table('accounts')->insert([
+            'user_id' => $this->user->id,
+            'name' => 'Legacy Checking',
+            'balance' => 10,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/accounts');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.name', 'Legacy Checking')
+            ->assertJsonPath('data.0.name_translations.en', 'Legacy Checking');
+    }
+
+    public function test_it_can_search_legacy_plain_string_account_names(): void
+    {
+        DB::table('accounts')->insert([
+            'user_id' => $this->user->id,
+            'name' => 'Legacy Savings',
+            'balance' => 10,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/accounts?filter[search]=Savings');
+
+        $response->assertOk()
+            ->assertJsonPath('paginatorInfo.total', 1)
+            ->assertJsonPath('data.0.name', 'Legacy Savings');
     }
 
     public function test_it_deletes_an_account(): void

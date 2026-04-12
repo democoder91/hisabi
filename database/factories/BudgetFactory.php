@@ -14,7 +14,10 @@ class BudgetFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'name' => $this->faker->name(),
+            'name' => [
+                'en' => $this->faker->words(2, true),
+                'ar' => null,
+            ],
             'amount' => $this->faker->numberBetween(100, 5000),
             'start_at' => now(),
             'reoccurrence' => Budget::DAILY,

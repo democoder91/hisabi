@@ -5,6 +5,7 @@ use App\Contracts\ReportManager;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountAuditController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
@@ -22,6 +23,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts');
     Route::get('/accounts/{account}/audit', [AccountAuditController::class, 'show'])->name('accounts.audit');
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions');
+    Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets');
     Route::get('/brands', [BrandController::class, 'index'])->name('brands');
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
@@ -65,6 +67,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/categories/{id}', [\App\Http\Controllers\Api\V1\CategoryController::class, 'update']);
         Route::delete('/categories/{id}', [\App\Http\Controllers\Api\V1\CategoryController::class, 'destroy']);
         Route::get('/budgets', [\App\Http\Controllers\Api\V1\BudgetController::class, 'index']);
+        Route::post('/budgets', [\App\Http\Controllers\Api\V1\BudgetController::class, 'store']);
+        Route::put('/budgets/{id}', [\App\Http\Controllers\Api\V1\BudgetController::class, 'update']);
+        Route::delete('/budgets/{id}', [\App\Http\Controllers\Api\V1\BudgetController::class, 'destroy']);
         Route::post('/ai/chat', [\App\Http\Controllers\Api\V1\AIController::class, 'chat']);
         Route::post('/ai/transcribe/token', [\App\Http\Controllers\Api\V1\TranscriptionController::class, 'token']);
         Route::put('/user/profile', [\App\Http\Controllers\Api\V1\UserController::class, 'updateProfile']);

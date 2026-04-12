@@ -22,8 +22,8 @@ class AccountService
                     $search = "%{$value}%";
 
                     $query->where(function (Builder $builder) use ($search) {
-                        $builder->where('name->en', 'like', $search)
-                            ->orWhere('name->ar', 'like', $search);
+                        $builder->whereRaw(Account::localizedNameSqlExpression('en', false) . ' LIKE ?', [$search])
+                            ->orWhereRaw(Account::localizedNameSqlExpression('ar', false) . ' LIKE ?', [$search]);
                     });
                 }),
             ])
@@ -137,18 +137,6 @@ class AccountService
         $direction = $descending ? 'DESC' : 'ASC';
         $locale = app()->getLocale();
 
-        if (DB::connection()->getDriverName() === 'sqlite') {
-            return sprintf(
-                "COALESCE(json_extract(name, '$.\"%s\"'), json_extract(name, '$.en')) %s",
-                $locale,
-                $direction,
-            );
-        }
-
-        return sprintf(
-            'COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, "$.%s")), JSON_UNQUOTE(JSON_EXTRACT(name, "$.en"))) %s',
-            $locale,
-            $direction,
-        );
+        return Account::localizedNameSqlExpression($locale) . ' ' . $direction;
     }
 }

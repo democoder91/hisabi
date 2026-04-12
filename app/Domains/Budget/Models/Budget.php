@@ -8,10 +8,13 @@ use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Translatable\HasTranslations;
 
 class Budget extends Model
 {
-    use BelongsToUser, HasFactory;
+    use BelongsToUser, HasFactory, HasTranslations;
+
+    public array $translatable = ['name'];
 
     const CUSTOM = "CUSTOM";
     const DAILY = "DAILY";
@@ -36,6 +39,8 @@ class Budget extends Model
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'saving' => 'boolean',
+        'amount' => 'float',
     ];
 
     public function categories(): BelongsToMany
@@ -46,6 +51,14 @@ class Budget extends Model
     public function getIsSavingAttribute(): bool
     {
         return $this->saving;
+    }
+
+    public function getLocalizedName(?string $locale = null): ?string
+    {
+        $locale ??= app()->getLocale();
+
+        return $this->getTranslation('name', $locale, false)
+            ?: $this->getTranslation('name', 'en', false);
     }
 
     public function getTotalSpentPercentageAttribute(): string
@@ -116,18 +129,26 @@ class Budget extends Model
     private function getCurrentWindowStartAndEndDates()
     {
         if ($this->reoccurrence === self::CUSTOM) {
-            return [$this->start_at, $this->end_at];
+            return [$this->start_at, $this->end_at ?? $this->start_at];
         }
 
         $unit = $this->getUnitMapping();
+        $startAt = $this->start_at->copy()->startOfDay();
+
+        if (now()->isBefore($startAt)) {
+            return [$startAt, $startAt->copy()->add($unit, $this->period)];
+        }
+
         $intervalString = $this->period . ' ' . $unit;
-        $ranges = CarbonPeriod::create($this->start_at->startOfDay(), $intervalString, now()->copy()->add($unit, $this->period))->toArray();
+        $ranges = CarbonPeriod::create($startAt, $intervalString, now()->copy()->add($unit, $this->period))->toArray();
 
         foreach (array_reverse($ranges) as $range) {
             if (now()->isAfter($range)) {
                 return [$range->copy(), $range->copy()->add($unit, $this->period)];
             }
         }
+
+        return [$startAt, $startAt->copy()->add($unit, $this->period)];
     }
 
     private function getUnitMapping(): string

@@ -9,40 +9,40 @@ return new class extends Migration
 {
     public function up(): void
     {
-        foreach (DB::table('accounts')->select(['id', 'name'])->orderBy('id')->cursor() as $account) {
-            if ($this->isJsonObject($account->name)) {
+        foreach (DB::table('budgets')->select(['id', 'name'])->orderBy('id')->cursor() as $budget) {
+            if ($this->isJsonObject($budget->name)) {
                 continue;
             }
 
-            DB::table('accounts')
-                ->where('id', $account->id)
+            DB::table('budgets')
+                ->where('id', $budget->id)
                 ->update([
-                    'name' => json_encode(['en' => (string) $account->name], JSON_UNESCAPED_UNICODE),
+                    'name' => json_encode(['en' => $budget->name], JSON_UNESCAPED_UNICODE),
                 ]);
         }
 
-        Schema::table('accounts', function (Blueprint $table) {
+        Schema::table('budgets', function (Blueprint $table) {
             $table->json('name')->change();
         });
     }
 
     public function down(): void
     {
-        foreach (DB::table('accounts')->select(['id', 'name'])->orderBy('id')->cursor() as $account) {
-            $decoded = json_decode((string) $account->name, true);
+        foreach (DB::table('budgets')->select(['id', 'name'])->orderBy('id')->cursor() as $budget) {
+            $decoded = json_decode((string) $budget->name, true);
 
             if (! is_array($decoded)) {
                 continue;
             }
 
-            DB::table('accounts')
-                ->where('id', $account->id)
+            DB::table('budgets')
+                ->where('id', $budget->id)
                 ->update([
                     'name' => $decoded['en'] ?? reset($decoded) ?: '',
                 ]);
         }
 
-        Schema::table('accounts', function (Blueprint $table) {
+        Schema::table('budgets', function (Blueprint $table) {
             $table->string('name')->change();
         });
     }

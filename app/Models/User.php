@@ -79,7 +79,7 @@ class User extends Authenticatable
     public function getOrCreateDefaultAccount(): Account
     {
         $account = $this->accounts()
-            ->where('name->en', Account::DEFAULT_NAME)
+            ->whereRaw(Account::localizedNameSqlExpression('en', false) . ' = ?', [Account::DEFAULT_NAME])
             ->first();
 
         if ($account) {

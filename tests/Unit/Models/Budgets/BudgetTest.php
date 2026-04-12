@@ -16,9 +16,10 @@ class BudgetTest extends TestCase
 
     public function test_it_has_name()
     {
-        $sut = Budget::factory()->create(['name' => 'test']);
+        $sut = Budget::factory()->create(['name' => ['en' => 'test', 'ar' => 'اختبار']]);
 
         $this->assertEquals("test", $sut->name);
+        $this->assertEquals('اختبار', $sut->getTranslation('name', 'ar'));
     }
 
     public function test_it_belongs_to_categories()

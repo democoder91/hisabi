@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domains\Budget\Models\Budget;
+use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -38,7 +39,13 @@ class BudgetControllerTest extends TestCase
                     '*' => [
                         'id',
                         'name',
+                        'name_translations',
                         'amount',
+                        'start_at',
+                        'end_at',
+                        'saving',
+                        'period',
+                        'reoccurrence',
                         'total_spent_percentage',
                         'start_at_date',
                         'end_at_date',
@@ -70,7 +77,7 @@ class BudgetControllerTest extends TestCase
     {
         $budget = Budget::factory()->create([
             'user_id' => $this->user->id,
-            'name' => 'Test Budget',
+            'name' => ['en' => 'Test Budget', 'ar' => 'ميزانية اختبار'],
             'amount' => 1000,
             'start_at' => now()->subDays(10),
             'reoccurrence' => Budget::MONTHLY,
@@ -83,6 +90,128 @@ class BudgetControllerTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.0.name', 'Test Budget')
             ->assertJsonPath('data.0.amount', 1000);
+    }
+
+    public function test_it_creates_a_budget(): void
+    {
+        $category = Category::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/budgets', [
+                'name' => ['en' => 'Groceries', 'ar' => 'مشتريات'],
+                'amount' => 1500,
+                'start_at' => now()->startOfMonth()->toDateString(),
+                'end_at' => now()->endOfMonth()->toDateString(),
+                'saving' => false,
+                'period' => 1,
+                'reoccurrence' => Budget::CUSTOM,
+                'category_ids' => [$category->id],
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('budget.name', 'Groceries')
+            ->assertJsonPath('budget.name_translations.en', 'Groceries')
+            ->assertJsonPath('budget.categories.0.id', $category->id);
+
+        $budget = Budget::query()->latest('id')->first();
+
+        $this->assertNotNull($budget);
+        $this->assertSame($this->user->id, $budget->user_id);
+        $this->assertSame('Groceries', $budget->getTranslation('name', 'en'));
+        $this->assertSame([$category->id], $budget->categories()->pluck('categories.id')->all());
+    }
+
+    public function test_it_validates_budget_required_fields(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/budgets', []);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name', 'amount', 'start_at', 'period', 'reoccurrence', 'category_ids']);
+    }
+
+    public function test_it_updates_a_budget(): void
+    {
+        $originalCategory = Category::factory()->create(['user_id' => $this->user->id]);
+        $newCategory = Category::factory()->create(['user_id' => $this->user->id]);
+        $budget = Budget::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Old Budget'],
+            'reoccurrence' => Budget::CUSTOM,
+            'start_at' => now()->subWeek(),
+            'end_at' => now()->addWeek(),
+        ]);
+        $budget->categories()->sync([$originalCategory->id]);
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/budgets/{$budget->id}", [
+                'name' => ['en' => 'New Budget', 'ar' => 'ميزانية جديدة'],
+                'amount' => 2200,
+                'start_at' => now()->startOfMonth()->toDateString(),
+                'end_at' => now()->endOfMonth()->toDateString(),
+                'saving' => true,
+                'period' => 1,
+                'reoccurrence' => Budget::CUSTOM,
+                'category_ids' => [$newCategory->id],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('budget.name', 'New Budget')
+            ->assertJsonPath('budget.saving', true)
+            ->assertJsonPath('budget.categories.0.id', $newCategory->id);
+
+        $budget->refresh();
+
+        $this->assertSame('New Budget', $budget->getTranslation('name', 'en'));
+        $this->assertTrue($budget->saving);
+        $this->assertSame([$newCategory->id], $budget->categories()->pluck('categories.id')->all());
+    }
+
+    public function test_it_deletes_a_budget(): void
+    {
+        $budget = Budget::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Budget to Delete'],
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->deleteJson("/api/v1/budgets/{$budget->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('budget.id', $budget->id)
+            ->assertJsonPath('budget.name', 'Budget to Delete');
+
+        $this->assertDatabaseMissing('budgets', ['id' => $budget->id]);
+    }
+
+    public function test_it_returns_404_when_updating_another_users_budget(): void
+    {
+        $category = Category::factory()->create(['user_id' => $this->user->id]);
+        $budget = Budget::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/budgets/{$budget->id}", [
+                'name' => ['en' => 'Should Fail'],
+                'amount' => 100,
+                'start_at' => now()->toDateString(),
+                'end_at' => now()->addDay()->toDateString(),
+                'saving' => false,
+                'period' => 1,
+                'reoccurrence' => Budget::CUSTOM,
+                'category_ids' => [$category->id],
+            ]);
+
+        $response->assertNotFound();
+    }
+
+    public function test_it_returns_404_when_deleting_another_users_budget(): void
+    {
+        $budget = Budget::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->deleteJson("/api/v1/budgets/{$budget->id}");
+
+        $response->assertNotFound();
     }
 
     public function test_it_only_returns_budgets_owned_by_the_authenticated_user(): void

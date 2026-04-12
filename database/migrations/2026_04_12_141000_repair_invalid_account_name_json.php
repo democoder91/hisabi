@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -20,31 +18,10 @@ return new class extends Migration
                     'name' => json_encode(['en' => (string) $account->name], JSON_UNESCAPED_UNICODE),
                 ]);
         }
-
-        Schema::table('accounts', function (Blueprint $table) {
-            $table->json('name')->change();
-        });
     }
 
     public function down(): void
     {
-        foreach (DB::table('accounts')->select(['id', 'name'])->orderBy('id')->cursor() as $account) {
-            $decoded = json_decode((string) $account->name, true);
-
-            if (! is_array($decoded)) {
-                continue;
-            }
-
-            DB::table('accounts')
-                ->where('id', $account->id)
-                ->update([
-                    'name' => $decoded['en'] ?? reset($decoded) ?: '',
-                ]);
-        }
-
-        Schema::table('accounts', function (Blueprint $table) {
-            $table->string('name')->change();
-        });
     }
 
     private function isJsonObject(mixed $value): bool

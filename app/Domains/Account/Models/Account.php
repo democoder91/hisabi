@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Spatie\Translatable\HasTranslations;
 
 class Account extends Model
@@ -113,7 +114,58 @@ class Account extends Model
     {
         $locale ??= app()->getLocale();
 
-        return $this->getTranslation('name', $locale, false)
-            ?: $this->getTranslation('name', 'en', false);
+        $translations = $this->getSafeNameTranslations();
+
+        return $translations[$locale]
+            ?? $translations['en']
+            ?? null;
+    }
+
+    public function getSafeNameTranslations(): array
+    {
+        $rawName = $this->getAttributes()['name'] ?? null;
+
+        if (is_array($rawName)) {
+            return $rawName;
+        }
+
+        if (is_string($rawName)) {
+            $decoded = json_decode($rawName, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+
+            return ['en' => $rawName];
+        }
+
+        return [];
+    }
+
+    public static function localizedNameSqlExpression(string $locale, bool $fallbackToEnglish = true): string
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $localeExpression = sprintf(
+                "CASE WHEN json_valid(name) THEN json_extract(name, '$.\"%s\"') END",
+                $locale,
+            );
+            $englishExpression = "CASE WHEN json_valid(name) THEN json_extract(name, '$.en') END";
+            $plainExpression = "CASE WHEN NOT json_valid(name) THEN name END";
+        } else {
+            $localeExpression = sprintf(
+                'CASE WHEN JSON_VALID(name) THEN JSON_UNQUOTE(JSON_EXTRACT(name, "$.%s")) END',
+                $locale,
+            );
+            $englishExpression = 'CASE WHEN JSON_VALID(name) THEN JSON_UNQUOTE(JSON_EXTRACT(name, "$.en")) END';
+            $plainExpression = 'CASE WHEN NOT JSON_VALID(name) THEN name END';
+        }
+
+        if ($fallbackToEnglish) {
+            return "COALESCE({$localeExpression}, {$englishExpression}, {$plainExpression}, '')";
+        }
+
+        return "COALESCE({$localeExpression}, {$plainExpression}, '')";
     }
 }

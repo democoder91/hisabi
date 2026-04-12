@@ -45,6 +45,7 @@ class CreateTransactionTool implements Tool
         $transaction = $transactionService->create([
             'amount' => $amount,
             'brand_id' => $brand?->id,
+            'transaction_type' => $categoryType === Category::INCOME ? 'CREDIT' : 'DEBIT',
             'currency' => $currency,
             'note' => $note,
             'created_at' => Carbon::parse($date),

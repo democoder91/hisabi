@@ -41,6 +41,7 @@ class TransactionControllerTest extends TestCase
                     '*' => [
                         'id',
                         'amount',
+                        'transaction_type',
                         'created_at',
                         'note',
                         'brand' => [
@@ -103,6 +104,7 @@ class TransactionControllerTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.0.id', $transaction->id)
             ->assertJsonPath('data.0.amount', 100.50)
+            ->assertJsonPath('data.0.transaction_type', $transaction->transaction_type)
             ->assertJsonPath('data.0.brand.name', 'Test Brand')
             ->assertJsonPath('data.0.brand.category.name', 'Test Category');
     }
@@ -363,6 +365,22 @@ class TransactionControllerTest extends TestCase
         $this->assertEquals($matchingTransaction->id, $data[0]['id']);
     }
 
+    public function test_it_filters_by_transaction_type(): void
+    {
+        Transaction::factory()->create(['transaction_type' => Transaction::TYPE_DEBIT]);
+        $matchingTransaction = Transaction::factory()->create(['transaction_type' => Transaction::TYPE_CREDIT]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/transactions?filter[transaction_type]=CREDIT');
+
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals($matchingTransaction->id, $data[0]['id']);
+        $this->assertEquals(Transaction::TYPE_CREDIT, $data[0]['transaction_type']);
+    }
+
     public function test_create_requires_authentication(): void
     {
         $category = Category::factory()->create();
@@ -399,6 +417,7 @@ class TransactionControllerTest extends TestCase
                 'transaction' => [
                     'id',
                     'amount',
+                    'transaction_type',
                     'created_at',
                     'note',
                     'brand' => [
@@ -413,15 +432,56 @@ class TransactionControllerTest extends TestCase
                 ]
             ])
             ->assertJsonPath('transaction.amount', 100.50)
-            ->assertJsonPath('transaction.brand.name', 'Test Brand')
-            ->assertJsonPath('transaction.brand.category.name', 'Test Category')
+            ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_DEBIT)
+            ->assertJsonPath('transaction.brand.name.en', 'Test Brand')
+            ->assertJsonPath('transaction.brand.category.name.en', 'Test Category')
             ->assertJsonPath('transaction.note', 'Test transaction');
 
         $this->assertDatabaseHas('transactions', [
             'amount' => 100.50,
             'brand_id' => $brand->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
             'note' => 'Test transaction'
         ]);
+    }
+
+    public function test_it_creates_an_uncategorized_credit_transaction(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/transactions', [
+                'amount' => 250.00,
+                'transaction_type' => Transaction::TYPE_CREDIT,
+                'created_at' => now()->format('Y-m-d'),
+                'note' => 'Refund'
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_CREDIT)
+            ->assertJsonPath('transaction.brand', null);
+
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 250.00,
+            'brand_id' => null,
+            'transaction_type' => Transaction::TYPE_CREDIT,
+            'note' => 'Refund',
+        ]);
+    }
+
+    public function test_create_rejects_transaction_type_that_conflicts_with_brand_category(): void
+    {
+        $category = Category::factory()->create(['type' => Category::EXPENSES]);
+        $brand = Brand::factory()->create(['category_id' => $category->id]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/transactions', [
+                'amount' => 100.50,
+                'brand_id' => $brand->id,
+                'transaction_type' => Transaction::TYPE_CREDIT,
+                'created_at' => now()->format('Y-m-d'),
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['brand_id']);
     }
 
     public function test_create_validates_required_amount(): void
@@ -625,6 +685,7 @@ class TransactionControllerTest extends TestCase
                 'transaction' => [
                     'id',
                     'amount',
+                    'transaction_type',
                     'created_at',
                     'note',
                     'brand' => [
@@ -640,16 +701,59 @@ class TransactionControllerTest extends TestCase
             ])
             ->assertJsonPath('transaction.id', $transaction->id)
             ->assertJsonPath('transaction.amount', 200.75)
-            ->assertJsonPath('transaction.brand.name', 'New Brand')
-            ->assertJsonPath('transaction.brand.category.name', 'New Category')
+            ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_DEBIT)
+            ->assertJsonPath('transaction.brand.name.en', 'New Brand')
+            ->assertJsonPath('transaction.brand.category.name.en', 'New Category')
             ->assertJsonPath('transaction.note', 'Updated note');
 
         $this->assertDatabaseHas('transactions', [
             'id' => $transaction->id,
             'amount' => 200.75,
             'brand_id' => $newBrand->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
             'note' => 'Updated note'
         ]);
+    }
+
+    public function test_it_updates_uncategorized_transaction_type(): void
+    {
+        $transaction = Transaction::factory()->create([
+            'brand_id' => null,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/transactions/{$transaction->id}", [
+                'amount' => 200.75,
+                'transaction_type' => Transaction::TYPE_CREDIT,
+                'created_at' => now()->format('Y-m-d'),
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_CREDIT);
+
+        $this->assertDatabaseHas('transactions', [
+            'id' => $transaction->id,
+            'transaction_type' => Transaction::TYPE_CREDIT,
+        ]);
+    }
+
+    public function test_update_rejects_transaction_type_that_conflicts_with_brand_category(): void
+    {
+        $transaction = Transaction::factory()->create();
+        $category = Category::factory()->create(['type' => Category::EXPENSES]);
+        $brand = Brand::factory()->create(['category_id' => $category->id]);
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/transactions/{$transaction->id}", [
+                'amount' => 200.75,
+                'brand_id' => $brand->id,
+                'transaction_type' => Transaction::TYPE_CREDIT,
+                'created_at' => now()->format('Y-m-d'),
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['brand_id']);
     }
 
     public function test_update_validates_required_amount(): void
@@ -865,6 +969,7 @@ class TransactionControllerTest extends TestCase
                 'transaction' => [
                     'id',
                     'amount',
+                    'transaction_type',
                     'created_at',
                     'note',
                     'brand' => [
@@ -880,8 +985,9 @@ class TransactionControllerTest extends TestCase
             ])
             ->assertJsonPath('transaction.id', $transaction->id)
             ->assertJsonPath('transaction.amount', 100.50)
-            ->assertJsonPath('transaction.brand.name', 'Test Brand')
-            ->assertJsonPath('transaction.brand.category.name', 'Test Category')
+            ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_DEBIT)
+            ->assertJsonPath('transaction.brand.name.en', 'Test Brand')
+            ->assertJsonPath('transaction.brand.category.name.en', 'Test Category')
             ->assertJsonPath('transaction.note', 'Test transaction');
 
         $this->assertDatabaseMissing('transactions', [

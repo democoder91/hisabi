@@ -7,6 +7,13 @@ import { FunnelIcon } from '@phosphor-icons/react';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { DateRange } from 'react-day-picker';
 import Combobox from '@/components/Global/Combobox';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface FilterProps {
     brands: any[];
@@ -29,10 +36,20 @@ export default function TransactionFilters({ brands, categories, onApply, active
         onApply(updatedFilters);
     };
 
+    const handleTransactionTypeChange = (value: string) => {
+        const updatedFilters = {
+            ...activeFilters,
+            transactionType: value === 'ALL' ? '' : value,
+        };
+
+        onApply(updatedFilters);
+    };
+
     const getActiveFilterCount = () => {
         let count = 0;
         if (activeFilters.brandId) count++;
         if (activeFilters.categoryId) count++;
+        if (activeFilters.transactionType) count++;
         if (activeFilters.dateFrom && activeFilters.dateTo) count++;
         return count;
     };
@@ -77,6 +94,8 @@ export default function TransactionFilters({ brands, categories, onApply, active
         return categories.find((c: any) => c.id == activeFilters.categoryId);
     };
 
+    const selectedTransactionType = activeFilters.transactionType || 'ALL';
+
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
@@ -107,6 +126,20 @@ export default function TransactionFilters({ brands, categories, onApply, active
                         initialSelectedItem={getSelectedCategory()}
                         onChange={handleCategoryChange}
                     />
+
+                    <div className="grid gap-2">
+                        <label className="text-sm font-medium">{t('transaction.type')}</label>
+                        <Select value={selectedTransactionType} onValueChange={handleTransactionTypeChange}>
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('transaction.allTypes')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ALL">{t('transaction.allTypes')}</SelectItem>
+                                <SelectItem value="DEBIT">{t('transaction.debit')}</SelectItem>
+                                <SelectItem value="CREDIT">{t('transaction.credit')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     {/* Date Filter */}
                     <div className="grid gap-2">

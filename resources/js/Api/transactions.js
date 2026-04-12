@@ -17,6 +17,9 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     if (filters.categoryId) {
         params.append('filter[category_id]', filters.categoryId);
     }
+    if (filters.transactionType) {
+        params.append('filter[transaction_type]', filters.transactionType);
+    }
     if (filters.dateFrom) {
         params.append('filter[date_from]', filters.dateFrom);
     }
@@ -41,7 +44,7 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     };
 }
 
-export const createTransaction = async ({amount, brandId, createdAt, note}) => {
+export const createTransaction = async ({amount, brandId, createdAt, note, transactionType}) => {
     const response = await fetch('/api/v1/transactions', {
         method: 'POST',
         headers: {
@@ -53,6 +56,7 @@ export const createTransaction = async ({amount, brandId, createdAt, note}) => {
         body: JSON.stringify({
             amount,
             brand_id: brandId || null,
+            transaction_type: transactionType || null,
             created_at: createdAt,
             note
         })
@@ -69,7 +73,7 @@ export const createTransaction = async ({amount, brandId, createdAt, note}) => {
     };
 }
 
-export const updateTransaction = async ({id, amount, brandId, createdAt, note}) => {
+export const updateTransaction = async ({id, amount, brandId, createdAt, note, transactionType}) => {
     const response = await fetch(`/api/v1/transactions/${id}`, {
         method: 'PUT',
         headers: {
@@ -81,6 +85,7 @@ export const updateTransaction = async ({id, amount, brandId, createdAt, note}) 
         body: JSON.stringify({
             amount,
             brand_id: brandId || null,
+            transaction_type: transactionType || null,
             created_at: createdAt,
             note
         })

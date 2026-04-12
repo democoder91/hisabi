@@ -13,7 +13,7 @@ import LoadMore from '@/components/Global/LoadMore';
 import { Button } from '@/components/ui/button';
 import { getTransactions, getAllBrands } from '@/Api';
 import { getAllCategories } from '@/Api/categories';
-import { animateRowItem, formatNumber, getAppCurrency } from '@/Utils';
+import { animateRowItem, formatNumber, getAppCurrency, isCreditTransaction } from '@/Utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowElbowDownRightIcon, X } from '@phosphor-icons/react';
@@ -33,6 +33,7 @@ export default function Index({ auth }: { auth: any }) {
     const initialFilters = {
         brandId: urlParams.get('brand') || '',
         categoryId: urlParams.get('category') || '',
+        transactionType: urlParams.get('type') || '',
         dateFrom: urlParams.get('dateFrom') || '',
         dateTo: urlParams.get('dateTo') || '',
     };
@@ -139,6 +140,12 @@ export default function Index({ auth }: { auth: any }) {
             url.searchParams.delete('category');
         }
 
+        if (newFilters.transactionType) {
+            url.searchParams.set('type', newFilters.transactionType);
+        } else {
+            url.searchParams.delete('type');
+        }
+
         if (newFilters.dateFrom && newFilters.dateTo) {
             url.searchParams.set('dateFrom', newFilters.dateFrom);
             url.searchParams.set('dateTo', newFilters.dateTo);
@@ -162,6 +169,9 @@ export default function Index({ auth }: { auth: any }) {
                 break;
             case 'category':
                 updatedFilters.categoryId = '';
+                break;
+            case 'type':
+                updatedFilters.transactionType = '';
                 break;
             case 'date':
                 updatedFilters.dateFrom = '';
@@ -241,6 +251,16 @@ export default function Index({ auth }: { auth: any }) {
                                     <X size={14} weight="bold" />
                                 </Badge>
                             )}
+                            {filters.transactionType && (
+                                <Badge
+                                    variant="secondary"
+                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
+                                    onClick={() => clearFilter('type')}
+                                >
+                                    {filters.transactionType === 'CREDIT' ? t('transaction.credit') : t('transaction.debit')}
+                                    <X size={14} weight="bold" />
+                                </Badge>
+                            )}
                             {filters.dateFrom && filters.dateTo && (
                                 <Badge
                                     variant="secondary"
@@ -268,11 +288,13 @@ export default function Index({ auth }: { auth: any }) {
                                 : null;
                             const hasCategory = hasBrand && transaction.brand.category !== null;
                             const isUncategorized = !hasCategory;
-                            const categoryType = hasCategory ? transaction.brand.category.type : null;
-                            const isIncomeTransaction = categoryType === "INCOME";
+                            const isIncomeTransaction = isCreditTransaction(transaction);
+                            const transactionTypeLabel = transaction.transaction_type
+                                ? t(`transaction.${transaction.transaction_type.toLowerCase()}`)
+                                : null;
 
                             return (
-                                <Card key={transaction.id} className={`py-0 ${isUncategorized ? 'bg-red-50 dark:bg-red-950 border-red-100 dark:border-red-900' : ''}`} id={'item-' + transaction.id}>
+                                <Card key={transaction.id} className={`py-0 ${isUncategorized ? 'bg-amber-50 dark:bg-amber-950 border-amber-100 dark:border-amber-900' : ''}`} id={'item-' + transaction.id}>
                                     <CardContent className='flex justify-between items-center px-4 py-3'>
                                         <div className='flex gap-2 items-center'>
                                             {CategoryIcon && hasCategory ? (
@@ -293,9 +315,14 @@ export default function Index({ auth }: { auth: any }) {
                                             </div>
                                         </div>
                                         <div className='flex gap-2 items-center'>
+                                            {transactionTypeLabel && (
+                                                <Badge variant="outline" className={isIncomeTransaction ? 'border-green-200 text-green-600' : 'border-red-200 text-red-600'}>
+                                                    {transactionTypeLabel}
+                                                </Badge>
+                                            )}
                                             {transaction.note && <Badge variant="secondary">{transaction.note}</Badge>
                                             }
-                                            <p className={`${isIncomeTransaction ? 'text-green-500' : ''} min-w-26 text-right`}> {isIncomeTransaction ? '' : '-'}{getAppCurrency()} {formatNumber(transaction.amount, null)}</p>
+                                            <p className={`${isIncomeTransaction ? 'text-green-500' : 'text-red-500'} min-w-26 text-right`}> {isIncomeTransaction ? '' : '-'}{getAppCurrency()} {formatNumber(transaction.amount, null)}</p>
                                         </div>
                                     </CardContent>
                                 </Card>

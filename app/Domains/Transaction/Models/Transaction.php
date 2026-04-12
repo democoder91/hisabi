@@ -5,6 +5,7 @@ namespace App\Domains\Transaction\Models;
 use App\Domains\Brand\Models\Brand;
 use Database\Factories\TransactionFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Category;
@@ -14,7 +15,14 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    public const TYPE_DEBIT = 'DEBIT';
+    public const TYPE_CREDIT = 'CREDIT';
+
     protected $guarded = [];
+
+    protected $attributes = [
+        'transaction_type' => self::TYPE_DEBIT,
+    ];
 
     /**
      * Create a new factory instance for the model.
@@ -35,15 +43,25 @@ class Transaction extends Model
 
     public function scopeExpenses($query)
     {
-        return $query->whereHas('brand.category', function ($query) {
-            return $query->where('type', Category::EXPENSES);
+        return $query->where(function (Builder $builder) {
+            $builder->whereHas('brand.category', function ($query) {
+                return $query->where('type', Category::EXPENSES);
+            })->orWhere(function (Builder $uncategorizedQuery) {
+                $uncategorizedQuery->whereNull('brand_id')
+                    ->where('transaction_type', self::TYPE_DEBIT);
+            });
         });
     }
 
     public function scopeIncome($query)
     {
-        return $query->whereHas('brand.category', function ($query) {
-            return $query->where('type', Category::INCOME);
+        return $query->where(function (Builder $builder) {
+            $builder->whereHas('brand.category', function ($query) {
+                return $query->where('type', Category::INCOME);
+            })->orWhere(function (Builder $uncategorizedQuery) {
+                $uncategorizedQuery->whereNull('brand_id')
+                    ->where('transaction_type', self::TYPE_CREDIT);
+            });
         });
     }
 
@@ -59,6 +77,23 @@ class Transaction extends Model
         return $query->whereHas('brand.category', function ($query) {
             return $query->where('type', Category::INVESTMENT);
         });
+    }
+
+    public function scopeDebit($query)
+    {
+        return $query->where('transaction_type', self::TYPE_DEBIT);
+    }
+
+    public function scopeCredit($query)
+    {
+        return $query->where('transaction_type', self::TYPE_CREDIT);
+    }
+
+    public static function transactionTypeForCategoryType(string $categoryType): string
+    {
+        return $categoryType === Category::INCOME
+            ? self::TYPE_CREDIT
+            : self::TYPE_DEBIT;
     }
 
     public static function tryCreateFromSms($sms)
@@ -79,6 +114,7 @@ class Transaction extends Model
         return static::create([
             'amount' => $amount,
             'brand_id' => $brand->id,
+            'transaction_type' => static::transactionTypeForCategoryType($brand->category?->type ?? Category::EXPENSES),
             'created_at' => $transactionDatetime
         ]);
     }

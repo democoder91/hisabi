@@ -1,5 +1,10 @@
 import numbro from 'numbro';
 
+export const TRANSACTION_TYPES = {
+    DEBIT: 'DEBIT',
+    CREDIT: 'CREDIT',
+}
+
 export const getAppCurrency = () => {
     return window ? window.AppCurrency : ''
 }
@@ -65,4 +70,22 @@ export const colors = () => {
 
 export const getTailwindColor = (index) => {
     return colors()[index] ? colors()[index].tailwind : "bg-gray-500";
+}
+
+export const getTransactionTypeForCategoryType = (categoryType) => {
+    return categoryType === 'INCOME'
+        ? TRANSACTION_TYPES.CREDIT
+        : TRANSACTION_TYPES.DEBIT
+}
+
+export const isBrandCompatibleWithTransactionType = (brand, transactionType) => {
+    if (!brand?.category?.type || !transactionType) {
+        return true
+    }
+
+    return getTransactionTypeForCategoryType(brand.category.type) === transactionType
+}
+
+export const isCreditTransaction = (transaction) => {
+    return transaction?.transaction_type === TRANSACTION_TYPES.CREDIT
 }

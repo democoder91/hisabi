@@ -6,6 +6,7 @@ use App\Ai\Agents\HisabiAgent;
 use App\Ai\Tools\CreateTransactionTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class HisabiAgentTest extends TestCase
@@ -80,5 +81,39 @@ class HisabiAgentTest extends TestCase
         $this->assertEquals('Mocked response', $response->text);
 
         HisabiAgent::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'expenses'));
+    }
+
+    public function test_agent_uses_zai_chat_completions_endpoint(): void
+    {
+        Http::fake([
+            'https://api.z.ai/api/paas/v4/chat/completions' => Http::response([
+                'id' => 'chatcmpl-test',
+                'model' => 'glm-5.1',
+                'choices' => [[
+                    'index' => 0,
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Hello from ZAI',
+                    ],
+                    'finish_reason' => 'stop',
+                ]],
+                'usage' => [
+                    'prompt_tokens' => 10,
+                    'completion_tokens' => 3,
+                    'total_tokens' => 13,
+                ],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $response = (new HisabiAgent([], $user))->prompt('Say hello');
+
+        $this->assertSame('Hello from ZAI', $response->text);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://api.z.ai/api/paas/v4/chat/completions'
+                && $request['model'] === 'glm-5.1';
+        });
     }
 }

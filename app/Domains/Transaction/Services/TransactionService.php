@@ -2,6 +2,7 @@
 
 namespace App\Domains\Transaction\Services;
 
+use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -23,6 +24,7 @@ class TransactionService
                     });
                 }),
                 AllowedFilter::exact('brand_id'),
+                AllowedFilter::exact('transaction_type'),
                 AllowedFilter::callback('category_id', function ($query, $value) {
                     $query->whereHas('brand', function($builder) use($value) {
                         $builder->where('category_id', $value);
@@ -44,13 +46,13 @@ class TransactionService
 
     public function create(array $data): Transaction
     {
-        return Transaction::query()->create($data);
+        return Transaction::query()->create($this->prepareData($data));
     }
 
     public function update(int $id, array $data): Transaction
     {
         $transaction = Transaction::query()->findOrFail($id);
-        $transaction->update($data);
+        $transaction->update($this->prepareData($data, $transaction));
         return $transaction->fresh();
     }
 
@@ -59,6 +61,21 @@ class TransactionService
         $transaction = Transaction::query()->findOrFail($id);
         $transaction->delete();
         return $transaction;
+    }
+
+    private function prepareData(array $data, ?Transaction $transaction = null): array
+    {
+        $brand = null;
+
+        if (! empty($data['brand_id'])) {
+            $brand = Brand::query()->with('category')->find($data['brand_id']);
+        }
+
+        $data['transaction_type'] = $brand?->category?->type
+            ? Transaction::transactionTypeForCategoryType($brand->category->type)
+            : strtoupper($data['transaction_type'] ?? $transaction?->transaction_type ?? Transaction::TYPE_DEBIT);
+
+        return $data;
     }
 }
 

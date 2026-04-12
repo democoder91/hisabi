@@ -10,13 +10,12 @@ use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
-use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::Anthropic)]
-#[Model('claude-sonnet-4-6')]
+#[Provider('zai')]
+#[Model('glm-5.1')]
 #[MaxSteps(5)]
 class HisabiAgent implements Agent, Conversational, HasTools
 {

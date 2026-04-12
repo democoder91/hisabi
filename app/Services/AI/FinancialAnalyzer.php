@@ -4,10 +4,13 @@ namespace App\Services\AI;
 
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Category\Models\Category;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class FinancialAnalyzer
 {
+    private const UNCATEGORIZED_LABEL = 'Uncategorized';
+
     /**
      * Generate a comprehensive financial summary for the user
      */
@@ -76,12 +79,20 @@ SUMMARY;
      */
     protected function getExpensesByCategory($sinceDate, string $currency): string
     {
-        $expenses = Transaction::select('categories.name', DB::raw('SUM(transactions.amount) as total'))
-            ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->join('categories', 'brands.category_id', '=', 'categories.id')
-            ->where('categories.type', Category::EXPENSES)
+        $expenses = Transaction::query()
+            ->leftJoin('brands', 'transactions.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'brands.category_id', '=', 'categories.id')
+            ->selectRaw("COALESCE(categories.name, ?) as name", [self::UNCATEGORIZED_LABEL])
+            ->selectRaw('SUM(transactions.amount) as total')
+            ->where(function (Builder $query) {
+                $query->where('categories.type', Category::EXPENSES)
+                    ->orWhere(function (Builder $uncategorizedQuery) {
+                        $uncategorizedQuery->whereNull('transactions.brand_id')
+                            ->where('transactions.transaction_type', Transaction::TYPE_DEBIT);
+                    });
+            })
             ->where('transactions.created_at', '>=', $sinceDate)
-            ->groupBy('categories.name')
+            ->groupByRaw("COALESCE(categories.name, ?)", [self::UNCATEGORIZED_LABEL])
             ->orderByDesc('total')
             ->get();
         
@@ -89,7 +100,7 @@ SUMMARY;
             return "No expense data available.";
         }
         
-        return $expenses->map(fn($exp) => "  - {$exp->name}: {$currency} {$this->formatNumber($exp->total)}")
+        return $expenses->map(fn($exp) => "  - {$this->normalizeLabel($exp->name)}: {$currency} {$this->formatNumber($exp->total)}")
             ->join("\n");
     }
     
@@ -98,12 +109,20 @@ SUMMARY;
      */
     protected function getIncomeByCategory($sinceDate, string $currency): string
     {
-        $income = Transaction::select('categories.name', DB::raw('SUM(transactions.amount) as total'))
-            ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->join('categories', 'brands.category_id', '=', 'categories.id')
-            ->where('categories.type', Category::INCOME)
+        $income = Transaction::query()
+            ->leftJoin('brands', 'transactions.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'brands.category_id', '=', 'categories.id')
+            ->selectRaw("COALESCE(categories.name, ?) as name", [self::UNCATEGORIZED_LABEL])
+            ->selectRaw('SUM(transactions.amount) as total')
+            ->where(function (Builder $query) {
+                $query->where('categories.type', Category::INCOME)
+                    ->orWhere(function (Builder $uncategorizedQuery) {
+                        $uncategorizedQuery->whereNull('transactions.brand_id')
+                            ->where('transactions.transaction_type', Transaction::TYPE_CREDIT);
+                    });
+            })
             ->where('transactions.created_at', '>=', $sinceDate)
-            ->groupBy('categories.name')
+            ->groupByRaw("COALESCE(categories.name, ?)", [self::UNCATEGORIZED_LABEL])
             ->orderByDesc('total')
             ->get();
         
@@ -111,7 +130,7 @@ SUMMARY;
             return "No income data available.";
         }
         
-        return $income->map(fn($inc) => "  - {$inc->name}: {$currency} {$this->formatNumber($inc->total)}")
+        return $income->map(fn($inc) => "  - {$this->normalizeLabel($inc->name)}: {$currency} {$this->formatNumber($inc->total)}")
             ->join("\n");
     }
     
@@ -125,13 +144,16 @@ SUMMARY;
             ? "strftime('%Y-%m', transactions.created_at)"
             : 'DATE_FORMAT(transactions.created_at, "%Y-%m")';
 
+        $expenseCondition = 'categories.type = "' . Category::EXPENSES . '" OR (transactions.brand_id IS NULL AND transactions.transaction_type = "' . Transaction::TYPE_DEBIT . '")';
+        $incomeCondition = 'categories.type = "' . Category::INCOME . '" OR (transactions.brand_id IS NULL AND transactions.transaction_type = "' . Transaction::TYPE_CREDIT . '")';
+
         $trends = Transaction::select(
                 DB::raw("{$monthExpr} as month"),
-                DB::raw('SUM(CASE WHEN categories.type = "EXPENSES" THEN transactions.amount ELSE 0 END) as expenses'),
-                DB::raw('SUM(CASE WHEN categories.type = "INCOME" THEN transactions.amount ELSE 0 END) as income')
+                DB::raw("SUM(CASE WHEN {$expenseCondition} THEN transactions.amount ELSE 0 END) as expenses"),
+                DB::raw("SUM(CASE WHEN {$incomeCondition} THEN transactions.amount ELSE 0 END) as income")
             )
-            ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->join('categories', 'brands.category_id', '=', 'categories.id')
+            ->leftJoin('brands', 'transactions.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'brands.category_id', '=', 'categories.id')
             ->where('transactions.created_at', '>=', $sinceDate)
             ->groupBy('month')
             ->orderBy('month')
@@ -151,12 +173,20 @@ SUMMARY;
      */
     protected function getTopBrands($sinceDate, int $limit = 5, string $currency = 'AED'): string
     {
-        $brands = Transaction::select('brands.name', DB::raw('SUM(transactions.amount) as total'))
-            ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->join('categories', 'brands.category_id', '=', 'categories.id')
-            ->where('categories.type', Category::EXPENSES)
+        $brands = Transaction::query()
+            ->leftJoin('brands', 'transactions.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'brands.category_id', '=', 'categories.id')
+            ->selectRaw("COALESCE(brands.name, ?) as name", [self::UNCATEGORIZED_LABEL])
+            ->selectRaw('SUM(transactions.amount) as total')
+            ->where(function (Builder $query) {
+                $query->where('categories.type', Category::EXPENSES)
+                    ->orWhere(function (Builder $uncategorizedQuery) {
+                        $uncategorizedQuery->whereNull('transactions.brand_id')
+                            ->where('transactions.transaction_type', Transaction::TYPE_DEBIT);
+                    });
+            })
             ->where('transactions.created_at', '>=', $sinceDate)
-            ->groupBy('brands.name')
+            ->groupByRaw("COALESCE(brands.name, ?)", [self::UNCATEGORIZED_LABEL])
             ->orderByDesc('total')
             ->limit($limit)
             ->get();
@@ -166,7 +196,7 @@ SUMMARY;
         }
         
         return $brands->map(fn($brand, $index) => 
-            "  " . ($index + 1) . ". {$brand->name}: {$currency} {$this->formatNumber($brand->total)}"
+            "  " . ($index + 1) . ". {$this->normalizeLabel($brand->name)}: {$currency} {$this->formatNumber($brand->total)}"
         )->join("\n");
     }
     
@@ -189,4 +219,25 @@ SUMMARY;
     {
         return number_format($number, 2);
     }
+
+    protected function normalizeLabel(?string $label): string
+    {
+        if (! $label) {
+            return self::UNCATEGORIZED_LABEL;
+        }
+
+        $decoded = json_decode($label, true);
+
+        if (! is_array($decoded)) {
+            return $label;
+        }
+
+        $locale = app()->getLocale();
+
+        return $decoded[$locale]
+            ?? $decoded['en']
+            ?? reset($decoded)
+            ?? self::UNCATEGORIZED_LABEL;
+    }
+
 }

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => 'openai',
+    'default' => 'anthropic',
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
@@ -106,6 +106,19 @@ return [
             'driver' => 'ollama',
             'key' => env('OLLAMA_API_KEY', ''),
             'url' => env('OLLAMA_BASE_URL', 'http://localhost:11434'),
+        ],
+
+        'zai' => [
+            'driver' => 'groq',
+            'key' => env('ZAI_API_KEY'),
+            'url' => env('ZAI_URL', 'https://api.z.ai/api/paas/v4'),
+            'models' => [
+                'text' => [
+                    'default' => env('ZAI_TEXT_MODEL', 'glm-5.1'),
+                    'smartest' => env('ZAI_TEXT_MODEL', 'glm-5.1'),
+                    'cheapest' => env('ZAI_TEXT_MODEL', 'glm-5.1'),
+                ],
+            ],
         ],
 
         'openai' => [

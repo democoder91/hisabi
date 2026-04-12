@@ -191,8 +191,11 @@ function Sidebar({
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              left: side === "left" ? 0 : "auto",
+              right: side === "right" ? 0 : "auto",
             } as React.CSSProperties
           }
+          dir={side === "right" ? "rtl" : "ltr"}
           side={side}
         >
           <SheetHeader className="sr-only">

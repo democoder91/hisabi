@@ -3,12 +3,13 @@
 namespace Tests\Unit\Ai\Tools;
 
 use App\Ai\Tools\CreateTransactionTool;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Account\Models\Account;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
-use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Tools\Request;
+use RuntimeException;
 use Tests\TestCase;
 
 class CreateTransactionToolTest extends TestCase
@@ -16,231 +17,86 @@ class CreateTransactionToolTest extends TestCase
     use RefreshDatabase;
 
     private CreateTransactionTool $tool;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create(['default_currency' => 'EUR']);
         $this->actingAs($this->user);
         $this->tool = new CreateTransactionTool();
     }
 
-    public function test_it_creates_transaction_with_all_parameters(): void
+    public function test_it_creates_transaction_for_a_specific_account_and_category(): void
     {
-        $category = Category::factory()->create(['type' => Category::EXPENSES, 'name' => ['en' => 'Food']]);
-        $brand = Brand::factory()->create(['name' => ['en' => 'Starbucks'], 'category_id' => $category->id]);
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Wallet', 'ar' => null],
+            'balance' => 200,
+        ]);
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Food', 'ar' => null],
+        ]);
 
-        $request = new Request([
+        $result = $this->tool->handle(new Request([
             'amount' => 25.50,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
             'brand_name' => 'Starbucks',
-            'category_type' => 'EXPENSES',
             'currency' => 'USD',
             'note' => 'Morning coffee',
             'date' => '2026-04-11',
-        ]);
-
-        $result = $this->tool->handle($request);
+        ]));
 
         $this->assertStringContains('Transaction created successfully', $result);
         $this->assertStringContains('USD', $result);
-        $this->assertStringContains('25.5', $result);
-        $this->assertStringContains('Starbucks', $result);
+        $this->assertStringContains('25.50', $result);
+        $this->assertStringContains('Wallet', $result);
+        $this->assertStringContains('Food', $result);
 
-        $transaction = Transaction::latest()->first();
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
+        $this->assertEquals($account->id, $transaction->account_id);
+        $this->assertEquals($category->id, $transaction->category_id);
         $this->assertEquals(25.50, $transaction->amount);
         $this->assertEquals('USD', $transaction->currency);
-        $this->assertEquals('Morning coffee', $transaction->note);
-        $this->assertEquals($brand->id, $transaction->brand_id);
+        $this->assertEquals('Morning coffee | Merchant: Starbucks', $transaction->note);
+        $this->assertEquals(Transaction::TYPE_DEBIT, $transaction->transaction_type);
+        $this->assertEquals('2026-04-11', $transaction->created_at->format('Y-m-d'));
     }
 
-    public function test_it_creates_new_brand_if_not_exists(): void
+    public function test_it_uses_default_account_and_fallback_category_when_only_category_type_is_provided(): void
     {
-        $request = new Request([
+        $result = $this->tool->handle(new Request([
             'amount' => 100,
-            'brand_name' => 'NewMerchant',
-            'category_type' => 'EXPENSES',
-            'currency' => 'AED',
-        ]);
+            'category_type' => 'expenses',
+        ]));
 
-        $this->tool->handle($request);
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->with(['account', 'category'])->first();
+        $defaultAccount = $this->user->getOrCreateDefaultAccount();
 
-    $brand = Brand::all()->first(fn (Brand $brand) => $brand->name === 'NewMerchant');
-        $this->assertNotNull($brand);
-        $this->assertNotNull($brand->category_id);
-
-        $transaction = Transaction::latest()->first();
-        $this->assertEquals(100, $transaction->amount);
-        $this->assertEquals($brand->id, $transaction->brand_id);
-    }
-
-    public function test_it_reuses_existing_brand(): void
-    {
-        $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        Brand::factory()->create(['name' => ['en' => 'McDonald'], 'category_id' => $category->id]);
-
-        $request = new Request([
-            'amount' => 30,
-            'brand_name' => 'McDonald',
-            'category_type' => 'EXPENSES',
-            'currency' => 'AED',
-        ]);
-
-        $this->tool->handle($request);
-
-        $this->assertCount(1, Brand::all()->filter(fn (Brand $brand) => $brand->name === 'McDonald'));
-        $transaction = Transaction::latest()->first();
-        $this->assertEquals(30, $transaction->amount);
-    }
-
-    public function test_it_assigns_category_to_uncategorized_brand(): void
-    {
-        $brand = Brand::factory()->create(['name' => ['en' => 'UnknownShop'], 'category_id' => null]);
-
-        $request = new Request([
-            'amount' => 50,
-            'brand_name' => 'UnknownShop',
-            'category_type' => 'INCOME',
-            'currency' => 'AED',
-        ]);
-
-        $this->tool->handle($request);
-
-        $brand->refresh();
-        $this->assertNotNull($brand->category_id);
-        $this->assertEquals(Category::INCOME, $brand->category->type);
-    }
-
-    public function test_it_uses_user_default_currency_when_not_specified(): void
-    {
-        $user = User::factory()->create(['default_currency' => 'EUR']);
-        $this->actingAs($user);
-
-        $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        Brand::factory()->create(['name' => ['en' => 'TestBrand'], 'category_id' => $category->id]);
-
-        $request = new Request([
-            'amount' => 75,
-            'brand_name' => 'TestBrand',
-            'category_type' => 'EXPENSES',
-        ]);
-
-        $result = $this->tool->handle($request);
-
-        $transaction = Transaction::latest()->first();
+        $this->assertEquals($defaultAccount->id, $transaction->account_id);
+        $this->assertEquals(Category::EXPENSES, $transaction->category->type);
         $this->assertEquals('EUR', $transaction->currency);
-        $this->assertStringContains('EUR', $result);
-    }
-
-    public function test_it_uses_system_default_currency_when_no_user_preference(): void
-    {
-        $user = User::factory()->create(['default_currency' => null]);
-        $this->actingAs($user);
-
-        $category = Category::factory()->create(['type' => Category::SAVINGS]);
-        Brand::factory()->create(['name' => ['en' => 'Bank'], 'category_id' => $category->id]);
-
-        $request = new Request([
-            'amount' => 500,
-            'brand_name' => 'Bank',
-            'category_type' => 'SAVINGS',
-        ]);
-
-        $this->tool->handle($request);
-
-        $transaction = Transaction::latest()->first();
-        $this->assertEquals(config('hisabi.currency'), $transaction->currency);
-    }
-
-    public function test_it_defaults_date_to_today(): void
-    {
-        $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        Brand::factory()->create(['name' => ['en' => 'Shop'], 'category_id' => $category->id]);
-
-        $request = new Request([
-            'amount' => 10,
-            'brand_name' => 'Shop',
-            'category_type' => 'EXPENSES',
-            'currency' => 'AED',
-        ]);
-
-        $this->tool->handle($request);
-
-        $transaction = Transaction::latest()->first();
-        $this->assertEquals(now()->toDateString(), $transaction->created_at->toDateString());
-    }
-
-    public function test_it_returns_confirmation_with_note(): void
-    {
-        $category = Category::factory()->create(['type' => Category::INVESTMENT]);
-        Brand::factory()->create(['name' => ['en' => 'Broker'], 'category_id' => $category->id]);
-
-        $request = new Request([
-            'amount' => 1000,
-            'brand_name' => 'Broker',
-            'category_type' => 'INVESTMENT',
-            'currency' => 'USD',
-            'note' => 'Monthly investment',
-            'date' => '2026-04-01',
-        ]);
-
-        $result = $this->tool->handle($request);
-
         $this->assertStringContains('Transaction created successfully', $result);
-        $this->assertStringContains('Monthly investment', $result);
-        $this->assertStringContains('USD', $result);
-        $this->assertStringContains('1000', $result);
-        $this->assertStringContains('Broker', $result);
+        $this->assertStringContains('EUR 100.00', $result);
     }
 
-    public function test_it_creates_income_transaction(): void
+    public function test_it_requires_category_context(): void
     {
-        $request = new Request([
-            'amount' => 5000,
-            'brand_name' => 'Employer',
-            'category_type' => 'INCOME',
-            'currency' => 'AED',
-            'note' => 'Salary',
-        ]);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Provide either category_id or category_type to create a transaction.');
 
-        $result = $this->tool->handle($request);
-
-        $this->assertStringContains('Transaction created successfully', $result);
-        $transaction = Transaction::latest()->first();
-        $this->assertEquals(5000, $transaction->amount);
-        $this->assertEquals('AED', $transaction->currency);
-        $this->assertEquals('Salary', $transaction->note);
-    }
-
-    public function test_it_creates_transaction_without_brand(): void
-    {
-        $request = new Request([
-            'amount' => 42,
-            'category_type' => 'EXPENSES',
-            'currency' => 'AED',
-            'note' => 'Quick purchase',
-        ]);
-
-        $result = $this->tool->handle($request);
-
-        $this->assertStringContains('Transaction created successfully', $result);
-        $this->assertStringContains('42', $result);
-        $this->assertStringNotContains(' at ', $result);
-
-        $transaction = Transaction::latest()->first();
-        $this->assertEquals(42, $transaction->amount);
-        $this->assertNull($transaction->brand_id);
-        $this->assertEquals('Quick purchase', $transaction->note);
+        $this->tool->handle(new Request([
+            'amount' => 40,
+        ]));
     }
 
     private function assertStringContains(string $needle, string $haystack): void
     {
         $this->assertStringContainsString($needle, $haystack);
-    }
-
-    private function assertStringNotContains(string $needle, string $haystack): void
-    {
-        $this->assertStringNotContainsString($needle, $haystack);
     }
 }

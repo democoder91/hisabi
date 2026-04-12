@@ -3,7 +3,18 @@
 namespace Tests\Unit\Ai\Agents;
 
 use App\Ai\Agents\HisabiAgent;
+use App\Ai\Tools\CreateAccountTool;
+use App\Ai\Tools\CreateBudgetTool;
+use App\Ai\Tools\CreateCategoryTool;
 use App\Ai\Tools\CreateTransactionTool;
+use App\Ai\Tools\EditAccountTool;
+use App\Ai\Tools\EditBudgetTool;
+use App\Ai\Tools\EditCategoryTool;
+use App\Ai\Tools\EditTransactionTool;
+use App\Ai\Tools\ListAccountsTool;
+use App\Ai\Tools\ListBudgetsTool;
+use App\Ai\Tools\ListCategoriesTool;
+use App\Ai\Tools\ListTransactionsTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -13,14 +24,26 @@ class HisabiAgentTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_registers_create_transaction_tool(): void
+    public function test_it_registers_all_finance_management_tools(): void
     {
         $agent = new HisabiAgent([], null);
 
         $tools = iterator_to_array($agent->tools());
 
-        $this->assertCount(1, $tools);
-        $this->assertInstanceOf(CreateTransactionTool::class, $tools[0]);
+        $this->assertSame([
+            CreateAccountTool::class,
+            CreateTransactionTool::class,
+            CreateBudgetTool::class,
+            CreateCategoryTool::class,
+            EditAccountTool::class,
+            EditTransactionTool::class,
+            EditBudgetTool::class,
+            EditCategoryTool::class,
+            ListAccountsTool::class,
+            ListTransactionsTool::class,
+            ListBudgetsTool::class,
+            ListCategoriesTool::class,
+        ], array_map(static fn ($tool) => get_class($tool), $tools));
     }
 
     public function test_instructions_include_financial_context(): void
@@ -31,8 +54,11 @@ class HisabiAgentTest extends TestCase
         $instructions = (string) $agent->instructions();
 
         $this->assertStringContainsString('HisabiAI', $instructions);
-        $this->assertStringContainsString('Financial Overview', $instructions);
+        $this->assertStringContainsString("User's Financial Summary", $instructions);
+        $this->assertStringContainsString('create_account', $instructions);
         $this->assertStringContainsString('create_transaction', $instructions);
+        $this->assertStringContainsString('edit_budget', $instructions);
+        $this->assertStringContainsString('list_categories', $instructions);
     }
 
     public function test_instructions_use_user_currency(): void

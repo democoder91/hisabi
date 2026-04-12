@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Sidebar,
     SidebarContent,
@@ -36,6 +37,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import ApplicationLogo from "@/components/Global/ApplicationLogo";
+import { getSettings, updateSettings } from '@/Api/settings';
 import { updateUserProfile } from '@/Api/user';
 
 // Helper function for route generation
@@ -53,6 +55,28 @@ interface User {
     email: string;
 }
 
+interface CurrencyOption {
+    value: string;
+    label: string;
+}
+
+interface SettingsPayload {
+    settings: {
+        default_currency: string | null;
+        effective_currency: string;
+        locale: string;
+    };
+    defaults: {
+        currency: string;
+        locale: string;
+    };
+    options: {
+        currencies: CurrencyOption[];
+    };
+}
+
+const APP_DEFAULT_CURRENCY = '__APP_DEFAULT_CURRENCY__';
+
 export default function Index({ auth }: { auth: { user: User } }) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('account');
@@ -69,6 +93,12 @@ export default function Index({ auth }: { auth: { user: User } }) {
     const [passwordError, setPasswordError] = useState('');
     const [isProfileOpen, setIsProfileOpen] = useState(true);
     const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+    const [settingsPayload, setSettingsPayload] = useState<SettingsPayload | null>(null);
+    const [selectedCurrency, setSelectedCurrency] = useState(APP_DEFAULT_CURRENCY);
+    const [loadingSettings, setLoadingSettings] = useState(true);
+    const [savingPreferences, setSavingPreferences] = useState(false);
+    const [preferencesMessage, setPreferencesMessage] = useState('');
+    const [preferencesError, setPreferencesError] = useState('');
 
     const settingsNavItems = [
         {
@@ -118,6 +148,47 @@ export default function Index({ auth }: { auth: { user: User } }) {
             return () => clearTimeout(timer);
         }
     }, [passwordMessage, passwordError]);
+
+    useEffect(() => {
+        if (preferencesMessage || preferencesError) {
+            const timer = setTimeout(() => {
+                setPreferencesMessage('');
+                setPreferencesError('');
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [preferencesError, preferencesMessage]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        getSettings()
+            .then((payload) => {
+                if (!isMounted) {
+                    return;
+                }
+
+                setSettingsPayload(payload);
+                setSelectedCurrency(payload.settings.default_currency ?? APP_DEFAULT_CURRENCY);
+            })
+            .catch((error) => {
+                if (!isMounted) {
+                    return;
+                }
+
+                setPreferencesError(error.message || t('settings.preferences.loadError'));
+            })
+            .finally(() => {
+                if (isMounted) {
+                    setLoadingSettings(false);
+                }
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [t]);
 
     const handleSaveProfile = () => {
         setProfileError('');
@@ -172,8 +243,34 @@ export default function Index({ auth }: { auth: { user: User } }) {
         router.post(route('logout'));
     };
 
+    const handleSavePreferences = () => {
+        setPreferencesError('');
+        setPreferencesMessage('');
+
+        if (savingPreferences) {
+            return;
+        }
+
+        setSavingPreferences(true);
+
+        updateSettings({
+            default_currency: selectedCurrency === APP_DEFAULT_CURRENCY ? null : selectedCurrency,
+        })
+            .then((payload) => {
+                setSettingsPayload(payload);
+                setSelectedCurrency(payload.settings.default_currency ?? APP_DEFAULT_CURRENCY);
+                setPreferencesMessage(t('settings.preferences.updated'));
+            })
+            .catch((error) => {
+                setPreferencesError(error.message || t('settings.preferences.updateError'));
+            })
+            .finally(() => setSavingPreferences(false));
+    };
+
     const isProfileValid = name.trim() !== '' && email.trim() !== '';
     const isPasswordValid = currentPassword && password && confirmPassword && password === confirmPassword && password.length >= 8;
+    const effectiveCurrency = settingsPayload?.settings.effective_currency ?? settingsPayload?.defaults.currency ?? '';
+    const isPreferencesDirty = selectedCurrency !== (settingsPayload?.settings.default_currency ?? APP_DEFAULT_CURRENCY);
 
     return (
         <>
@@ -401,7 +498,66 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                         <CardDescription>{t('settings.preferences.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
+                                        {preferencesMessage && (
+                                            <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-green-700">
+                                                {preferencesMessage}
+                                            </div>
+                                        )}
+
+                                        {preferencesError && (
+                                            <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                                                {preferencesError}
+                                            </div>
+                                        )}
+
+                                        {loadingSettings ? (
+                                            <p className="text-muted-foreground">{t('common.loading')}</p>
+                                        ) : (
+                                            <div className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="default-currency">{t('settings.preferences.currency')}</Label>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {t('settings.preferences.currencyDescription')}
+                                                    </p>
+                                                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                                                        <SelectTrigger id="default-currency" className="w-full sm:max-w-sm">
+                                                            <SelectValue placeholder={t('settings.preferences.currencyPlaceholder')} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value={APP_DEFAULT_CURRENCY}>
+                                                                {t('settings.preferences.useAppDefault', {
+                                                                    currency: settingsPayload?.defaults.currency,
+                                                                })}
+                                                            </SelectItem>
+                                                            {settingsPayload?.options.currencies.map((currency) => (
+                                                                <SelectItem key={currency.value} value={currency.value}>
+                                                                    {currency.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                                                    <p className="text-sm font-medium text-foreground">
+                                                        {t('settings.preferences.effectiveCurrency')}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        {effectiveCurrency}
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <Button
+                                                        onClick={handleSavePreferences}
+                                                        disabled={savingPreferences || !isPreferencesDirty}
+                                                        className="w-full sm:w-auto"
+                                                    >
+                                                        {savingPreferences ? t('settings.preferences.saving') : t('settings.preferences.savePreferences')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             )}

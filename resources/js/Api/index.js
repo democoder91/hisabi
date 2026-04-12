@@ -5,3 +5,4 @@ export * from './budgets.js';
 export * from './transactions.js';
 export * from './sms.js';
 export * from './user.js';
+export * from './settings.js';

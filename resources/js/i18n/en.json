@@ -303,8 +303,18 @@
         "preferences": {
             "title": "Preferences",
             "description": "Manage your application preferences",
+            "currency": "Default currency",
+            "currencyDescription": "Choose the currency used across the app when no transaction currency is specified.",
+            "currencyPlaceholder": "Select a currency",
+            "useAppDefault": "Use app default ({{currency}})",
+            "effectiveCurrency": "Effective currency",
             "language": "Language",
-            "languageDescription": "Choose your preferred language"
+            "languageDescription": "Choose your preferred language",
+            "savePreferences": "Save Preferences",
+            "saving": "Saving...",
+            "updated": "Preferences updated successfully",
+            "updateError": "Failed to update preferences",
+            "loadError": "Failed to load preferences"
         },
         "placeholder": {
             "apiKey": {

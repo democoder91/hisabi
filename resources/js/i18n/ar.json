@@ -304,8 +304,18 @@
         "preferences": {
             "title": "التفضيلات",
             "description": "إدارة تفضيلات التطبيق",
+            "currency": "العملة الافتراضية",
+            "currencyDescription": "اختر العملة المستخدمة في التطبيق عند عدم تحديد عملة للمعاملة.",
+            "currencyPlaceholder": "اختر عملة",
+            "useAppDefault": "استخدام عملة التطبيق الافتراضية ({{currency}})",
+            "effectiveCurrency": "العملة الفعالة",
             "language": "اللغة",
-            "languageDescription": "اختر لغتك المفضلة"
+            "languageDescription": "اختر لغتك المفضلة",
+            "savePreferences": "حفظ التفضيلات",
+            "saving": "جار الحفظ...",
+            "updated": "تم تحديث التفضيلات بنجاح",
+            "updateError": "فشل في تحديث التفضيلات",
+            "loadError": "فشل في تحميل التفضيلات"
         },
         "placeholder": {
             "apiKey": {

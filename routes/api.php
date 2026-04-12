@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
+use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SmsController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TranscriptionController;
@@ -66,6 +67,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/ai/chat', [AIController::class, 'chat']);
         Route::post('/ai/transcribe', [TranscriptionController::class, 'transcribe']);
         Route::post('/ai/transcribe/token', [TranscriptionController::class, 'token']);
+        Route::get('/settings', [SettingsController::class, 'show']);
+        Route::put('/settings', [SettingsController::class, 'update']);
         Route::put('/user/profile', [UserController::class, 'updateProfile']);
 
         Route::prefix('metrics')->group(function () {

@@ -135,4 +135,44 @@ class TransactionCurrencyTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['default_currency']);
     }
+
+    public function test_it_returns_settings_with_currency_options(): void
+    {
+        $this->user->update(['default_currency' => 'EUR']);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/settings');
+
+        $response->assertOk()
+            ->assertJsonPath('settings.default_currency', 'EUR')
+            ->assertJsonPath('settings.effective_currency', 'EUR')
+            ->assertJsonPath('defaults.currency', 'EGP')
+            ->assertJsonFragment(['value' => 'USD', 'label' => 'USD']);
+    }
+
+    public function test_it_updates_settings_default_currency(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->putJson('/api/v1/settings', [
+                'default_currency' => 'usd',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('settings.default_currency', 'USD')
+            ->assertJsonPath('settings.effective_currency', 'USD');
+
+        $this->user->refresh();
+        $this->assertSame('USD', $this->user->default_currency);
+    }
+
+    public function test_it_rejects_unsupported_settings_currency(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->putJson('/api/v1/settings', [
+                'default_currency' => 'XYZ',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['default_currency']);
+    }
 }

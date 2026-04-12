@@ -1,13 +1,10 @@
 <?php
 
+use App\Enums\Currency;
+
 return [
-    'currency' => 'EGP',
-    'supported_currencies' => [
-        'AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR', 'PKR', 'EGP',
-        'QAR', 'KWD', 'BHD', 'OMR', 'JOD', 'TRY', 'CAD', 'AUD',
-        'JPY', 'CNY', 'CHF', 'SGD', 'MYR', 'PHP', 'THB', 'IDR',
-        'BRL', 'ZAR', 'NGN', 'KES', 'GHS', 'MAD',
-    ],
+    'currency' => Currency::default()->value,
+    'supported_currencies' => Currency::values(),
     'sms_templates' => [
         'Purchase of AED {amount} with {card} at {brand},',
         'Payment of AED {amount} to {brand} with {card}.',

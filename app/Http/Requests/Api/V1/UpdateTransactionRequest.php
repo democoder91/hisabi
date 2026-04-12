@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\V1;
 use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
+use App\Enums\Currency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -37,7 +38,7 @@ class UpdateTransactionRequest extends FormRequest
             ],
             'created_at' => 'required|date',
             'transaction_type' => 'nullable|string|in:DEBIT,CREDIT',
-            'currency' => 'nullable|string|size:3',
+            'currency' => ['nullable', Rule::enum(Currency::class)],
             'note' => 'nullable|string|max:1000',
         ];
     }
@@ -47,6 +48,12 @@ class UpdateTransactionRequest extends FormRequest
         if ($this->filled('transaction_type')) {
             $this->merge([
                 'transaction_type' => strtoupper($this->input('transaction_type')),
+            ]);
+        }
+
+        if ($this->filled('currency')) {
+            $this->merge([
+                'currency' => strtoupper((string) $this->input('currency')),
             ]);
         }
     }

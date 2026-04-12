@@ -43,7 +43,7 @@ export default function RightSidebar() {
                 className="flex flex-col items-center gap-1 h-auto py-3"
               >
                 <SparkleIcon size={18} />
-                <span 
+                <span
                   className="font-medium whitespace-nowrap"
                   style={{ writingMode: 'vertical-lr', transform: 'rotate(0deg)' }}
                 >
@@ -51,7 +51,7 @@ export default function RightSidebar() {
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-                      
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => togglePanel('sms')}
@@ -72,9 +72,8 @@ export default function RightSidebar() {
         </div>
 
         {/* Expandable content panel */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out border-l ${
-          activePanel ? 'w-[400px]' : 'w-0'
-        }`}>
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out border-l ${activePanel ? 'w-[400px]' : 'w-0'
+          }`}>
           {activePanel === 'ai' && <HisabiAIChat onClose={closePanel} />}
           {activePanel === 'sms' && <SmsParser onClose={closePanel} />}
         </div>

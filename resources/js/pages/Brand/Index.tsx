@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Head, Link } from '@inertiajs/react';
 import { debounce } from 'lodash';
@@ -21,7 +21,7 @@ import BrandStats from '@/components/Domain/BrandStats';
 import { getCategoryIcon } from '@/Utils/categoryIcons';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 
-export default function Index({auth}) {
+export default function Index({ auth }) {
     const [brands, setBrands] = useState([]);
     const [allCategories, setAllCategories] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -38,18 +38,18 @@ export default function Index({auth}) {
 
     useEffect(() => {
         getAllCategories()
-            .then(({data}) => {
+            .then(({ data }) => {
                 setAllCategories(data.allCategories)
             })
             .catch(console.error);
     }, []);
 
     useEffect(() => {
-        if(! hasMorePages) return;
+        if (!hasMorePages) return;
         setLoading(true);
 
         getBrands(currentPage, searchQuery)
-            .then(({data}) => {
+            .then(({ data }) => {
                 setBrands([...brands, ...data.brands.data])
                 setHasMorePages(data.brands.paginatorInfo.hasMorePages)
                 setLoading(false);
@@ -61,7 +61,7 @@ export default function Index({auth}) {
         setLoading(true);
 
         getBrands(currentPage, searchQuery)
-            .then(({data}) => {
+            .then(({ data }) => {
                 setBrands([...brands, ...data.brands.data])
                 setHasMorePages(data.brands.paginatorInfo.hasMorePages)
                 setLoading(false);

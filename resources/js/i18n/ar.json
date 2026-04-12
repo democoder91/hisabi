@@ -1,192 +1,192 @@
 {
-  "navigation": {
-    "dashboard": "لوحة التحكم",
-    "transactions": "المعاملات",
-    "brands": "العلامات التجارية",
-    "categories": "الفئات"
-  },
-  "common": {
-    "create": "إنشاء",
-    "update": "تحديث",
-    "delete": "حذف",
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "search": "بحث..",
-    "name": "الاسم",
-    "loading": "جار التحميل...",
-    "comingSoon": "قريبًا...",
-    "holdToDelete": "اضغط مطولًا للحذف",
-    "transaction": "معاملة",
-    "transactions": "معاملات",
-    "noBrand": "بدون علامة تجارية"
-  },
-  "auth": {
-    "welcomeBack": "مرحبًا بعودتك",
-    "loginWithEmail": "تسجيل الدخول بالبريد الإلكتروني",
-    "email": "البريد الإلكتروني",
-    "password": "كلمة المرور",
-    "login": "تسجيل الدخول"
-  },
-  "dashboard": {
-    "title": "لوحة التحكم",
-    "noData": "لا توجد بيانات كافية لعرض التقارير",
-    "netWorthOverTime": "صافي الثروة عبر الزمن",
-    "totalCash": "إجمالي النقد",
-    "totalCashHelp": "النقد المتاح = الدخل - (المصروفات + المدخرات + الاستثمارات)",
-    "totalSavings": "إجمالي المدخرات",
-    "totalInvestment": "إجمالي الاستثمارات",
-    "totalIncome": "إجمالي الدخل",
-    "totalExpenses": "إجمالي المصروفات",
-    "incomeOverTime": "الدخل عبر الزمن",
-    "spendingOverTime": "الإنفاق عبر الزمن",
-    "categoriesAnalytics": "تحليلات الفئات",
-    "incomeSources": "مصادر الدخل",
-    "spendingByCategory": "الإنفاق حسب الفئة",
-    "overallTrendByCategory": "الاتجاه العام حسب الفئة",
-    "dailyTrendByCategory": "الاتجاه اليومي حسب الفئة",
-    "brandsAnalytics": "تحليلات العلامات التجارية",
-    "spendingByBrand": "الإنفاق حسب العلامة التجارية",
-    "overallTrendByBrand": "الاتجاه العام حسب العلامة التجارية",
-    "financeVisualization": "تصور مالي"
-  },
-  "brand": {
-    "title": "العلامات التجارية",
-    "createBrand": "إنشاء علامة تجارية",
-    "name": "الاسم",
-    "namePlaceholder_en": "English name",
-    "namePlaceholder_ar": "الاسم بالعربية",
-    "category": "الفئة",
-    "uncategorized": "غير مصنف",
-    "searchBrands": "بحث في العلامات..",
-    "createTitle": "إنشاء علامة تجارية",
-    "editTitle": "تعديل علامة تجارية",
-    "lang_en": "EN",
-    "lang_ar": "AR"
-  },
-  "category": {
-    "title": "الفئات",
-    "createCategory": "إنشاء فئة",
-    "name": "الاسم",
-    "namePlaceholder_en": "English name",
-    "namePlaceholder_ar": "الاسم بالعربية",
-    "type": "النوع",
-    "expenses": "مصروفات",
-    "income": "دخل",
-    "savings": "مدخرات",
-    "investment": "استثمار",
-    "all": "الكل",
-    "searchCategories": "بحث في الفئات..",
-    "createTitle": "إنشاء فئة",
-    "editTitle": "تعديل فئة",
-    "lang_en": "EN",
-    "lang_ar": "AR"
-  },
-  "transaction": {
-    "title": "المعاملات",
-    "recordTransaction": "تسجيل معاملة",
-    "totalTransactions": "إجمالي المعاملات",
-    "filters": "الفلاتر",
-    "search": "بحث في المعاملات..",
-    "brand": "العلامة التجارية",
-    "category": "الفئة",
-    "date": "التاريخ",
-    "amount": "المبلغ",
-    "note": "ملاحظة",
-    "clearFilters": "مسح الفلاتر"
-  },
-  "ai": {
-    "title": "Hisabi AI",
-    "titleBeta": "Hisabi AI (تجريبي)"
-  },
-  "smsParser": {
-    "title": "محلل الرسائل"
-  },
-  "settings": {
-    "title": "الإعدادات",
-    "sections": {
-      "general": "عام",
-      "transactions": "المعاملات",
-      "more": "المزيد"
+    "navigation": {
+        "dashboard": "لوحة التحكم",
+        "transactions": "المعاملات",
+        "brands": "العلامات التجارية",
+        "categories": "الفئات"
     },
-    "nav": {
-      "account": "الحساب",
-      "preferences": "التفضيلات",
-      "apiKey": "مفتاح API",
-      "import": "استيراد",
-      "export": "تصدير",
-      "tags": "الوسوم",
-      "smsParserRules": "قواعد تحليل SMS",
-      "productUpdates": "تحديثات المنتج",
-      "feedback": "ملاحظات"
+    "common": {
+        "create": "إنشاء",
+        "update": "تحديث",
+        "delete": "حذف",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "search": "بحث..",
+        "name": "الاسم",
+        "loading": "جار التحميل...",
+        "comingSoon": "قريبًا...",
+        "holdToDelete": "اضغط مطولًا للحذف",
+        "transaction": "معاملة",
+        "transactions": "معاملات",
+        "noBrand": "بدون علامة تجارية"
     },
-    "account": {
-      "profileInformation": "معلومات الملف الشخصي",
-      "profileDescription": "تحديث اسمك وعنوان بريدك الإلكتروني",
-      "name": "الاسم",
-      "namePlaceholder": "أدخل اسمك",
-      "email": "البريد الإلكتروني",
-      "emailPlaceholder": "أدخل بريدك الإلكتروني",
-      "saveProfile": "حفظ الملف الشخصي",
-      "saving": "جار الحفظ...",
-      "profileUpdated": "تم تحديث الملف الشخصي بنجاح",
-      "profileError": "فشل في تحديث الملف الشخصي",
-      "changePassword": "تغيير كلمة المرور",
-      "changePasswordDescription": "تحديث كلمة المرور الخاصة بك",
-      "currentPassword": "كلمة المرور الحالية",
-      "currentPasswordPlaceholder": "أدخل كلمة المرور الحالية",
-      "newPassword": "كلمة المرور الجديدة",
-      "newPasswordPlaceholder": "أدخل كلمة المرور الجديدة (٨ أحرف على الأقل)",
-      "confirmPassword": "تأكيد كلمة المرور الجديدة",
-      "confirmPasswordPlaceholder": "تأكيد كلمة المرور الجديدة",
-      "changePasswordButton": "تغيير كلمة المرور",
-      "changingPassword": "جار التغيير...",
-      "passwordChanged": "تم تغيير كلمة المرور بنجاح",
-      "passwordError": "فشل في تغيير كلمة المرور",
-      "passwordsDoNotMatch": "كلمتا المرور الجديدتان غير متطابقتين",
-      "currentPasswordRequired": "كلمة المرور الحالية مطلوبة"
+    "auth": {
+        "welcomeBack": "مرحبًا بعودتك",
+        "loginWithEmail": "تسجيل الدخول بالبريد الإلكتروني",
+        "email": "البريد الإلكتروني",
+        "password": "كلمة المرور",
+        "login": "تسجيل الدخول"
     },
-    "preferences": {
-      "title": "التفضيلات",
-      "description": "إدارة تفضيلات التطبيق",
-      "language": "اللغة",
-      "languageDescription": "اختر لغتك المفضلة"
+    "dashboard": {
+        "title": "لوحة التحكم",
+        "noData": "لا توجد بيانات كافية لعرض التقارير",
+        "netWorthOverTime": "صافي الثروة عبر الزمن",
+        "totalCash": "إجمالي النقد",
+        "totalCashHelp": "النقد المتاح = الدخل - (المصروفات + المدخرات + الاستثمارات)",
+        "totalSavings": "إجمالي المدخرات",
+        "totalInvestment": "إجمالي الاستثمارات",
+        "totalIncome": "إجمالي الدخل",
+        "totalExpenses": "إجمالي المصروفات",
+        "incomeOverTime": "الدخل عبر الزمن",
+        "spendingOverTime": "الإنفاق عبر الزمن",
+        "categoriesAnalytics": "تحليلات الفئات",
+        "incomeSources": "مصادر الدخل",
+        "spendingByCategory": "الإنفاق حسب الفئة",
+        "overallTrendByCategory": "الاتجاه العام حسب الفئة",
+        "dailyTrendByCategory": "الاتجاه اليومي حسب الفئة",
+        "brandsAnalytics": "تحليلات العلامات التجارية",
+        "spendingByBrand": "الإنفاق حسب العلامة التجارية",
+        "overallTrendByBrand": "الاتجاه العام حسب العلامة التجارية",
+        "financeVisualization": "تصور مالي"
     },
-    "placeholder": {
-      "apiKey": {
-        "title": "مفتاح API",
-        "description": "إدارة مفاتيح API الخاصة بك"
-      },
-      "import": {
-        "title": "استيراد",
-        "description": "استيراد بياناتك"
-      },
-      "export": {
-        "title": "تصدير",
-        "description": "تصدير بياناتك"
-      },
-      "tags": {
-        "title": "الوسوم",
-        "description": "إدارة وسوم المعاملات"
-      },
-      "smsParserRules": {
-        "title": "قواعد تحليل SMS",
-        "description": "تهيئة قواعد تحليل SMS"
-      },
-      "productUpdates": {
-        "title": "تحديثات المنتج",
-        "description": "ابق على اطلاع بأحدث الميزات"
-      },
-      "feedback": {
-        "title": "ملاحظات",
-        "description": "شاركنا ملاحظاتك"
-      }
+    "brand": {
+        "title": "العلامات التجارية",
+        "createBrand": "إنشاء علامة تجارية",
+        "name": "الاسم",
+        "namePlaceholder_en": "English name",
+        "namePlaceholder_ar": "الاسم بالعربية",
+        "category": "الفئة",
+        "uncategorized": "غير مصنف",
+        "searchBrands": "بحث في العلامات..",
+        "createTitle": "إنشاء علامة تجارية",
+        "editTitle": "تعديل علامة تجارية",
+        "lang_en": "EN",
+        "lang_ar": "AR"
+    },
+    "category": {
+        "title": "الفئات",
+        "createCategory": "إنشاء فئة",
+        "name": "الاسم",
+        "namePlaceholder_en": "English name",
+        "namePlaceholder_ar": "الاسم بالعربية",
+        "type": "النوع",
+        "expenses": "مصروفات",
+        "income": "دخل",
+        "savings": "مدخرات",
+        "investment": "استثمار",
+        "all": "الكل",
+        "searchCategories": "بحث في الفئات..",
+        "createTitle": "إنشاء فئة",
+        "editTitle": "تعديل فئة",
+        "lang_en": "EN",
+        "lang_ar": "AR"
+    },
+    "transaction": {
+        "title": "المعاملات",
+        "recordTransaction": "تسجيل معاملة",
+        "totalTransactions": "إجمالي المعاملات",
+        "filters": "الفلاتر",
+        "search": "بحث في المعاملات..",
+        "brand": "العلامة التجارية",
+        "category": "الفئة",
+        "date": "التاريخ",
+        "amount": "المبلغ",
+        "note": "ملاحظة",
+        "clearFilters": "مسح الفلاتر"
+    },
+    "ai": {
+        "title": "Hisabi AI",
+        "titleBeta": "Hisabi AI (تجريبي)"
+    },
+    "smsParser": {
+        "title": "محلل الرسائل"
+    },
+    "settings": {
+        "title": "الإعدادات",
+        "sections": {
+            "general": "عام",
+            "transactions": "المعاملات",
+            "more": "المزيد"
+        },
+        "nav": {
+            "account": "الحساب",
+            "preferences": "التفضيلات",
+            "apiKey": "مفتاح API",
+            "import": "استيراد",
+            "export": "تصدير",
+            "tags": "الوسوم",
+            "smsParserRules": "قواعد تحليل SMS",
+            "productUpdates": "تحديثات المنتج",
+            "feedback": "ملاحظات"
+        },
+        "account": {
+            "profileInformation": "معلومات الملف الشخصي",
+            "profileDescription": "تحديث اسمك وعنوان بريدك الإلكتروني",
+            "name": "الاسم",
+            "namePlaceholder": "أدخل اسمك",
+            "email": "البريد الإلكتروني",
+            "emailPlaceholder": "أدخل بريدك الإلكتروني",
+            "saveProfile": "حفظ الملف الشخصي",
+            "saving": "جار الحفظ...",
+            "profileUpdated": "تم تحديث الملف الشخصي بنجاح",
+            "profileError": "فشل في تحديث الملف الشخصي",
+            "changePassword": "تغيير كلمة المرور",
+            "changePasswordDescription": "تحديث كلمة المرور الخاصة بك",
+            "currentPassword": "كلمة المرور الحالية",
+            "currentPasswordPlaceholder": "أدخل كلمة المرور الحالية",
+            "newPassword": "كلمة المرور الجديدة",
+            "newPasswordPlaceholder": "أدخل كلمة المرور الجديدة (٨ أحرف على الأقل)",
+            "confirmPassword": "تأكيد كلمة المرور الجديدة",
+            "confirmPasswordPlaceholder": "تأكيد كلمة المرور الجديدة",
+            "changePasswordButton": "تغيير كلمة المرور",
+            "changingPassword": "جار التغيير...",
+            "passwordChanged": "تم تغيير كلمة المرور بنجاح",
+            "passwordError": "فشل في تغيير كلمة المرور",
+            "passwordsDoNotMatch": "كلمتا المرور الجديدتان غير متطابقتين",
+            "currentPasswordRequired": "كلمة المرور الحالية مطلوبة"
+        },
+        "preferences": {
+            "title": "التفضيلات",
+            "description": "إدارة تفضيلات التطبيق",
+            "language": "اللغة",
+            "languageDescription": "اختر لغتك المفضلة"
+        },
+        "placeholder": {
+            "apiKey": {
+                "title": "مفتاح API",
+                "description": "إدارة مفاتيح API الخاصة بك"
+            },
+            "import": {
+                "title": "استيراد",
+                "description": "استيراد بياناتك"
+            },
+            "export": {
+                "title": "تصدير",
+                "description": "تصدير بياناتك"
+            },
+            "tags": {
+                "title": "الوسوم",
+                "description": "إدارة وسوم المعاملات"
+            },
+            "smsParserRules": {
+                "title": "قواعد تحليل SMS",
+                "description": "تهيئة قواعد تحليل SMS"
+            },
+            "productUpdates": {
+                "title": "تحديثات المنتج",
+                "description": "ابق على اطلاع بأحدث الميزات"
+            },
+            "feedback": {
+                "title": "ملاحظات",
+                "description": "شاركنا ملاحظاتك"
+            }
+        }
+    },
+    "userNav": {
+        "settings": "الإعدادات",
+        "logout": "تسجيل الخروج",
+        "language": "اللغة",
+        "english": "English",
+        "arabic": "العربية"
     }
-  },
-  "userNav": {
-    "settings": "الإعدادات",
-    "logout": "تسجيل الخروج",
-    "language": "اللغة",
-    "english": "English",
-    "arabic": "العربية"
-  }
 }

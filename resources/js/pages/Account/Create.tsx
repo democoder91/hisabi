@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type AccountTranslations = {
     en?: string;
@@ -28,6 +29,7 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
     const { t } = useTranslation();
     const [nameEn, setNameEn] = useState('');
     const [nameAr, setNameAr] = useState('');
+    const [nameLang, setNameLang] = useState<'en' | 'ar'>('en');
     const [balance, setBalance] = useState('0');
     const [loading, setLoading] = useState(false);
 
@@ -35,6 +37,7 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
         if (!open) {
             setNameEn('');
             setNameAr('');
+            setNameLang('en');
             setBalance('0');
             setLoading(false);
         }
@@ -69,34 +72,31 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
                 <div className="space-y-4">
                     <div>
                         <Label>{t('account.name')}</Label>
-                        <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                            <div>
-                                <Label htmlFor="account-name-en" className="text-xs text-muted-foreground">
-                                    {t('account.lang_en')}
-                                </Label>
+                        <Tabs value={nameLang} onValueChange={(value) => setNameLang(value as 'en' | 'ar')} className="mt-1">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="en">{t('account.lang_en')}</TabsTrigger>
+                                <TabsTrigger value="ar">{t('account.lang_ar')}</TabsTrigger>
+                            </TabsList>
+                            {nameLang === 'en' ? (
                                 <Input
                                     id="account-name-en"
                                     value={nameEn}
-                                    className="mt-1"
+                                    className="mt-2"
                                     placeholder={t('account.namePlaceholder_en')}
                                     onChange={(event) => setNameEn(event.target.value)}
                                     dir="ltr"
                                 />
-                            </div>
-                            <div>
-                                <Label htmlFor="account-name-ar" className="text-xs text-muted-foreground">
-                                    {t('account.lang_ar')}
-                                </Label>
+                            ) : (
                                 <Input
                                     id="account-name-ar"
                                     value={nameAr}
-                                    className="mt-1"
+                                    className="mt-2"
                                     placeholder={t('account.namePlaceholder_ar')}
                                     onChange={(event) => setNameAr(event.target.value)}
                                     dir="rtl"
                                 />
-                            </div>
-                        </div>
+                            )}
+                        </Tabs>
                     </div>
                     <div>
                         <Label htmlFor="account-balance">{t('account.balance')}</Label>

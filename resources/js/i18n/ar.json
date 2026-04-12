@@ -97,6 +97,8 @@
         "ownerOnlySettings": "هذا الحساب تمت مشاركته معك. إعدادات الحساب والمشاركة مخصصة للمالك فقط.",
         "inviteByEmail": "دعوة عبر البريد الإلكتروني",
         "invitePlaceholder": "name@example.com",
+        "searchUsersPlaceholder": "ابدأ الكتابة للبحث عن بريد المستخدم",
+        "searchUsersHelp": "ابدأ الكتابة لعرض رسائل البريد المطابقة من الخادم.",
         "permissionLevel": "مستوى الصلاحية",
         "inviteUser": "دعوة مستخدم",
         "revokeAccess": "إلغاء الوصول",
@@ -144,6 +146,7 @@
         "weekly": "أسبوعي",
         "monthly": "شهري",
         "yearly": "سنوي",
+        "selectCategories": "اختر الفئات",
         "noBudgets": "لا توجد ميزانيات بعد.",
         "spent": "المصروف",
         "remaining": "المتبقي"

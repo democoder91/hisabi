@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LongPressButton } from '@/components/ui/long-press-button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
 
+import CategoryMultiSelect from './CategoryMultiSelect';
 import { BudgetCategory, BudgetRecord, budgetRecurrenceOptions } from './types';
 
 type EditBudgetProps = {
@@ -69,12 +70,6 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
 
         return true;
     }, [amount, budget, endAt, nameEn, reoccurrence, selectedCategoryIds]);
-
-    const toggleCategory = (categoryId: number) => {
-        setSelectedCategoryIds((current) => current.includes(categoryId)
-            ? current.filter((id) => id !== categoryId)
-            : [...current, categoryId]);
-    };
 
     const handleUpdate = () => {
         if (!budget || !isReady || loading) {
@@ -166,26 +161,32 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
                             </div>
                             <div>
                                 <Label>{t('budget.budgetType')}</Label>
-                                <Tabs value={budgetType} onValueChange={(value) => setBudgetType(value as 'spending' | 'saving')} className="mt-1">
-                                    <TabsList className="grid w-full grid-cols-2">
-                                        <TabsTrigger value="spending">{t('budget.spending')}</TabsTrigger>
-                                        <TabsTrigger value="saving">{t('budget.saving')}</TabsTrigger>
-                                    </TabsList>
-                                </Tabs>
+                                <Select value={budgetType} onValueChange={(value) => setBudgetType(value as 'spending' | 'saving')}>
+                                    <SelectTrigger className="mt-1 h-10">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="spending">{t('budget.spending')}</SelectItem>
+                                        <SelectItem value="saving">{t('budget.saving')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
                         <div>
                             <Label>{t('budget.reoccurrence')}</Label>
-                            <Tabs value={reoccurrence} onValueChange={(value) => setReoccurrence(value as BudgetRecord['reoccurrence'])} className="mt-1">
-                                <TabsList className="grid w-full grid-cols-5">
+                            <Select value={reoccurrence} onValueChange={(value) => setReoccurrence(value as BudgetRecord['reoccurrence'])}>
+                                <SelectTrigger className="mt-1 h-10">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
                                     {budgetRecurrenceOptions.map((option) => (
-                                        <TabsTrigger key={option} value={option}>
+                                        <SelectItem key={option} value={option}>
                                             {t(`budget.${option.toLowerCase()}`)}
-                                        </TabsTrigger>
+                                        </SelectItem>
                                     ))}
-                                </TabsList>
-                            </Tabs>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -228,27 +229,11 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
 
                         <div>
                             <Label>{t('budget.categories')}</Label>
-                            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                                {categories.map((category) => {
-                                    const isSelected = selectedCategoryIds.includes(category.id);
-
-                                    return (
-                                        <button
-                                            key={category.id}
-                                            type="button"
-                                            onClick={() => toggleCategory(category.id)}
-                                            className={cn(
-                                                'rounded-lg border px-3 py-2 text-sm text-left transition-colors',
-                                                isSelected
-                                                    ? 'border-primary bg-primary/10 text-foreground'
-                                                    : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                                            )}
-                                        >
-                                            {category.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <CategoryMultiSelect
+                                categories={categories}
+                                selectedCategoryIds={selectedCategoryIds}
+                                onChange={setSelectedCategoryIds}
+                            />
                         </div>
 
                         <div className="flex justify-end gap-2">

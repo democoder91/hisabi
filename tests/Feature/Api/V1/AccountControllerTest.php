@@ -208,6 +208,42 @@ class AccountControllerTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_search_shareable_users_by_email(): void
+    {
+        $account = Account::factory()->create(['user_id' => $this->user->id]);
+        $matchingUser = User::factory()->create(['email' => 'jane.doe@example.com']);
+        $alreadySharedUser = User::factory()->create(['email' => 'james.shared@example.com']);
+        User::factory()->create(['email' => 'other.person@example.com']);
+
+        $account->sharedUsers()->attach($alreadySharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/accounts/{$account->id}/shareable-users?search=jan");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'users')
+            ->assertJsonPath('users.0.id', $matchingUser->id)
+            ->assertJsonPath('users.0.email', $matchingUser->email);
+    }
+
+    public function test_shareable_user_search_excludes_the_owner_and_existing_shared_users(): void
+    {
+        $account = Account::factory()->create(['user_id' => $this->user->id]);
+        $alreadySharedUser = User::factory()->create(['email' => 'shared-match@example.com']);
+        $availableUser = User::factory()->create(['email' => 'shareable-match@example.com']);
+
+        $account->sharedUsers()->attach($alreadySharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/accounts/{$account->id}/shareable-users?search=match");
+
+        $emails = collect($response->json('users'))->pluck('email')->all();
+
+        $response->assertOk();
+
+        $this->assertNotContains($this->user->email, $emails);
+        $this->assertNotContains($alreadySharedUser->email, $emails);
+        $this->assertContains($availableUser->email, $emails);
+    }
+
     public function test_owner_can_update_a_shared_users_permission(): void
     {
         $account = Account::factory()->create(['user_id' => $this->user->id]);
@@ -270,5 +306,15 @@ class AccountControllerTest extends TestCase
         ]);
 
         $inviteResponse->assertStatus(403);
+    }
+
+    public function test_shared_user_cannot_search_shareable_users(): void
+    {
+        $account = Account::factory()->create();
+        $account->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/accounts/{$account->id}/shareable-users?search=user");
+
+        $response->assertStatus(403);
     }
 }

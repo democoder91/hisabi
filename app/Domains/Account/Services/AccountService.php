@@ -89,6 +89,35 @@ class AccountService
         return $account;
     }
 
+    public function searchShareableUsers(Account $account, string $search, int $limit = 10): Collection
+    {
+        $term = trim($search);
+
+        if ($term === '') {
+            return new Collection();
+        }
+
+        $excludedUserIds = $account->sharedUsers()
+            ->pluck('users.id')
+            ->push($account->user_id)
+            ->unique()
+            ->values();
+
+        return User::query()
+            ->select(['id', 'name', 'email'])
+            ->whereNotIn('id', $excludedUserIds)
+            ->where(function (Builder $query) use ($term) {
+                $searchPattern = "%{$term}%";
+
+                $query->where('email', 'like', $searchPattern)
+                    ->orWhere('name', 'like', $searchPattern);
+            })
+            ->orderByRaw('CASE WHEN email LIKE ? THEN 0 ELSE 1 END', ["{$term}%"])
+            ->orderBy('email')
+            ->limit($limit)
+            ->get();
+    }
+
     public function invite(Account $account, array $data): Account
     {
         $shareUser = User::query()->where('email', $data['email'])->firstOrFail();

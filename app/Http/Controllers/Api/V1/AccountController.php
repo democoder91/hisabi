@@ -74,6 +74,26 @@ class AccountController extends Controller
         ]);
     }
 
+    public function searchShareableUsers(Request $request, int $id): JsonResponse
+    {
+        $account = $this->accountService->findAccessibleOrFail($id);
+        $this->authorize('manageSharing', $account);
+
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $users = $this->accountService->searchShareableUsers($account, (string) ($validated['search'] ?? ''));
+
+        return response()->json([
+            'users' => $users->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ])->values()->all(),
+        ]);
+    }
+
     public function share(InviteAccountShareRequest $request, int $id): JsonResponse
     {
         $account = $this->accountService->findAccessibleOrFail($id);

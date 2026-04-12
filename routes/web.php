@@ -47,6 +47,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/accounts', [\App\Http\Controllers\Api\V1\AccountController::class, 'store']);
         Route::put('/accounts/{id}', [\App\Http\Controllers\Api\V1\AccountController::class, 'update']);
         Route::delete('/accounts/{id}', [\App\Http\Controllers\Api\V1\AccountController::class, 'destroy']);
+        Route::get('/accounts/{id}/shareable-users', [\App\Http\Controllers\Api\V1\AccountController::class, 'searchShareableUsers']);
         Route::post('/accounts/{id}/shares', [\App\Http\Controllers\Api\V1\AccountController::class, 'share']);
         Route::put('/accounts/{id}/shares/{shareUserId}', [\App\Http\Controllers\Api\V1\AccountController::class, 'updateShare']);
         Route::delete('/accounts/{id}/shares/{shareUserId}', [\App\Http\Controllers\Api\V1\AccountController::class, 'revokeShare']);

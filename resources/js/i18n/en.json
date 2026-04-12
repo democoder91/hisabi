@@ -96,6 +96,8 @@
         "ownerOnlySettings": "This account is shared with you. Account settings and sharing are owner-only.",
         "inviteByEmail": "Invite by email",
         "invitePlaceholder": "name@example.com",
+        "searchUsersPlaceholder": "Type to search user emails",
+        "searchUsersHelp": "Start typing to search for a user email from the backend.",
         "permissionLevel": "Permission level",
         "inviteUser": "Invite user",
         "revokeAccess": "Revoke access",
@@ -143,6 +145,7 @@
         "weekly": "Weekly",
         "monthly": "Monthly",
         "yearly": "Yearly",
+        "selectCategories": "Select categories",
         "noBudgets": "No budgets yet.",
         "spent": "Spent",
         "remaining": "Remaining"

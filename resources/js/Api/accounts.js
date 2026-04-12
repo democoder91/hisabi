@@ -120,6 +120,30 @@ export const updateAccount = async ({ id, name, balance }) => {
     };
 };
 
+export const searchAccountShareableUsers = async ({ id, query }) => {
+    const params = new URLSearchParams();
+
+    if (query) {
+        params.append('search', query);
+    }
+
+    const response = await fetch(`/api/v1/accounts/${id}/shareable-users?${params.toString()}`, {
+        method: 'GET',
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    return {
+        data: {
+            users: result.users,
+        },
+    };
+};
+
 export const inviteAccountShare = async ({ id, email, permissionLevel }) => {
     const response = await fetch(`/api/v1/accounts/${id}/shares`, {
         method: 'POST',

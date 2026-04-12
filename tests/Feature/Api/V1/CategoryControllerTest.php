@@ -85,17 +85,20 @@ class CategoryControllerTest extends TestCase
                 'category' => [
                     'id',
                     'name',
-                    'user_id',
+                    'name_translations',
                     'type',
                     'color',
                     'icon',
-                    'transactions_count',
+                    'transactionsCount',
                 ],
             ])
-            ->assertJsonPath('category.name.en', 'Test Category')
+            ->assertJsonPath('category.name', 'Test Category')
+            ->assertJsonPath('category.name_translations.en', 'Test Category')
+            ->assertJsonPath('category.name_translations.ar', 'فئة تجريبية')
             ->assertJsonPath('category.type', 'EXPENSES')
             ->assertJsonPath('category.color', 'red')
-            ->assertJsonPath('category.icon', 'wallet');
+            ->assertJsonPath('category.icon', 'wallet')
+            ->assertJsonPath('category.transactionsCount', 0);
 
         $category = Category::query()->latest('id')->first();
 
@@ -177,17 +180,20 @@ class CategoryControllerTest extends TestCase
                 'category' => [
                     'id',
                     'name',
-                    'user_id',
+                    'name_translations',
                     'type',
                     'color',
                     'icon',
-                    'transactions_count',
+                    'transactionsCount',
                 ],
             ])
-            ->assertJsonPath('category.name.en', 'New Name')
+            ->assertJsonPath('category.name', 'New Name')
+            ->assertJsonPath('category.name_translations.en', 'New Name')
+            ->assertJsonPath('category.name_translations.ar', 'اسم جديد')
             ->assertJsonPath('category.type', 'INCOME')
             ->assertJsonPath('category.color', 'blue')
-            ->assertJsonPath('category.icon', 'money');
+            ->assertJsonPath('category.icon', 'money')
+            ->assertJsonPath('category.transactionsCount', 0);
 
         $category->refresh();
         $this->assertSame('New Name', $category->getTranslation('name', 'en'));
@@ -260,13 +266,17 @@ class CategoryControllerTest extends TestCase
                 'category' => [
                     'id',
                     'name',
+                    'name_translations',
                     'type',
                     'color',
                     'icon',
+                    'transactionsCount',
                 ],
             ])
             ->assertJsonPath('category.id', $category->id)
-            ->assertJsonPath('category.name.en', 'Category to Delete');
+            ->assertJsonPath('category.name', 'Category to Delete')
+            ->assertJsonPath('category.name_translations.en', 'Category to Delete')
+            ->assertJsonPath('category.transactionsCount', 0);
 
         $this->assertSoftDeleted('categories', [
             'id' => $category->id,

@@ -10,6 +10,7 @@ import { updateCategory, deleteCategory } from "../../Api";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
 import { getCategoryIcon } from '@/Utils/categoryIcons';
@@ -72,6 +73,7 @@ export default function Edit({ category, onUpdate, onDelete, onClose }) {
             <Dialog open={!!category} onOpenChange={(open) => !open && onClose()}>
                 <DialogContent>
                     <DialogTitle className="sr-only">{t('category.editTitle')}</DialogTitle>
+                    <DialogDescription className="sr-only">{t('category.editTitle')}</DialogDescription>
                     {category && (
                         <div className="space-y-4">
                             <div className="flex justify-center">

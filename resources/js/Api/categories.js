@@ -1,6 +1,20 @@
 import { getCsrfToken } from './common.js';
 import { getCategoryStats as getCategoryStatsMetric } from './metrics.js';
 
+const normalizeCategory = (category = {}) => {
+    const nameTranslations = category.name_translations
+        ?? (typeof category.name === 'object' && category.name !== null ? category.name : {});
+
+    return {
+        ...category,
+        name: typeof category.name === 'string'
+            ? category.name
+            : nameTranslations.en ?? nameTranslations.ar ?? '',
+        name_translations: nameTranslations,
+        transactionsCount: category.transactionsCount ?? category.transactions_count ?? 0,
+    };
+};
+
 export const getAllCategories = async () => {
     const response = await fetch('/api/v1/categories/all', {
         method: 'GET',
@@ -14,7 +28,7 @@ export const getAllCategories = async () => {
 
     return {
         data: {
-            allCategories: result.data
+            allCategories: result.data.map(normalizeCategory)
         }
     };
 }
@@ -39,10 +53,7 @@ export const createCategory = async ({name, type, color, icon}) => {
 
     return {
         data: {
-            createCategory: {
-                ...result.category,
-                transactionsCount: result.category.transactions_count
-            }
+            createCategory: normalizeCategory(result.category)
         }
     };
 }
@@ -67,10 +78,7 @@ export const updateCategory = async ({id, name, type, color, icon}) => {
 
     return {
         data: {
-            updateCategory: {
-                ...result.category,
-                transactionsCount: result.category.transactions_count
-            }
+            updateCategory: normalizeCategory(result.category)
         }
     };
 }
@@ -94,7 +102,7 @@ export const deleteCategory = async (id) => {
 
     return {
         data: {
-            deleteCategory: result.category
+            deleteCategory: normalizeCategory(result.category)
         }
     };
 }

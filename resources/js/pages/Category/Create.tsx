@@ -9,6 +9,7 @@ import { createCategory } from "../../Api";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
 import { getCategoryIcon } from '@/Utils/categoryIcons';
@@ -62,6 +63,7 @@ export default function Create({ showCreate, onClose, onCreate }) {
             <Dialog open={showCreate} onOpenChange={(open) => !open && onClose()}>
                 <DialogContent>
                     <DialogTitle className="sr-only">{t('category.createTitle')}</DialogTitle>
+                    <DialogDescription className="sr-only">{t('category.createTitle')}</DialogDescription>
                     <div className="space-y-4">
 
                         <div className="flex justify-center">

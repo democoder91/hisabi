@@ -3,6 +3,7 @@
 namespace App\Http\Commands\Category\UpdateCategoryCommand;
 
 use App\Domains\Category\Models\Category;
+use App\Http\Resources\CategoryResource;
 use Illuminate\Http\JsonResponse;
 
 readonly class UpdateCategoryCommandResponse
@@ -14,7 +15,7 @@ readonly class UpdateCategoryCommandResponse
     public function toResponse(): JsonResponse
     {
         return response()->json([
-            'category' => $this->category->loadCount('transactions'),
+            'category' => new CategoryResource($this->category->loadCount('transactions')),
         ]);
     }
 }

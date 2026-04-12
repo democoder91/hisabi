@@ -3,6 +3,7 @@
 namespace App\Http\Commands\Category\DeleteCategoryCommand;
 
 use App\Domains\Category\Models\Category;
+use App\Http\Resources\CategoryResource;
 use Illuminate\Http\JsonResponse;
 
 readonly class DeleteCategoryCommandResponse
@@ -14,7 +15,7 @@ readonly class DeleteCategoryCommandResponse
     public function toResponse(): JsonResponse
     {
         return response()->json([
-            'category' => $this->category,
+            'category' => new CategoryResource($this->category->loadCount('transactions')),
         ]);
     }
 }

@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { debounce } from 'lodash';
+import { type ColumnDef } from '@tanstack/react-table';
 
 import { getBudgets } from '@/Api/budgets';
 import { getAllCategories } from '@/Api/categories';
 import Authenticated from '@/Layouts/Authenticated';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { DataTable } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { animateRowItem, formatNumber } from '@/Utils';
@@ -71,6 +72,74 @@ export default function Index({ auth }: { auth: any }) {
         });
     }, [budgets, searchQuery]);
 
+    const columns = useMemo<ColumnDef<BudgetRecord>[]>(() => [
+        {
+            accessorKey: 'name',
+            header: t('budget.name'),
+            cell: ({ row }) => <p className="font-medium">{row.original.name}</p>,
+        },
+        {
+            accessorKey: 'amount',
+            header: t('budget.amount'),
+            cell: ({ row }) => <span className="whitespace-nowrap">AED {formatNumber(row.original.amount, null)}</span>,
+        },
+        {
+            accessorKey: 'reoccurrence',
+            header: t('budget.reoccurrence'),
+            cell: ({ row }) => (
+                <Badge variant="secondary">
+                    {t(`budget.${row.original.reoccurrence.toLowerCase()}`)}
+                </Badge>
+            ),
+        },
+        {
+            id: 'budgetType',
+            header: t('budget.budgetType'),
+            cell: ({ row }) => (
+                <span>{row.original.saving ? t('budget.saving') : t('budget.spending')}</span>
+            ),
+        },
+        {
+            id: 'categories',
+            header: t('budget.categories'),
+            cell: ({ row }) => (
+                <span className="text-sm text-muted-foreground">
+                    {row.original.categories.map((category) => category.name).join(', ') || ' - '}
+                </span>
+            ),
+        },
+        {
+            id: 'period',
+            header: t('budget.period'),
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap text-sm text-muted-foreground">
+                    {row.original.start_at_date} - {row.original.end_at_date}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'total_transactions_amount',
+            header: t('budget.spent'),
+            cell: ({ row }) => <span className="whitespace-nowrap">AED {formatNumber(row.original.total_transactions_amount, null)}</span>,
+        },
+        {
+            accessorKey: 'remaining_to_spend',
+            header: t('budget.remaining'),
+            cell: ({ row }) => <span className="whitespace-nowrap">AED {formatNumber(row.original.remaining_to_spend, null)}</span>,
+        },
+        {
+            id: 'actions',
+            header: () => <div className="text-right">{t('common.actions')}</div>,
+            cell: ({ row }) => (
+                <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setEditBudget(row.original)}>
+                        {t('common.edit')}
+                    </Button>
+                </div>
+            ),
+        },
+    ], [t]);
+
     const header = (
         <div className="flex items-center justify-between w-full">
             <h2>{t('budget.title')}</h2>
@@ -108,52 +177,12 @@ export default function Index({ auth }: { auth: any }) {
                         />
                     )}
 
-                    {filteredBudgets.length === 0 ? (
-                        <Card>
-                            <CardContent className="p-6 text-sm text-muted-foreground">
-                                {t('budget.noBudgets')}
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {filteredBudgets.map((budget) => (
-                                <Card key={budget.id} id={`item-${budget.id}`} className="py-0">
-                                    <CardContent className="grid gap-4 p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <button className="text-left font-medium hover:underline" onClick={() => setEditBudget(budget)}>
-                                                    {budget.name}
-                                                </button>
-                                                <p className="text-sm text-muted-foreground">
-                                                    AED {formatNumber(budget.amount, null)}
-                                                </p>
-                                            </div>
-                                            <Badge variant="secondary">
-                                                {t(`budget.${budget.reoccurrence.toLowerCase()}`)}
-                                            </Badge>
-                                        </div>
-
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p>
-                                                {budget.saving ? t('budget.saving') : t('budget.spending')}
-                                                {' · '}
-                                                {budget.categories.map((category) => category.name).join(', ')}
-                                            </p>
-                                            <p>
-                                                {budget.start_at_date} - {budget.end_at_date}
-                                            </p>
-                                            <p>
-                                                {t('budget.spent')}: AED {formatNumber(budget.total_transactions_amount, null)}
-                                            </p>
-                                            <p>
-                                                {t('budget.remaining')}: AED {formatNumber(budget.remaining_to_spend, null)}
-                                            </p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
+                    <DataTable
+                        columns={columns}
+                        data={filteredBudgets}
+                        emptyMessage={searchQuery ? t('common.noResults') : t('budget.noBudgets')}
+                        getRowId={(budget) => budget.id}
+                    />
                 </div>
             </div>
         </Authenticated>

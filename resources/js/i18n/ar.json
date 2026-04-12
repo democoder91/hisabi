@@ -10,6 +10,7 @@
     "common": {
         "create": "إنشاء",
         "update": "تحديث",
+        "actions": "الإجراءات",
         "owner": "المالك",
         "shared": "مشترك",
         "view": "عرض",
@@ -20,6 +21,7 @@
         "search": "بحث..",
         "name": "الاسم",
         "loading": "جار التحميل...",
+        "noResults": "لا توجد نتائج.",
         "comingSoon": "قريبًا...",
         "holdToDelete": "اضغط مطولًا للحذف",
         "transaction": "معاملة",

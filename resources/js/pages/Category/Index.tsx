@@ -4,15 +4,16 @@ import { Head, Link } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { type ColumnDef } from '@tanstack/react-table';
 
 import Authenticated from '@/Layouts/Authenticated';
 import Edit from './Edit';
 import Create from './Create';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 import { getAllCategories } from '@/Api';
 import { animateRowItem } from '@/Utils';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import CategoryStats from '@/components/Domain/CategoryStats';
@@ -118,6 +119,87 @@ export default function Index({ auth }: { auth: any }) {
         }
     };
 
+    const columns = useMemo<ColumnDef<Category>[]>(() => [
+        {
+            accessorKey: 'name',
+            header: t('category.name'),
+            cell: ({ row }) => {
+                const category = row.original;
+                const CategoryIcon = category.icon ? getCategoryIcon(category.icon) : null;
+
+                return (
+                    <div className="flex items-center gap-3">
+                        {CategoryIcon ? (
+                            <div className={`badge badge-${category.color} flex size-10 items-center justify-center rounded-full`}>
+                                <CategoryIcon size={20} weight="regular" className="text-current" />
+                            </div>
+                        ) : (
+                            <Badge
+                                className={`badge badge-${category.color} h-3 w-3 rounded-full p-0`}
+                                variant="outline"
+                            />
+                        )}
+                        <p className="font-medium">{category.name}</p>
+                    </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'type',
+            header: t('category.type'),
+            cell: ({ row }) => (
+                <Badge variant="secondary">{t(`category.${row.original.type.toLowerCase()}`)}</Badge>
+            ),
+        },
+        {
+            accessorKey: 'transactionsCount',
+            header: t('common.transactions'),
+            cell: ({ row }) => row.original.transactionsCount,
+        },
+        {
+            id: 'actions',
+            header: () => <div className="text-right">{t('common.actions')}</div>,
+            cell: ({ row }) => (
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={`/transactions?category=${row.original.id}`}>{t('common.view')}</Link>
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setEditCategory(row.original)}>
+                        {t('common.edit')}
+                    </Button>
+                </div>
+            ),
+        },
+    ], [t]);
+
+    const categoryTabs = useMemo(() => [
+        {
+            value: 'all',
+            label: t('category.all'),
+            items: filteredCategories,
+        },
+        {
+            value: 'INCOME',
+            label: t('category.income'),
+            items: groupedCategories.INCOME,
+        },
+        {
+            value: 'EXPENSES',
+            label: t('category.expenses'),
+            items: groupedCategories.EXPENSES,
+        },
+        {
+            value: 'SAVINGS',
+            label: t('category.savings'),
+            items: groupedCategories.SAVINGS,
+        },
+        {
+            value: 'INVESTMENT',
+            label: t('category.investment'),
+            items: groupedCategories.INVESTMENT,
+        },
+    ], [filteredCategories, groupedCategories, t]);
+
     const header = (
         <div className="flex items-center justify-between w-full">
             <h2>{t('category.title')}</h2>
@@ -150,7 +232,7 @@ export default function Index({ auth }: { auth: any }) {
                 <div className="max-w-7xl mx-auto grid gap-4">
                     <CategoryStats dateRange={dateRange} />
 
-                    {categories.length > 0 && (
+                    {categories.length > 0 ? (
                         <Tabs defaultValue="all" className="w-full">
                             <div className="flex justify-between items-center mb-2">
                                 <Input
@@ -159,226 +241,37 @@ export default function Index({ auth }: { auth: any }) {
                                     className='max-w-56'
                                     onChange={performSearch}
                                 />
-                                <TabsList>
-                                    <TabsTrigger value="all">
-                                        {t('category.all')} ({filteredCategories.length})
-                                    </TabsTrigger>
-                                    {groupedCategories.INCOME.length > 0 && (
-                                        <TabsTrigger value="INCOME">
-                                            {t('category.income')} ({groupedCategories.INCOME.length})
-                                        </TabsTrigger>
-                                    )}
-                                    {groupedCategories.EXPENSES.length > 0 && (
-                                        <TabsTrigger value="EXPENSES">
-                                            {t('category.expenses')} ({groupedCategories.EXPENSES.length})
-                                        </TabsTrigger>
-                                    )}
-                                    {groupedCategories.SAVINGS.length > 0 && (
-                                        <TabsTrigger value="SAVINGS">
-                                            {t('category.savings')} ({groupedCategories.SAVINGS.length})
-                                        </TabsTrigger>
-                                    )}
-                                    {groupedCategories.INVESTMENT.length > 0 && (
-                                        <TabsTrigger value="INVESTMENT">
-                                            {t('category.investment')} ({groupedCategories.INVESTMENT.length})
-                                        </TabsTrigger>
-                                    )}
+                                <TabsList className="h-auto flex-wrap justify-start">
+                                    {categoryTabs
+                                        .filter((tab) => tab.value === 'all' || tab.items.length > 0)
+                                        .map((tab) => (
+                                            <TabsTrigger key={tab.value} value={tab.value}>
+                                                {tab.label} ({tab.items.length})
+                                            </TabsTrigger>
+                                        ))}
                                 </TabsList>
                             </div>
 
-                            <TabsContent value="all">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                    {filteredCategories.map((category) => {
-                                        const CategoryIcon = category.icon ? getCategoryIcon(category.icon) : null;
-                                        return (
-                                            <Card key={category.id} className='py-0' id={'item-' + category.id}>
-                                                <CardContent className='flex justify-between items-center p-4'>
-                                                    <div className='flex gap-3 items-center'>
-                                                        {CategoryIcon ? (
-                                                            <div className={`size-10 rounded-full flex items-center justify-center badge badge-${category.color}`}>
-                                                                <CategoryIcon size={20} weight="regular" className="text-current" />
-                                                            </div>
-                                                        ) : (
-                                                            <Badge
-                                                                className={`badge badge-${category.color} h-3 w-3 p-0 rounded-full`}
-                                                                variant="outline"
-                                                            />
-                                                        )}
-                                                        <div>
-                                                            <button onClick={() => setEditCategory(category)} className='font-medium hover:underline text-left'>
-                                                                <p>{category.name}</p>
-                                                            </button>
-                                                            <Link
-                                                                href={`/transactions?category=${category.id}`}
-                                                                className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
-                                                            >
-                                                                {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            </TabsContent>
-
-                            {groupedCategories.INCOME.length > 0 && (
-                                <TabsContent value="INCOME">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                        {groupedCategories.INCOME.map((category) => {
-                                            const CategoryIcon = category.icon ? getCategoryIcon(category.icon) : null;
-                                            return (
-                                                <Card key={category.id} className='py-0' id={'item-' + category.id}>
-                                                    <CardContent className='flex justify-between items-center p-4'>
-                                                        <div className='flex gap-3 items-center'>
-                                                            {CategoryIcon ? (
-                                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${category.color}`}>
-                                                                    <CategoryIcon size={20} weight="regular" className="text-current" />
-                                                                </div>
-                                                            ) : (
-                                                                <Badge
-                                                                    className={`badge badge-${category.color} h-3 w-3 p-0 rounded-full`}
-                                                                    variant="outline"
-                                                                />
-                                                            )}
-                                                            <div>
-                                                                <button onClick={() => setEditCategory(category)} className='font-medium hover:underline text-left'>
-                                                                    <p>{category.name}</p>
-                                                                </button>
-                                                                <Link
-                                                                    href={`/transactions?category=${category.id}`}
-                                                                    className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
-                                                                >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            );
-                                        })}
-                                    </div>
-                                </TabsContent>
-                            )}
-
-                            {groupedCategories.EXPENSES.length > 0 && (
-                                <TabsContent value="EXPENSES">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                        {groupedCategories.EXPENSES.map((category) => {
-                                            const CategoryIcon = category.icon ? getCategoryIcon(category.icon) : null;
-                                            return (
-                                                <Card key={category.id} className='py-0' id={'item-' + category.id}>
-                                                    <CardContent className='flex justify-between items-center p-4'>
-                                                        <div className='flex gap-3 items-center'>
-                                                            {CategoryIcon ? (
-                                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${category.color}`}>
-                                                                    <CategoryIcon size={20} weight="regular" className="text-current" />
-                                                                </div>
-                                                            ) : (
-                                                                <Badge
-                                                                    className={`badge badge-${category.color} h-3 w-3 p-0 rounded-full`}
-                                                                    variant="outline"
-                                                                />
-                                                            )}
-                                                            <div>
-                                                                <button onClick={() => setEditCategory(category)} className='font-medium hover:underline text-left'>
-                                                                    <p>{category.name}</p>
-                                                                </button>
-                                                                <Link
-                                                                    href={`/transactions?category=${category.id}`}
-                                                                    className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
-                                                                >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            );
-                                        })}
-                                    </div>
-                                </TabsContent>
-                            )}
-
-                            {groupedCategories.SAVINGS.length > 0 && (
-                                <TabsContent value="SAVINGS">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                        {groupedCategories.SAVINGS.map((category) => {
-                                            const CategoryIcon = category.icon ? getCategoryIcon(category.icon) : null;
-                                            return (
-                                                <Card key={category.id} className='py-0' id={'item-' + category.id}>
-                                                    <CardContent className='flex justify-between items-center p-4'>
-                                                        <div className='flex gap-3 items-center'>
-                                                            {CategoryIcon ? (
-                                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${category.color}`}>
-                                                                    <CategoryIcon size={20} weight="regular" className="text-current" />
-                                                                </div>
-                                                            ) : (
-                                                                <Badge
-                                                                    className={`badge badge-${category.color} h-3 w-3 p-0 rounded-full`}
-                                                                    variant="outline"
-                                                                />
-                                                            )}
-                                                            <div>
-                                                                <button onClick={() => setEditCategory(category)} className='font-medium hover:underline text-left'>
-                                                                    <p>{category.name}</p>
-                                                                </button>
-                                                                <Link
-                                                                    href={`/transactions?category=${category.id}`}
-                                                                    className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
-                                                                >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            );
-                                        })}
-                                    </div>
-                                </TabsContent>
-                            )}
-
-                            {groupedCategories.INVESTMENT.length > 0 && (
-                                <TabsContent value="INVESTMENT">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                        {groupedCategories.INVESTMENT.map((category) => {
-                                            const CategoryIcon = category.icon ? getCategoryIcon(category.icon) : null;
-                                            return (
-                                                <Card key={category.id} className='py-0' id={'item-' + category.id}>
-                                                    <CardContent className='flex justify-between items-center p-4'>
-                                                        <div className='flex gap-3 items-center'>
-                                                            {CategoryIcon ? (
-                                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${category.color}`}>
-                                                                    <CategoryIcon size={20} weight="regular" className="text-current" />
-                                                                </div>
-                                                            ) : (
-                                                                <Badge
-                                                                    className={`badge badge-${category.color} h-3 w-3 p-0 rounded-full`}
-                                                                    variant="outline"
-                                                                />
-                                                            )}
-                                                            <div>
-                                                                <button onClick={() => setEditCategory(category)} className='font-medium hover:underline text-left'>
-                                                                    <p>{category.name}</p>
-                                                                </button>
-                                                                <Link
-                                                                    href={`/transactions?category=${category.id}`}
-                                                                    className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
-                                                                >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            );
-                                        })}
-                                    </div>
-                                </TabsContent>
-                            )}
+                            {categoryTabs
+                                .filter((tab) => tab.value === 'all' || tab.items.length > 0)
+                                .map((tab) => (
+                                    <TabsContent key={tab.value} value={tab.value}>
+                                        <DataTable
+                                            columns={columns}
+                                            data={tab.items}
+                                            emptyMessage={t('common.noResults')}
+                                            getRowId={(category) => category.id}
+                                        />
+                                    </TabsContent>
+                                ))}
                         </Tabs>
+                    ) : (
+                        <DataTable
+                            columns={columns}
+                            data={[]}
+                            emptyMessage={t('common.noResults')}
+                            getRowId={(category) => category.id}
+                        />
                     )}
                 </div>
             </div>

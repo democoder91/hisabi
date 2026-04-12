@@ -10,6 +10,7 @@
     "common": {
         "create": "Create",
         "update": "Update",
+        "actions": "Actions",
         "owner": "Owner",
         "shared": "Shared",
         "view": "View",
@@ -20,6 +21,7 @@
         "search": "Search..",
         "name": "Name",
         "loading": "Loading...",
+        "noResults": "No results found.",
         "comingSoon": "Coming soon...",
         "holdToDelete": "Hold to Delete",
         "transaction": "transaction",

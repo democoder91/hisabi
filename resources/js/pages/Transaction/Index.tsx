@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { type ColumnDef } from '@tanstack/react-table';
 
 import Authenticated from '@/Layouts/Authenticated';
 import Edit from './Edit';
@@ -11,9 +12,9 @@ import RecordTransactionButton from '@/components/Domain/RecordTransactionButton
 import Filters from './Filters';
 import LoadMore from '@/components/Global/LoadMore';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 import { getTransactions, getAllAccounts, getTransactionFormOptions } from '@/Api';
 import { animateRowItem, formatNumber, getAppCurrency, isCreditTransaction } from '@/Utils';
-import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowElbowDownRightIcon, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
@@ -71,15 +72,13 @@ export default function Index({ auth }: { auth: any }) {
 
         getTransactions(currentPage, searchQuery, filters)
             .then(({ data }) => {
-                const newTransactions = currentPage === 1
+                setTransactions((current) => currentPage === 1
                     ? data.transactions.data
-                    : [...transactions, ...data.transactions.data];
-
-                setTransactions(newTransactions)
-                setHasMorePages(data.transactions.paginatorInfo.hasMorePages)
-                setLoading(false);
+                    : [...current, ...data.transactions.data]);
+                setHasMorePages(data.transactions.paginatorInfo.hasMorePages);
             })
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoading(false));
     }, [currentPage, searchQuery, filters]);
 
     const onCreate = (createdItem: any) => {
@@ -177,6 +176,98 @@ export default function Index({ auth }: { auth: any }) {
         }
     };
 
+    const columns = useMemo<ColumnDef<any>[]>(() => [
+        {
+            id: 'category',
+            header: t('transaction.category'),
+            cell: ({ row }) => {
+                const transaction = row.original;
+                const hasCategory = transaction.category !== null;
+                const CategoryIcon = transaction.category?.icon
+                    ? getCategoryIcon(transaction.category.icon)
+                    : null;
+
+                return (
+                    <div className="flex items-center gap-3">
+                        {CategoryIcon && hasCategory ? (
+                            <div className={`badge badge-${transaction.category.color} flex size-10 items-center justify-center rounded-full`}>
+                                <CategoryIcon size={24} weight="regular" className="text-current" />
+                            </div>
+                        ) : (
+                            <Avatar className="size-10">
+                                <AvatarFallback>{hasCategory ? transaction.category.name.charAt(0) : '?'}</AvatarFallback>
+                                <AvatarImage />
+                            </Avatar>
+                        )}
+                        <div className="space-y-1">
+                            <p className="font-medium">{transaction.category?.name ?? '-'}</p>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <ArrowElbowDownRightIcon size={10} weight="bold" />
+                                <span>{transaction.created_at}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'account',
+            header: t('transaction.account'),
+            cell: ({ row }) => row.original.account?.name ?? '-',
+        },
+        {
+            id: 'type',
+            header: t('transaction.type'),
+            cell: ({ row }) => {
+                const transaction = row.original;
+                const isIncomeTransaction = isCreditTransaction(transaction);
+                const transactionTypeLabel = transaction.transaction_type
+                    ? t(`transaction.${transaction.transaction_type.toLowerCase()}`)
+                    : null;
+
+                if (!transactionTypeLabel) {
+                    return '-';
+                }
+
+                return (
+                    <Badge variant="outline" className={isIncomeTransaction ? 'border-green-200 text-green-600' : 'border-red-200 text-red-600'}>
+                        {transactionTypeLabel}
+                    </Badge>
+                );
+            },
+        },
+        {
+            accessorKey: 'note',
+            header: t('transaction.note'),
+            cell: ({ row }) => row.original.note ? <Badge variant="secondary">{row.original.note}</Badge> : '-',
+        },
+        {
+            accessorKey: 'amount',
+            header: t('transaction.amount'),
+            cell: ({ row }) => {
+                const transaction = row.original;
+                const isIncomeTransaction = isCreditTransaction(transaction);
+
+                return (
+                    <p className={`${isIncomeTransaction ? 'text-green-500' : 'text-red-500'} whitespace-nowrap text-right`}>
+                        {isIncomeTransaction ? '' : '-'}{getAppCurrency()} {formatNumber(transaction.amount, null)}
+                    </p>
+                );
+            },
+        },
+        {
+            id: 'actions',
+            header: () => <div className="text-right">{t('common.actions')}</div>,
+            cell: ({ row }) => (
+                <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setEditItem(row.original)}>
+                        {t('common.edit')}
+                    </Button>
+                </div>
+            ),
+        },
+    ], [t]);
+
     const header = (
         <div className="flex items-center justify-between w-full">
             <h2>{t('transaction.title')}</h2>
@@ -260,58 +351,18 @@ export default function Index({ auth }: { auth: any }) {
                         </div>
                     </div>
 
-                    <div className="grid gap-2">
-                        {transactions.length > 0 && transactions.map((transaction) => {
-                            const hasCategory = transaction.category !== null;
-                            const CategoryIcon = transaction.category?.icon
-                                ? getCategoryIcon(transaction.category.icon)
-                                : null;
-                            const isIncomeTransaction = isCreditTransaction(transaction);
-                            const transactionTypeLabel = transaction.transaction_type
-                                ? t(`transaction.${transaction.transaction_type.toLowerCase()}`)
-                                : null;
+                    <DataTable
+                        columns={columns}
+                        data={transactions}
+                        loading={loading}
+                        loadingMessage={t('common.loading')}
+                        emptyMessage={t('common.noResults')}
+                        getRowId={(transaction) => transaction.id}
+                    />
 
-                            return (
-                                <Card key={transaction.id} className="py-0" id={'item-' + transaction.id}>
-                                    <CardContent className='flex justify-between items-center px-4 py-3'>
-                                        <div className='flex gap-2 items-center'>
-                                            {CategoryIcon && hasCategory ? (
-                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${transaction.category.color}`}>
-                                                    <CategoryIcon size={24} weight="regular" className="text-current" />
-                                                </div>
-                                            ) : (
-                                                <Avatar className='size-10'>
-                                                    <AvatarFallback>{hasCategory ? transaction.category.name.charAt(0) : '?'}</AvatarFallback>
-                                                </Avatar>
-                                            )}
-                                            <div>
-                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{transaction.category?.name ?? '-'}</button>
-                                                <div className='flex gap-1 text-muted-foreground items-center'>
-                                                    <ArrowElbowDownRightIcon size={10} weight="bold" />
-                                                    <p className=' text-xs'>
-                                                        {transaction.account ? <span>{transaction.account.name} - </span> : ''}
-                                                        {transaction.created_at}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className='flex gap-2 items-center'>
-                                            {transactionTypeLabel && (
-                                                <Badge variant="outline" className={isIncomeTransaction ? 'border-green-200 text-green-600' : 'border-red-200 text-red-600'}>
-                                                    {transactionTypeLabel}
-                                                </Badge>
-                                            )}
-                                            {transaction.note && <Badge variant="secondary">{transaction.note}</Badge>
-                                            }
-                                            <p className={`${isIncomeTransaction ? 'text-green-500' : 'text-red-500'} min-w-26 text-right`}> {isIncomeTransaction ? '' : '-'}{getAppCurrency()} {formatNumber(transaction.amount, null)}</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-
+                    {transactions.length > 0 && (
                         <LoadMore hasContent={transactions.length > 0} hasMorePages={hasMorePages} loading={loading} onClick={() => setCurrentPage(currentPage + 1)} />
-                    </div>
+                    )}
                 </div>
             </div>
         </Authenticated>

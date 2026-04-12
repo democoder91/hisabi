@@ -3,17 +3,14 @@
 namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Metrics\Metric;
-use App\Domains\Transaction\Models\Transaction;
 
 class NetWorthMetric extends Metric
 {
     public function calculate(): array
     {
-        $income = Transaction::income()->sum('amount');
-        $expenses = Transaction::expenses()->sum('amount');
+        $income = $this->sumConverted($this->transactions(fn ($query) => $query->income()));
+        $expenses = $this->sumConverted($this->transactions(fn ($query) => $query->expenses()));
 
-        return [
-            'value' => $income - $expenses
-        ];
+        return $this->valuePayload($income - $expenses);
     }
 }

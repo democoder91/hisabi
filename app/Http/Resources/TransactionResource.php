@@ -19,6 +19,7 @@ class TransactionResource extends JsonResource
         return [
             'id' => $this->id,
             'amount' => $this->amount,
+            'currency' => $this->currency,
             'transaction_type' => $this->transaction_type,
             'note' => $this->note,
             'created_at' => $this->created_at?->format('Y-m-d'),
@@ -29,6 +30,7 @@ class TransactionResource extends JsonResource
                     'name' => $this->account->getLocalizedName(),
                     'name_translations' => $this->account->getTranslations('name'),
                     'balance' => (float) $this->account->balance,
+                    'currency' => $this->account->currency,
                     'canEditTransactions' => $this->account->canBeEditedBy(request()->user()),
                 ];
             }),

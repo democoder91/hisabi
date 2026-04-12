@@ -18,7 +18,7 @@ export const getBudgets = async () => {
     };
 };
 
-export const createBudget = async ({ name, amount, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
+export const createBudget = async ({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
     const response = await fetch('/api/v1/budgets', {
         method: 'POST',
         headers: {
@@ -27,7 +27,7 @@ export const createBudget = async ({ name, amount, start_at, end_at, saving, per
             'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ name, amount, start_at, end_at, saving, period, reoccurrence, category_ids }),
+        body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }),
     });
 
     if (!response.ok) {
@@ -44,7 +44,7 @@ export const createBudget = async ({ name, amount, start_at, end_at, saving, per
     };
 };
 
-export const updateBudget = async ({ id, name, amount, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
+export const updateBudget = async ({ id, name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
     const response = await fetch(`/api/v1/budgets/${id}`, {
         method: 'PUT',
         headers: {
@@ -53,7 +53,7 @@ export const updateBudget = async ({ id, name, amount, start_at, end_at, saving,
             'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ name, amount, start_at, end_at, saving, period, reoccurrence, category_ids }),
+        body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }),
     });
 
     if (!response.ok) {

@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('hisabi:report')->onOneServer()->lastDayOfMonth('23:00');
+        $schedule->command('hisabi:refresh-exchange-rates')->daily();
 
         $schedule->command('cache:prune-stale-tags')->hourly();
 

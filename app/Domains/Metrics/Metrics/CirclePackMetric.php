@@ -4,7 +4,6 @@ namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Category\Models\Category;
 use App\Domains\Metrics\Metric;
-use Illuminate\Support\Facades\DB;
 
 class CirclePackMetric extends Metric
 {
@@ -23,29 +22,28 @@ class CirclePackMetric extends Metric
             'gray' => '#94A4B8'
         ];
 
-        $transactions = Category::query()
-            ->join('transactions', 'transactions.category_id', '=', 'categories.id')
-            ->selectRaw($this->localizedJsonSelect('categories.name', 'category_name') . ', categories.type, categories.color, SUM(transactions.amount) as value')
-            ->groupBy('categories.id')
-            ->groupBy(DB::raw($labelExpression))
-            ->groupBy('categories.type')
-            ->groupBy('categories.color');
+        $rootLevel = [
+            'currency' => $this->metricCurrency(),
+            'children' => [],
+        ];
 
-        if ($this->hasDateRange()) {
-            $transactions->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);
-        }
+        $transactions = $this->transactions();
 
-        $rootLevel = ["children" => []];
-        foreach ($transactions->get()->groupBy('type') as $key => $value) {
+        foreach ($transactions->groupBy(fn ($transaction) => $transaction->category ? $transaction->category->type : 'Unknown') as $key => $value) {
             $rootLevel["children"][] = [
                 "label" => $key,
                 "children" => $value->map(function ($item) use ($colors) {
                     return [
-                        "label" => $item->category_name,
-                        "value" => $item->value,
-                        "color" => $colors[$item->color] ?? 'white'
+                        "label" => $this->categoryLabel($item->category),
+                        "value" => $this->convertedTransactionAmount($item),
+                        "color" => $colors[$item->category ? $item->category->color : ''] ?? 'white'
                     ];
-                })->toArray()
+                })->groupBy('label')->map(function ($children) {
+                    $firstChild = $children->first();
+                    $firstChild['value'] = round($children->sum('value'), 2);
+
+                    return $firstChild;
+                })->values()->toArray()
             ];
         }
 

@@ -19,6 +19,7 @@ class BudgetFactory extends Factory
                 'ar' => null,
             ],
             'amount' => $this->faker->numberBetween(100, 5000),
+            'currency' => config('hisabi.currency'),
             'start_at' => now(),
             'reoccurrence' => Budget::DAILY,
             'period' => 1,

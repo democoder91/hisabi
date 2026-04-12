@@ -3,30 +3,19 @@
 namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Metrics\Metric;
-use App\Domains\Transaction\Models\Transaction;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class NetWorthTrendMetric extends Metric
 {
     public function calculate(): array
     {
-        $dateFormat = $this->getDateFormat('%Y-%m');
+        $income = $this->transactions(fn ($query) => $query->income())
+            ->groupBy(fn ($transaction) => Carbon::parse($transaction->created_at)->format('Y-m'))
+            ->map(fn ($transactions) => $this->sumConverted($transactions));
 
-        $income = Transaction::query()
-            ->income()
-            ->select(DB::raw("{$dateFormat} as label, SUM(transactions.amount) as value"))
-            ->groupBy(DB::raw("label"))
-            ->orderBy("label")
-            ->get()
-            ->keyBy('label');
-
-        $expenses = Transaction::query()
-            ->expenses()
-            ->select(DB::raw("{$dateFormat} as label, SUM(transactions.amount) as value"))
-            ->groupBy(DB::raw("label"))
-            ->orderBy("label")
-            ->get()
-            ->keyBy('label');
+        $expenses = $this->transactions(fn ($query) => $query->expenses())
+            ->groupBy(fn ($transaction) => Carbon::parse($transaction->created_at)->format('Y-m'))
+            ->map(fn ($transactions) => $this->sumConverted($transactions));
 
         $allLabels = $income->keys()->merge($expenses->keys())->unique()->sort()->values();
 
@@ -34,8 +23,8 @@ class NetWorthTrendMetric extends Metric
         $results = [];
 
         foreach ($allLabels as $label) {
-            $incomeValue = $income->get($label)->value ?? 0;
-            $expenseValue = $expenses->get($label)->value ?? 0;
+            $incomeValue = $income->get($label, 0);
+            $expenseValue = $expenses->get($label, 0);
             $runningNetWorth += ($incomeValue - $expenseValue);
             $results[] = ['label' => $label, 'value' => $runningNetWorth];
         }
@@ -48,6 +37,6 @@ class NetWorthTrendMetric extends Metric
             $results = array_values($results);
         }
 
-        return $results;
+        return $this->itemsPayload($results);
     }
 }

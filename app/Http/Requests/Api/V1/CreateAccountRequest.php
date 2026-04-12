@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Enums\Currency;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateAccountRequest extends FormRequest
 {
@@ -18,6 +20,16 @@ class CreateAccountRequest extends FormRequest
             'name.en' => ['required', 'string', 'max:255'],
             'name.ar' => ['nullable', 'string', 'max:255'],
             'balance' => ['required', 'numeric'],
+            'currency' => ['required', Rule::enum(Currency::class)],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('currency')) {
+            $this->merge([
+                'currency' => strtoupper((string) $this->input('currency')),
+            ]);
+        }
     }
 }

@@ -4,11 +4,14 @@ namespace App\Domains\Budget\Models;
 
 use App\Domains\Category\Models\Category;
 use App\Models\Concerns\BelongsToUser;
+use App\Models\User;
+use App\Services\Currency\CurrencyRateService;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Translatable\HasTranslations;
 
 class Budget extends Model
@@ -121,11 +124,31 @@ class Budget extends Model
     {
         [$startAt, $endAt] = $this->getCurrentWindowStartAndEndDates();
 
-        return $this->categories()
+        $transactions = $this->categories()
             ->join('transactions', 'categories.id', '=', 'transactions.category_id')
+            ->select('transactions.amount', 'transactions.currency')
             ->where('categories.user_id', $this->user_id)
             ->whereBetween('transactions.created_at', [$startAt, $endAt])
-            ->sum('transactions.amount');
+            ->get();
+
+        /** @var CurrencyRateService $currencyRateService */
+        $currencyRateService = app(CurrencyRateService::class);
+        $user = Auth::user();
+
+        if (! $user instanceof User || (int) $user->id !== (int) $this->user_id) {
+            $user = User::find($this->user_id);
+        }
+
+        if (! $user instanceof User) {
+            return $transactions->sum('amount');
+        }
+
+        return round($transactions->sum(fn ($transaction) => $currencyRateService->convert(
+            $user,
+            (float) $transaction->amount,
+            $transaction->currency,
+            $this->currency,
+        )), 2);
     }
 
     private function getCurrentWindowStartAndEndDates()

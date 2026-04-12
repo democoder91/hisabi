@@ -6,7 +6,7 @@ import { DateRange } from 'react-day-picker';
 import { metricEndpoints } from '@/Api/metrics';
 import { Card } from '@/components/ui/card';
 import LoadingView from "../Global/LoadingView";
-import { formatNumber } from '@/Utils';
+import { formatNumber, getAppCurrency } from '@/Utils';
 import { useInView } from '@/hooks/useInView';
 
 Chart.register(LineElement, Tooltip, LineController, CategoryScale, LinearScale, PointElement, Filler, AnnotationPlugin);
@@ -36,6 +36,7 @@ const getCurrentYearRange = (): DateRange => {
 
 export default function TrendMetric({ name, metric, relation, show_standard_deviation, dateRange, defaultToCurrentYear = true }: TrendMetricProps) {
     const [data, setData] = useState(null);
+    const [currency, setCurrency] = useState(getAppCurrency());
     const [chartRef, setChartRef] = useState(null);
     const [relationData, setRelationData] = useState([]);
     const [selectedRelationId, setSelectedRelationId] = useState(0);
@@ -76,14 +77,20 @@ export default function TrendMetric({ name, metric, relation, show_standard_devi
         if (relation) {
             if (selectedRelationId) {
                 fetcher(effectiveDateRange, selectedRelationId)
-                    .then((response) => setData(response.data))
+                    .then((response) => {
+                        setData(response.data.items ?? response.data);
+                        setCurrency(response.data.currency ?? getAppCurrency());
+                    })
                     .catch(console.error)
             }
             return;
         }
 
         fetcher(effectiveDateRange)
-            .then((response) => setData(response.data))
+            .then((response) => {
+                setData(response.data.items ?? response.data);
+                setCurrency(response.data.currency ?? getAppCurrency());
+            })
             .catch(console.error)
     }, [selectedRelationId, dateRange, metric, isInView])
 
@@ -315,7 +322,7 @@ export default function TrendMetric({ name, metric, relation, show_standard_devi
 
                 <div className="text-2xl font-semibold text-gray-800">
                     {data[data.length - 1] && data[data.length - 1].value > 0
-                        ? formatNumber(data[data.length - 1].value)
+                        ? `${currency} ${formatNumber(data[data.length - 1].value)}`
                         : '-'
                     }
                 </div>

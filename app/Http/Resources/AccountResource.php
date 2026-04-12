@@ -16,6 +16,7 @@ class AccountResource extends JsonResource
             'name' => $this->getLocalizedName(),
             'name_translations' => $this->getSafeNameTranslations(),
             'balance' => (float) $this->balance,
+            'currency' => $this->currency,
             'transactionsCount' => $this->transactions_count ?? 0,
             'created_at' => $this->created_at?->format('Y-m-d'),
             'isOwner' => $this->isOwnedBy($user),

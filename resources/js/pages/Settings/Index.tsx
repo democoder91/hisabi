@@ -37,7 +37,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import ApplicationLogo from "@/components/Global/ApplicationLogo";
-import { getSettings, updateSettings } from '@/Api/settings';
+import { getCurrencySettings, refreshCurrencyRates, updateCurrencyRates, updateCurrencySettings } from '@/Api/settings';
 import { updateUserProfile } from '@/Api/user';
 
 // Helper function for route generation
@@ -60,19 +60,27 @@ interface CurrencyOption {
     label: string;
 }
 
-interface SettingsPayload {
+interface CurrencyRate {
+    currency: string;
+    label: string;
+    rate: number;
+    source: string;
+    last_synced_at: string | null;
+}
+
+interface CurrencySettingsPayload {
     settings: {
         default_currency: string | null;
         effective_currency: string;
-        locale: string;
     };
     defaults: {
         currency: string;
-        locale: string;
     };
     options: {
         currencies: CurrencyOption[];
     };
+    rates: CurrencyRate[];
+    last_refreshed_at: string | null;
 }
 
 const APP_DEFAULT_CURRENCY = '__APP_DEFAULT_CURRENCY__';
@@ -93,12 +101,15 @@ export default function Index({ auth }: { auth: { user: User } }) {
     const [passwordError, setPasswordError] = useState('');
     const [isProfileOpen, setIsProfileOpen] = useState(true);
     const [isPasswordOpen, setIsPasswordOpen] = useState(false);
-    const [settingsPayload, setSettingsPayload] = useState<SettingsPayload | null>(null);
+    const [currencySettingsPayload, setCurrencySettingsPayload] = useState<CurrencySettingsPayload | null>(null);
     const [selectedCurrency, setSelectedCurrency] = useState(APP_DEFAULT_CURRENCY);
-    const [loadingSettings, setLoadingSettings] = useState(true);
-    const [savingPreferences, setSavingPreferences] = useState(false);
-    const [preferencesMessage, setPreferencesMessage] = useState('');
-    const [preferencesError, setPreferencesError] = useState('');
+    const [rateDrafts, setRateDrafts] = useState<Record<string, string>>({});
+    const [loadingCurrencies, setLoadingCurrencies] = useState(true);
+    const [savingCurrencyPreference, setSavingCurrencyPreference] = useState(false);
+    const [savingRates, setSavingRates] = useState(false);
+    const [refreshingRates, setRefreshingRates] = useState(false);
+    const [currenciesMessage, setCurrenciesMessage] = useState('');
+    const [currenciesError, setCurrenciesError] = useState('');
 
     const settingsNavItems = [
         {
@@ -106,6 +117,7 @@ export default function Index({ auth }: { auth: { user: User } }) {
             items: [
                 { title: t('settings.nav.account'), value: "account", icon: UserCircleIcon },
                 { title: t('settings.nav.preferences'), value: "preferences", icon: SlidersHorizontalIcon },
+                { title: t('settings.nav.currencies'), value: "currencies", icon: SlidersHorizontalIcon },
                 { title: t('settings.nav.apiKey'), value: "api-key", icon: KeyIcon },
                 { title: t('settings.nav.import'), value: "import", icon: DownloadIcon },
                 { title: t('settings.nav.export'), value: "export", icon: UploadIcon },
@@ -150,38 +162,47 @@ export default function Index({ auth }: { auth: { user: User } }) {
     }, [passwordMessage, passwordError]);
 
     useEffect(() => {
-        if (preferencesMessage || preferencesError) {
+        if (currenciesMessage || currenciesError) {
             const timer = setTimeout(() => {
-                setPreferencesMessage('');
-                setPreferencesError('');
+                setCurrenciesMessage('');
+                setCurrenciesError('');
             }, 5000);
 
             return () => clearTimeout(timer);
         }
-    }, [preferencesError, preferencesMessage]);
+    }, [currenciesError, currenciesMessage]);
+
+    const applyCurrencyPayload = (payload: CurrencySettingsPayload) => {
+        setCurrencySettingsPayload(payload);
+        setSelectedCurrency(payload.settings.default_currency ?? APP_DEFAULT_CURRENCY);
+        setRateDrafts(Object.fromEntries(payload.rates.map((rate) => [rate.currency, String(rate.rate)])));
+
+        if (typeof window !== 'undefined') {
+            window.AppCurrency = payload.settings.effective_currency;
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
 
-        getSettings()
+        getCurrencySettings()
             .then((payload) => {
                 if (!isMounted) {
                     return;
                 }
 
-                setSettingsPayload(payload);
-                setSelectedCurrency(payload.settings.default_currency ?? APP_DEFAULT_CURRENCY);
+                applyCurrencyPayload(payload);
             })
             .catch((error) => {
                 if (!isMounted) {
                     return;
                 }
 
-                setPreferencesError(error.message || t('settings.preferences.loadError'));
+                setCurrenciesError(error.message || t('settings.currencies.loadError'));
             })
             .finally(() => {
                 if (isMounted) {
-                    setLoadingSettings(false);
+                    setLoadingCurrencies(false);
                 }
             });
 
@@ -243,34 +264,86 @@ export default function Index({ auth }: { auth: { user: User } }) {
         router.post(route('logout'));
     };
 
-    const handleSavePreferences = () => {
-        setPreferencesError('');
-        setPreferencesMessage('');
+    const handleSaveCurrencyPreference = () => {
+        setCurrenciesError('');
+        setCurrenciesMessage('');
 
-        if (savingPreferences) {
+        if (savingCurrencyPreference) {
             return;
         }
 
-        setSavingPreferences(true);
+        setSavingCurrencyPreference(true);
 
-        updateSettings({
+        updateCurrencySettings({
             default_currency: selectedCurrency === APP_DEFAULT_CURRENCY ? null : selectedCurrency,
         })
             .then((payload) => {
-                setSettingsPayload(payload);
-                setSelectedCurrency(payload.settings.default_currency ?? APP_DEFAULT_CURRENCY);
-                setPreferencesMessage(t('settings.preferences.updated'));
+                applyCurrencyPayload(payload);
+                setCurrenciesMessage(t('settings.currencies.updated'));
             })
             .catch((error) => {
-                setPreferencesError(error.message || t('settings.preferences.updateError'));
+                setCurrenciesError(error.message || t('settings.currencies.updateError'));
             })
-            .finally(() => setSavingPreferences(false));
+            .finally(() => setSavingCurrencyPreference(false));
+    };
+
+    const handleSaveRates = () => {
+        setCurrenciesError('');
+        setCurrenciesMessage('');
+
+        if (savingRates || !currencySettingsPayload) {
+            return;
+        }
+
+        setSavingRates(true);
+
+        updateCurrencyRates({
+            rates: Object.entries(rateDrafts).map(([currency, rate]) => ({
+                currency,
+                rate: Number(rate || 0),
+            })),
+        })
+            .then((payload) => {
+                applyCurrencyPayload(payload);
+                setCurrenciesMessage(t('settings.currencies.ratesUpdated'));
+            })
+            .catch((error) => {
+                setCurrenciesError(error.message || t('settings.currencies.updateError'));
+            })
+            .finally(() => setSavingRates(false));
+    };
+
+    const handleRefreshRates = () => {
+        setCurrenciesError('');
+        setCurrenciesMessage('');
+
+        if (refreshingRates) {
+            return;
+        }
+
+        setRefreshingRates(true);
+
+        refreshCurrencyRates()
+            .then((payload) => {
+                applyCurrencyPayload(payload);
+                setCurrenciesMessage(t('settings.currencies.refreshed'));
+            })
+            .catch((error) => {
+                setCurrenciesError(error.message || t('settings.currencies.refreshError'));
+            })
+            .finally(() => setRefreshingRates(false));
     };
 
     const isProfileValid = name.trim() !== '' && email.trim() !== '';
     const isPasswordValid = currentPassword && password && confirmPassword && password === confirmPassword && password.length >= 8;
-    const effectiveCurrency = settingsPayload?.settings.effective_currency ?? settingsPayload?.defaults.currency ?? '';
-    const isPreferencesDirty = selectedCurrency !== (settingsPayload?.settings.default_currency ?? APP_DEFAULT_CURRENCY);
+    const effectiveCurrency = currencySettingsPayload?.settings.effective_currency ?? currencySettingsPayload?.defaults.currency ?? '';
+    const isCurrencyPreferenceDirty = selectedCurrency !== (currencySettingsPayload?.settings.default_currency ?? APP_DEFAULT_CURRENCY);
+    const areRatesDirty = JSON.stringify(rateDrafts) !== JSON.stringify(Object.fromEntries((currencySettingsPayload?.rates ?? []).map((rate) => [rate.currency, String(rate.rate)])));
+    const selectedDefaultCurrencyLabel = selectedCurrency === APP_DEFAULT_CURRENCY
+        ? t('settings.preferences.useAppDefault', {
+            currency: currencySettingsPayload?.defaults.currency,
+        })
+        : currencySettingsPayload?.options.currencies.find((currency) => currency.value === selectedCurrency)?.label ?? selectedCurrency;
 
     return (
         <>
@@ -498,63 +571,124 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                         <CardDescription>{t('settings.preferences.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        {preferencesMessage && (
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {activeTab === 'currencies' && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>{t('settings.currencies.title')}</CardTitle>
+                                        <CardDescription>{t('settings.currencies.description')}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {currenciesMessage && (
                                             <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-green-700">
-                                                {preferencesMessage}
+                                                {currenciesMessage}
                                             </div>
                                         )}
 
-                                        {preferencesError && (
+                                        {currenciesError && (
                                             <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-                                                {preferencesError}
+                                                {currenciesError}
                                             </div>
                                         )}
 
-                                        {loadingSettings ? (
+                                        {loadingCurrencies ? (
                                             <p className="text-muted-foreground">{t('common.loading')}</p>
                                         ) : (
                                             <div className="space-y-6">
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="default-currency">{t('settings.preferences.currency')}</Label>
+                                                    <Label htmlFor="default-currency">{t('settings.currencies.defaultCurrency')}</Label>
                                                     <p className="text-sm text-muted-foreground">
-                                                        {t('settings.preferences.currencyDescription')}
+                                                        {t('settings.currencies.defaultCurrencyDescription')}
                                                     </p>
                                                     <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
                                                         <SelectTrigger id="default-currency" className="w-full sm:max-w-sm">
-                                                            <SelectValue placeholder={t('settings.preferences.currencyPlaceholder')} />
+                                                            <SelectValue placeholder={t('settings.preferences.currencyPlaceholder')}>
+                                                                {selectedDefaultCurrencyLabel}
+                                                            </SelectValue>
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value={APP_DEFAULT_CURRENCY}>
                                                                 {t('settings.preferences.useAppDefault', {
-                                                                    currency: settingsPayload?.defaults.currency,
+                                                                    currency: currencySettingsPayload?.defaults.currency,
                                                                 })}
                                                             </SelectItem>
-                                                            {settingsPayload?.options.currencies.map((currency) => (
+                                                            {currencySettingsPayload?.options.currencies.map((currency) => (
                                                                 <SelectItem key={currency.value} value={currency.value}>
                                                                     {currency.label}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    <Button
+                                                        onClick={handleSaveCurrencyPreference}
+                                                        disabled={savingCurrencyPreference || !isCurrencyPreferenceDirty}
+                                                        className="w-full sm:w-auto"
+                                                    >
+                                                        {savingCurrencyPreference ? t('settings.currencies.saving') : t('settings.currencies.saveDefaultCurrency')}
+                                                    </Button>
                                                 </div>
 
                                                 <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
                                                     <p className="text-sm font-medium text-foreground">
-                                                        {t('settings.preferences.effectiveCurrency')}
+                                                        {t('settings.currencies.effectiveCurrency')}
                                                     </p>
                                                     <p className="mt-1 text-sm text-muted-foreground">
                                                         {effectiveCurrency}
                                                     </p>
+                                                    <p className="mt-3 text-sm font-medium text-foreground">
+                                                        {t('settings.currencies.lastRefreshed')}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        {currencySettingsPayload?.last_refreshed_at
+                                                            ? new Date(currencySettingsPayload.last_refreshed_at).toLocaleString()
+                                                            : t('settings.currencies.neverRefreshed')}
+                                                    </p>
                                                 </div>
 
-                                                <div>
-                                                    <Button
-                                                        onClick={handleSavePreferences}
-                                                        disabled={savingPreferences || !isPreferencesDirty}
-                                                        className="w-full sm:w-auto"
-                                                    >
-                                                        {savingPreferences ? t('settings.preferences.saving') : t('settings.preferences.savePreferences')}
+                                                <div className="flex flex-wrap gap-3">
+                                                    <Button onClick={handleRefreshRates} disabled={refreshingRates} variant="outline">
+                                                        {refreshingRates ? t('settings.currencies.refreshing') : t('settings.currencies.refreshRates')}
                                                     </Button>
+                                                    <Button onClick={handleSaveRates} disabled={savingRates || !areRatesDirty}>
+                                                        {savingRates ? t('settings.currencies.savingRates') : t('settings.currencies.saveRates')}
+                                                    </Button>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-foreground">{t('settings.currencies.manualRates')}</p>
+                                                        <p className="text-sm text-muted-foreground">{t('settings.currencies.manualRatesDescription')}</p>
+                                                    </div>
+                                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                        {currencySettingsPayload?.rates.map((rate) => (
+                                                            <div key={rate.currency} className="rounded-lg border border-border/60 p-3">
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <p className="font-medium">{rate.label}</p>
+                                                                    <span className="text-xs text-muted-foreground uppercase">{rate.source}</span>
+                                                                </div>
+                                                                <Label htmlFor={`rate-${rate.currency}`} className="mt-3 block text-xs text-muted-foreground">
+                                                                    {t('settings.currencies.rateLabel', { currency: rate.currency })}
+                                                                </Label>
+                                                                <Input
+                                                                    id={`rate-${rate.currency}`}
+                                                                    className="mt-1"
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.000001"
+                                                                    value={rateDrafts[rate.currency] ?? ''}
+                                                                    disabled={rate.currency === 'USD'}
+                                                                    onChange={(event) => setRateDrafts((current) => ({
+                                                                        ...current,
+                                                                        [rate.currency]: event.target.value,
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}

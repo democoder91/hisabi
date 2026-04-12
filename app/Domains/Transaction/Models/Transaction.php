@@ -44,6 +44,18 @@ class Transaction extends Model
     {
         static::addGlobalScope(new OwnedAccountScope());
 
+        static::saving(function (self $transaction) {
+            if (! $transaction->account_id) {
+                return;
+            }
+
+            $account = Account::withoutGlobalScopes()->find($transaction->account_id);
+
+            if ($account) {
+                $transaction->currency = $account->currency;
+            }
+        });
+
         static::created(function (self $transaction) {
             $transaction->applyAccountBalanceDelta($transaction->account_id, $transaction->signedAmount());
         });

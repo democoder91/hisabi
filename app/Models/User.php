@@ -72,6 +72,11 @@ class User extends Authenticatable
         return $this->hasMany(DomainCategory::class);
     }
 
+    public function exchangeRates(): HasMany
+    {
+        return $this->hasMany(ExchangeRate::class);
+    }
+
     public function getOrCreateDefaultAccount(): Account
     {
         $account = $this->accounts()
@@ -85,6 +90,7 @@ class User extends Authenticatable
         return $this->accounts()->create([
             'name' => ['en' => Account::DEFAULT_NAME],
             'balance' => 0,
+            'currency' => $this->default_currency ?: config('hisabi.currency'),
         ]);
     }
 }

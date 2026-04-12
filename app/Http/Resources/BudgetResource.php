@@ -15,6 +15,7 @@ class BudgetResource extends JsonResource
             'name' => $this->getLocalizedName(),
             'name_translations' => $this->getTranslations('name'),
             'amount' => $this->amount,
+            'currency' => $this->currency,
             'start_at' => $this->start_at?->format('Y-m-d'),
             'end_at' => $this->end_at?->format('Y-m-d'),
             'saving' => $this->saving,

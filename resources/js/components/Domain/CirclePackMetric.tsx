@@ -33,7 +33,7 @@ export default function CirclePackMetric({ name, metric, dateRange }: CirclePack
 
                 // Check if the component is still mounted and this is the latest request
                 if (!isCancelled) {
-                    setValue(response.data);
+                    setValue(response.data.data ?? response.data);
                 }
             } catch (error) {
                 // Ignore AbortError as it's expected when component unmounts or range changes

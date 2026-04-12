@@ -17,6 +17,7 @@ export type BudgetRecord = {
     name: string;
     name_translations?: BudgetTranslations;
     amount: number;
+    currency: string;
     start_at: string;
     end_at: string | null;
     saving: boolean;

@@ -70,7 +70,7 @@ export const getAccountAudits = async (accountId, page = 1) => {
     };
 };
 
-export const createAccount = async ({ name, balance }) => {
+export const createAccount = async ({ name, balance, currency }) => {
     const response = await fetch('/api/v1/accounts', {
         method: 'POST',
         headers: {
@@ -79,7 +79,7 @@ export const createAccount = async ({ name, balance }) => {
             'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ name, balance }),
+        body: JSON.stringify({ name, balance, currency }),
     });
 
     if (!response.ok) {
@@ -95,7 +95,7 @@ export const createAccount = async ({ name, balance }) => {
     };
 };
 
-export const updateAccount = async ({ id, name, balance }) => {
+export const updateAccount = async ({ id, name, balance, currency }) => {
     const response = await fetch(`/api/v1/accounts/${id}`, {
         method: 'PUT',
         headers: {
@@ -104,7 +104,7 @@ export const updateAccount = async ({ id, name, balance }) => {
             'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ name, balance }),
+        body: JSON.stringify({ name, balance, currency }),
     });
 
     if (!response.ok) {

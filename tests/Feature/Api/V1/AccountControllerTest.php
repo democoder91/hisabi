@@ -58,18 +58,21 @@ class AccountControllerTest extends TestCase
                 'ar' => 'صندوق الطوارئ',
             ],
             'balance' => 1250.75,
+            'currency' => 'usd',
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('account.name', 'Emergency Fund')
             ->assertJsonPath('account.name_translations.en', 'Emergency Fund')
             ->assertJsonPath('account.name_translations.ar', 'صندوق الطوارئ')
-            ->assertJsonPath('account.balance', 1250.75);
+            ->assertJsonPath('account.balance', 1250.75)
+            ->assertJsonPath('account.currency', 'USD');
 
         $account = Account::query()->where('user_id', $this->user->id)->latest('id')->firstOrFail();
 
         $this->assertSame('Emergency Fund', $account->getTranslation('name', 'en'));
         $this->assertSame('صندوق الطوارئ', $account->getTranslation('name', 'ar'));
+        $this->assertSame('USD', $account->currency);
     }
 
     public function test_it_shows_an_accessible_account(): void
@@ -93,6 +96,7 @@ class AccountControllerTest extends TestCase
             'user_id' => $this->user->id,
             'name' => ['en' => 'Checking'],
             'balance' => 200,
+            'currency' => 'AED',
         ]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
@@ -101,18 +105,21 @@ class AccountControllerTest extends TestCase
                 'ar' => 'الحساب الرئيسي',
             ],
             'balance' => 450.50,
+            'currency' => 'sar',
         ]);
 
         $response->assertOk()
             ->assertJsonPath('account.name', 'Main Checking')
             ->assertJsonPath('account.name_translations.en', 'Main Checking')
             ->assertJsonPath('account.name_translations.ar', 'الحساب الرئيسي')
-            ->assertJsonPath('account.balance', 450.5);
+            ->assertJsonPath('account.balance', 450.5)
+            ->assertJsonPath('account.currency', 'SAR');
 
         $account->refresh();
         $this->assertSame('Main Checking', $account->getTranslation('name', 'en'));
         $this->assertSame('الحساب الرئيسي', $account->getTranslation('name', 'ar'));
         $this->assertSame(450.5, $account->balance);
+        $this->assertSame('SAR', $account->currency);
     }
 
     public function test_it_filters_accounts_by_translated_name(): void
@@ -188,6 +195,7 @@ class AccountControllerTest extends TestCase
         $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
             'name' => ['en' => 'Blocked'],
             'balance' => 99,
+            'currency' => 'USD',
         ]);
 
         $response->assertStatus(404);
@@ -340,6 +348,7 @@ class AccountControllerTest extends TestCase
         $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
             'name' => ['en' => 'Not Allowed'],
             'balance' => 999,
+            'currency' => 'USD',
         ]);
 
         $response->assertStatus(403);

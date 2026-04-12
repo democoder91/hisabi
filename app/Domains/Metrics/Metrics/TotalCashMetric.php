@@ -3,19 +3,16 @@
 namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Metrics\Metric;
-use App\Domains\Transaction\Models\Transaction;
 
 class TotalCashMetric extends Metric
 {
     public function calculate(): array
     {
-        $income = Transaction::income()->sum('amount');
-        $expenses = Transaction::expenses()->sum('amount');
-        $investment = Transaction::investment()->sum('amount');
-        $savings = Transaction::savings()->sum('amount');
+        $income = $this->sumConverted($this->transactions(fn ($query) => $query->income()));
+        $expenses = $this->sumConverted($this->transactions(fn ($query) => $query->expenses()));
+        $investment = $this->sumConverted($this->transactions(fn ($query) => $query->investment()));
+        $savings = $this->sumConverted($this->transactions(fn ($query) => $query->savings()));
 
-        return [
-            'value' => $income - ($expenses + $investment + $savings)
-        ];
+        return $this->valuePayload($income - ($expenses + $investment + $savings));
     }
 }

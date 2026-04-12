@@ -29,6 +29,7 @@ class BudgetService
             'user_id' => Auth::id(),
             'name' => $data['name'],
             'amount' => $data['amount'],
+            'currency' => $data['currency'],
             'start_at' => $data['start_at'],
             'end_at' => $data['reoccurrence'] === Budget::CUSTOM ? $data['end_at'] : ($data['end_at'] ?? null),
             'saving' => $data['saving'] ?? false,
@@ -46,6 +47,7 @@ class BudgetService
         $budget->update([
             'name' => $data['name'],
             'amount' => $data['amount'],
+            'currency' => $data['currency'],
             'start_at' => $data['start_at'],
             'end_at' => $data['reoccurrence'] === Budget::CUSTOM ? $data['end_at'] : ($data['end_at'] ?? null),
             'saving' => $data['saving'] ?? false,

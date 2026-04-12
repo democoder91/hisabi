@@ -3,8 +3,7 @@
 namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Metrics\Metric;
-use App\Domains\Transaction\Models\Transaction;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class CategoryTrendMetric extends Metric
 {
@@ -18,18 +17,16 @@ class CategoryTrendMetric extends Metric
 
     public function calculate(): array
     {
-        $dateFormat = $this->getDateFormat('%Y-%m');
+        $items = $this->transactions(fn ($query) => $query->where('transactions.category_id', $this->categoryId))
+            ->groupBy(fn ($transaction) => Carbon::parse($transaction->created_at)->format('Y-m'))
+            ->sortKeys()
+            ->map(fn ($transactions, $label) => [
+                'label' => $label,
+                'value' => $this->sumConverted($transactions),
+            ])
+            ->values()
+            ->all();
 
-        $query = Transaction::query()
-            ->where('transactions.category_id', $this->categoryId)
-            ->select(DB::raw("{$dateFormat} as label, SUM(transactions.amount) as value"))
-            ->groupBy(DB::raw("label"))
-            ->orderBy('label');
-
-        if ($this->hasDateRange()) {
-            $query->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);
-        }
-
-        return $query->get()->toArray();
+        return $this->itemsPayload($items);
     }
 }

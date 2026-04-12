@@ -37,6 +37,8 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
         return accounts.filter((item) => item.canEditTransactions);
     }, [accounts]);
 
+    const selectedCurrency = account?.currency || transaction?.currency || getAppCurrency();
+
     const canEdit = transaction?.canEdit ?? false;
 
     useEffect(() => {
@@ -123,7 +125,7 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
 
                         <div>
                             <Label htmlFor="amount">
-                                {`${t('transaction.amount')} (${getAppCurrency()})`}
+                                {`${t('transaction.amount')} (${selectedCurrency})`}
                             </Label>
                             <Input
                                 type="number"
@@ -158,6 +160,10 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 displayInputValue={(item) => item ? item.name : ''}
                                 displayOptionValue={(item) => item ? item.name : ''}
                             />
+                        </div>
+
+                        <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+                            {t('settings.preferences.effectiveCurrency')}: <span className="font-medium text-foreground">{selectedCurrency}</span>
                         </div>
 
                         <div>

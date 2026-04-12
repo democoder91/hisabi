@@ -3,7 +3,6 @@
 namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Metrics\Metric;
-use App\Domains\Transaction\Models\Transaction;
 
 class TransactionsStdDevMetric extends Metric
 {
@@ -17,22 +16,18 @@ class TransactionsStdDevMetric extends Metric
 
     public function calculate(): array
     {
-        $query = Transaction::query()
-            ->where('transactions.category_id', $this->categoryId);
-
-        if ($this->hasDateRange()) {
-            $query->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);
-        }
-
-        $amounts = $query->pluck('amount')->toArray();
+        $amounts = $this->transactions(fn ($query) => $query->where('transactions.category_id', $this->categoryId))
+            ->map(fn ($transaction) => $this->convertedTransactionAmount($transaction))
+            ->values()
+            ->all();
 
         if (count($amounts) < 2) {
-            return ['value' => 0];
+            return $this->valuePayload(0);
         }
 
         $mean = array_sum($amounts) / count($amounts);
         $variance = array_sum(array_map(fn($x) => pow($x - $mean, 2), $amounts)) / (count($amounts) - 1);
 
-        return ['value' => sqrt($variance)];
+        return $this->valuePayload(sqrt($variance));
     }
 }

@@ -14,7 +14,7 @@ import LoadMore from '@/components/Global/LoadMore';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { getTransactions, getAllAccounts, getTransactionFormOptions } from '@/Api';
-import { animateRowItem, formatNumber, getAppCurrency, isCreditTransaction } from '@/Utils';
+import { animateRowItem, formatNumber, isCreditTransaction } from '@/Utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowElbowDownRightIcon, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
@@ -250,7 +250,7 @@ export default function Index({ auth }: { auth: any }) {
 
                 return (
                     <p className={`${isIncomeTransaction ? 'text-green-500' : 'text-red-500'} whitespace-nowrap text-right`}>
-                        {isIncomeTransaction ? '' : '-'}{getAppCurrency()} {formatNumber(transaction.amount, null)}
+                        {isIncomeTransaction ? '' : '-'}{transaction.currency} {formatNumber(transaction.amount, null)}
                     </p>
                 );
             },

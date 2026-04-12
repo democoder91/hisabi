@@ -30,6 +30,7 @@ function CategoryStats({ dateRange }: CategoryStatsProps) {
         highestSpendingCategory: null,
         highestIncomeCategory: null
     });
+    const [currency, setCurrency] = useState(getAppCurrency());
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -43,6 +44,7 @@ function CategoryStats({ dateRange }: CategoryStatsProps) {
                     highestSpendingCategory: data.highestSpendingCategory,
                     highestIncomeCategory: data.highestIncomeCategory
                 });
+                setCurrency(data.currency ?? getAppCurrency());
             })
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -61,7 +63,7 @@ function CategoryStats({ dateRange }: CategoryStatsProps) {
                                 <div>
                                     <div className='font-semibold'>{stats.highestIncomeCategory.name}</div>
                                     <span className="text-muted-foreground">
-                                        {getAppCurrency()} {formatNumber(stats.highestIncomeCategory.amount)}
+                                        {currency} {formatNumber(stats.highestIncomeCategory.amount)}
                                     </span>
                                 </div>
                             ) : '-'}
@@ -80,7 +82,7 @@ function CategoryStats({ dateRange }: CategoryStatsProps) {
                                 <div>
                                     <div className='font-semibold'>{stats.highestSpendingCategory.name}</div>
                                     <span className="text-muted-foreground">
-                                        {getAppCurrency()} {formatNumber(stats.highestSpendingCategory.amount)}
+                                        {currency} {formatNumber(stats.highestSpendingCategory.amount)}
                                     </span>
                                 </div>
                             ) : '-'}

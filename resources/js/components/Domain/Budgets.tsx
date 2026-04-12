@@ -10,6 +10,7 @@ interface Budget {
     id: number;
     name: string;
     amount: number;
+    currency: string;
     total_spent_percentage: number;
     start_at_date: string;
     end_at_date: string;
@@ -63,9 +64,9 @@ export default function Budgets() {
                             </div>
                             <div>
                                 <p className="font-medium">{budget.name}</p>
-                                {budget.remaining_to_spend > 0 && <p className='text-xs'><span>AED {formatNumber(budget.remaining_to_spend, null)}</span> left of AED {formatNumber(budget.amount, null)}</p>}
+                                {budget.remaining_to_spend > 0 && <p className='text-xs'><span>{budget.currency} {formatNumber(budget.remaining_to_spend, null)}</span> left of {budget.currency} {formatNumber(budget.amount, null)}</p>}
                                 {budget.remaining_to_spend == 0 && <p className='text-xs'>You have used all your budget</p>}
-                                {budget.remaining_to_spend < 0 && <p className='text-xs text-red-500'><span>AED {formatNumber(-budget.remaining_to_spend, null)}</span> over AED {formatNumber(budget.amount, null)}</p>}
+                                {budget.remaining_to_spend < 0 && <p className='text-xs text-red-500'><span>{budget.currency} {formatNumber(-budget.remaining_to_spend, null)}</span> over {budget.currency} {formatNumber(budget.amount, null)}</p>}
                             </div>
                         </div>
 

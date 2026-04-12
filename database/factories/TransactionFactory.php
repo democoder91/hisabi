@@ -23,7 +23,7 @@ class TransactionFactory extends Factory
             'category_id' => Category::factory(),
             'amount' => $this->faker->numberBetween(),
             'transaction_type' => Transaction::TYPE_DEBIT,
-            'currency' => 'AED',
+            'currency' => config('hisabi.currency'),
             'note' => $this->faker->text(),
         ];
     }
@@ -43,15 +43,20 @@ class TransactionFactory extends Factory
                 return;
             }
 
-            $transaction->account_id = Account::withoutGlobalScopes()->firstOrCreate(
-                [
+            $existingAccount = Account::withoutGlobalScopes()
+                ->where('user_id', $categoryUserId)
+                ->first();
+
+            if (! $existingAccount) {
+                $existingAccount = Account::factory()->create([
                     'user_id' => $categoryUserId,
-                    'name' => Account::DEFAULT_NAME,
-                ],
-                [
+                    'name' => ['en' => Account::DEFAULT_NAME],
                     'balance' => 0,
-                ]
-            )->id;
+                ]);
+            }
+
+            $transaction->account_id = $existingAccount->id;
+            $transaction->currency = $existingAccount->currency;
         })->afterCreating(function (Transaction $transaction) {
             if (! $transaction->category) {
                 return;
@@ -63,19 +68,24 @@ class TransactionFactory extends Factory
                 return;
             }
 
-            $alignedAccount = Account::withoutGlobalScopes()->firstOrCreate(
-                [
+            $alignedAccount = Account::withoutGlobalScopes()
+                ->where('user_id', $transaction->category->user_id)
+                ->first();
+
+            if (! $alignedAccount) {
+                $alignedAccount = Account::factory()->create([
                     'user_id' => $transaction->category->user_id,
-                    'name' => Account::DEFAULT_NAME,
-                ],
-                [
+                    'name' => ['en' => Account::DEFAULT_NAME],
                     'balance' => 0,
-                ]
-            );
+                ]);
+            }
 
             Transaction::withoutGlobalScopes()
                 ->whereKey($transaction->id)
-                ->update(['account_id' => $alignedAccount->id]);
+                ->update([
+                    'account_id' => $alignedAccount->id,
+                    'currency' => $alignedAccount->currency,
+                ]);
 
             $transaction->forceFill(['account_id' => $alignedAccount->id])
                 ->setRelation('account', $alignedAccount);

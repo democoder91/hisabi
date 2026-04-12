@@ -29,6 +29,8 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
     const [isReady, setIsReady] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const selectedCurrency = account?.currency || getAppCurrency();
+
     const editableAccounts = useMemo(() => {
         return accounts.filter((item) => item.canEditTransactions);
     }, [accounts]);
@@ -112,7 +114,7 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
 
                     <div>
                         <Label htmlFor="amount">
-                            {`${t('transaction.amount')} (${getAppCurrency()})`}
+                            {`${t('transaction.amount')} (${selectedCurrency})`}
                         </Label>
                         <Input
                             type="number"
@@ -145,6 +147,10 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
                             displayInputValue={(item) => item ? item.name : ''}
                             displayOptionValue={(item) => item ? item.name : ''}
                         />
+                    </div>
+
+                    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+                        {t('settings.preferences.effectiveCurrency')}: <span className="font-medium text-foreground">{selectedCurrency}</span>
                     </div>
 
                     <div>

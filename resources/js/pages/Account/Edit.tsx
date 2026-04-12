@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteAccount, inviteAccountShare, revokeAccountShare, searchAccountShareableUsers, updateAccount, updateAccountSharePermission } from '@/Api/accounts';
+import { getCurrencySettings } from '@/Api/settings';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
@@ -8,8 +9,14 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LongPressButton } from '@/components/ui/long-press-button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+
+type CurrencyOption = {
+    value: string;
+    label: string;
+};
 
 type AccountTranslations = {
     en?: string;
@@ -34,6 +41,7 @@ type AccountRecord = {
     name: string;
     name_translations?: AccountTranslations;
     balance: number;
+    currency: string;
     canManage: boolean;
     permissionLevel: string;
     sharedUsers?: SharedUser[];
@@ -53,6 +61,8 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
     const [nameAr, setNameAr] = useState('');
     const [nameLang, setNameLang] = useState<'en' | 'ar'>('en');
     const [balance, setBalance] = useState('0');
+    const [currency, setCurrency] = useState('');
+    const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [shareSearch, setShareSearch] = useState('');
     const [selectedShareUser, setSelectedShareUser] = useState<ShareableUser | null>(null);
@@ -63,6 +73,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
     const [shareLoading, setShareLoading] = useState(false);
     const [updatingShareId, setUpdatingShareId] = useState<number | null>(null);
     const shareSearchRequestId = useRef(0);
+    const selectedCurrencyLabel = currencies.find((item) => item.value === currency)?.label ?? currency;
 
     useEffect(() => {
         if (!account) {
@@ -74,6 +85,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
         setNameAr(account.name_translations?.ar ?? '');
         setNameLang('en');
         setBalance(String(account.balance ?? 0));
+        setCurrency(account.currency ?? '');
         setShareSearch('');
         setSelectedShareUser(null);
         setShareResults([]);
@@ -82,6 +94,16 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
         setSharePermission('view');
         setShareLoading(false);
         setLoading(false);
+    }, [account]);
+
+    useEffect(() => {
+        if (!account) {
+            return;
+        }
+
+        getCurrencySettings()
+            .then((payload) => setCurrencies(payload.options.currencies))
+            .catch(console.error);
     }, [account]);
 
     const canManage = currentAccount?.canManage ?? false;
@@ -155,6 +177,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
                 ar: nameAr.trim(),
             },
             balance: Number(balance || 0),
+            currency,
         })
             .then(({ data }) => {
                 setCurrentAccount(data.updateAccount);
@@ -311,6 +334,23 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
                                         onChange={(event) => setBalance(event.target.value)}
                                     />
                                 </div>
+                                <div>
+                                    <Label htmlFor="account-currency">{t('settings.nav.currencies')}</Label>
+                                    <Select value={currency} onValueChange={setCurrency} disabled={!canManage}>
+                                        <SelectTrigger id="account-currency" className="mt-1">
+                                            <SelectValue placeholder={t('settings.preferences.currencyPlaceholder')}>
+                                                {selectedCurrencyLabel}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencies.map((item) => (
+                                                <SelectItem key={item.value} value={item.value}>
+                                                    {item.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Badge variant="secondary" className="capitalize">
                                         {currentAccount.permissionLevel === 'owner' ? t('common.owner') : `${t('common.shared')} · ${t(`common.${currentAccount.permissionLevel}`)}`}
@@ -321,7 +361,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
                                 {canManage && (
                                     <div className="flex justify-end gap-2">
                                         <LongPressButton onLongPress={handleDelete}>{t('common.holdToDelete')}</LongPressButton>
-                                        <Button onClick={handleUpdate} disabled={loading || !nameEn.trim()}>
+                                        <Button onClick={handleUpdate} disabled={loading || !nameEn.trim() || !currency}>
                                             {t('common.update')}
                                         </Button>
                                     </div>

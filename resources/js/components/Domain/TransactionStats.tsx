@@ -12,6 +12,7 @@ interface TransactionStatsProps {
 function TransactionStats({ dateRange }: TransactionStatsProps) {
     const { t } = useTranslation();
     const [stats, setStats] = useState({ totalIncome: 0, totalExpenses: 0, totalTransactions: 0 });
+    const [currency, setCurrency] = useState(getAppCurrency());
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -27,6 +28,7 @@ function TransactionStats({ dateRange }: TransactionStatsProps) {
                     totalExpenses: data.totalExpenses.value,
                     totalTransactions: totalCount
                 });
+                setCurrency(data.totalIncome.currency ?? data.totalExpenses.currency ?? getAppCurrency());
             })
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -50,7 +52,7 @@ function TransactionStats({ dateRange }: TransactionStatsProps) {
                     {loading ? (
                         <div className="h-6 w-24 bg-muted animate-pulse rounded"></div>
                     ) : (
-                        <div className="font-semibold">{getAppCurrency()} {formatNumber(stats.totalIncome)}</div>
+                        <div className="font-semibold">{currency} {formatNumber(stats.totalIncome)}</div>
                     )}
                 </CardContent>
             </Card>
@@ -60,7 +62,7 @@ function TransactionStats({ dateRange }: TransactionStatsProps) {
                     {loading ? (
                         <div className="h-6 w-24 bg-muted animate-pulse rounded"></div>
                     ) : (
-                        <div className="font-semibold">{getAppCurrency()} {formatNumber(stats.totalExpenses)}</div>
+                        <div className="font-semibold">{currency} {formatNumber(stats.totalExpenses)}</div>
                     )}
                 </CardContent>
             </Card>

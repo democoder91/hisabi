@@ -19,6 +19,7 @@ class AccountFactory extends Factory
             'user_id' => Auth::id() ?? User::factory(),
             'name' => ['en' => $name],
             'balance' => 0,
+            'currency' => config('hisabi.currency'),
         ];
     }
 }

@@ -7,13 +7,15 @@ use App\Enums\Currency;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
 use App\Models\User;
+use App\Services\Currency\CurrencyRateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
     public function __construct(
-        private UserService $userService
+        private UserService $userService,
+        private CurrencyRateService $currencyRateService,
     ) {}
 
     public function show(Request $request): JsonResponse
@@ -39,7 +41,7 @@ class SettingsController extends Controller
         return [
             'settings' => [
                 'default_currency' => $user->default_currency,
-                'effective_currency' => $user->default_currency ?: config('hisabi.currency'),
+                'effective_currency' => $this->currencyRateService->effectiveCurrency($user),
                 'locale' => $user->locale ?: config('app.locale'),
             ],
             'defaults' => [

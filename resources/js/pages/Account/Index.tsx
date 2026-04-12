@@ -7,7 +7,7 @@ import { BankIcon, ArrowElbowDownRightIcon } from '@phosphor-icons/react';
 
 import Authenticated from '@/Layouts/Authenticated';
 import { getAccounts } from '@/Api/accounts';
-import { animateRowItem, formatNumber, getAppCurrency } from '@/Utils';
+import { animateRowItem, formatNumber } from '@/Utils';
 import Create from './Create';
 import Edit from './Edit';
 import { Button } from '@/components/ui/button';
@@ -91,7 +91,7 @@ export default function Index({ auth }) {
             header: t('account.balance'),
             cell: ({ row }) => (
                 <p className="font-medium whitespace-nowrap">
-                    {getAppCurrency()} {formatNumber(row.original.balance, null)}
+                    {row.original.currency} {formatNumber(row.original.balance, null)}
                 </p>
             ),
         },

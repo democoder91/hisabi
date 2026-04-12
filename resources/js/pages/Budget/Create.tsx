@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createBudget } from '@/Api/budgets';
+import { getCurrencySettings } from '@/Api/settings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,11 @@ type CreateBudgetProps = {
     onCreate: (budget: BudgetRecord) => void;
 };
 
+type CurrencyOption = {
+    value: string;
+    label: string;
+};
+
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 export default function Create({ open, categories, onClose, onCreate }: CreateBudgetProps) {
@@ -27,6 +33,8 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
     const [nameAr, setNameAr] = useState('');
     const [nameLang, setNameLang] = useState('en');
     const [amount, setAmount] = useState('0');
+    const [currency, setCurrency] = useState('');
+    const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
     const [startAt, setStartAt] = useState(getToday());
     const [endAt, setEndAt] = useState(getToday());
     const [period, setPeriod] = useState('1');
@@ -34,13 +42,24 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
     const [budgetType, setBudgetType] = useState<'spending' | 'saving'>('spending');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
+    const selectedCurrencyLabel = currencies.find((item) => item.value === currency)?.label ?? currency;
 
     useEffect(() => {
+        if (open) {
+            getCurrencySettings()
+                .then((payload) => {
+                    setCurrencies(payload.options.currencies);
+                    setCurrency(payload.settings.effective_currency);
+                })
+                .catch(console.error);
+        }
+
         if (!open) {
             setNameEn('');
             setNameAr('');
             setNameLang('en');
             setAmount('0');
+            setCurrency('');
             setStartAt(getToday());
             setEndAt(getToday());
             setPeriod('1');
@@ -56,7 +75,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
             return false;
         }
 
-        if (Number(amount) <= 0 || selectedCategoryIds.length === 0) {
+        if (!currency || Number(amount) <= 0 || selectedCategoryIds.length === 0) {
             return false;
         }
 
@@ -65,7 +84,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
         }
 
         return true;
-    }, [amount, endAt, nameEn, reoccurrence, selectedCategoryIds]);
+    }, [amount, currency, endAt, nameEn, reoccurrence, selectedCategoryIds]);
 
     const handleCreate = () => {
         if (!isReady || loading) {
@@ -80,6 +99,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
                 ar: nameAr.trim(),
             },
             amount: Number(amount),
+            currency,
             start_at: startAt,
             end_at: reoccurrence === 'CUSTOM' ? endAt : null,
             saving: budgetType === 'saving',
@@ -140,6 +160,26 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
                                 onChange={(event) => setAmount(event.target.value)}
                             />
                         </div>
+                        <div>
+                            <Label>{t('settings.nav.currencies')}</Label>
+                            <Select value={currency} onValueChange={setCurrency}>
+                                <SelectTrigger className="mt-1 h-10">
+                                    <SelectValue placeholder={t('settings.preferences.currencyPlaceholder')}>
+                                        {selectedCurrencyLabel}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {currencies.map((item) => (
+                                        <SelectItem key={item.value} value={item.value}>
+                                            {item.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <Label>{t('budget.budgetType')}</Label>
                             <Select value={budgetType} onValueChange={(value) => setBudgetType(value as 'spending' | 'saving')}>

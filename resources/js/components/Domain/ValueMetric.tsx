@@ -18,6 +18,7 @@ interface ValueMetricProps {
 export default function ValueMetric({ name, helpText, metric, dateRange }: ValueMetricProps) {
     const [value, setValue] = useState(null);
     const [previous, setPrevious] = useState(null);
+    const [currency, setCurrency] = useState(getAppCurrency());
     const [ref, isInView] = useInView();
 
     useEffect(() => {
@@ -33,6 +34,7 @@ export default function ValueMetric({ name, helpText, metric, dateRange }: Value
             const response = await fetcher(dateRange);
             setValue(response.data.value);
             setPrevious(response.data.previous);
+            setCurrency(response.data.currency ?? getAppCurrency());
         };
 
         fetchData();
@@ -81,7 +83,7 @@ export default function ValueMetric({ name, helpText, metric, dateRange }: Value
                 </div>
 
                 <p className="flex grow-1 items-center text-3xl">
-                    { getAppCurrency() } { formatNumber(value) }
+                    { currency } { formatNumber(value) }
                 </p>
 
                 {increaseOrDecrease() !== 0 && <div className="flex grow-0">

@@ -81,7 +81,7 @@ export default function Index({ auth }: { auth: any }) {
         {
             accessorKey: 'amount',
             header: t('budget.amount'),
-            cell: ({ row }) => <span className="whitespace-nowrap">AED {formatNumber(row.original.amount, null)}</span>,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.amount, null)}</span>,
         },
         {
             accessorKey: 'reoccurrence',
@@ -120,12 +120,12 @@ export default function Index({ auth }: { auth: any }) {
         {
             accessorKey: 'total_transactions_amount',
             header: t('budget.spent'),
-            cell: ({ row }) => <span className="whitespace-nowrap">AED {formatNumber(row.original.total_transactions_amount, null)}</span>,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.total_transactions_amount, null)}</span>,
         },
         {
             accessorKey: 'remaining_to_spend',
             header: t('budget.remaining'),
-            cell: ({ row }) => <span className="whitespace-nowrap">AED {formatNumber(row.original.remaining_to_spend, null)}</span>,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.remaining_to_spend, null)}</span>,
         },
         {
             id: 'actions',

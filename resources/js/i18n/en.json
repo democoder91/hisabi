@@ -266,6 +266,7 @@
         "nav": {
             "account": "Account",
             "preferences": "Preferences",
+            "currencies": "Currencies",
             "apiKey": "API Key",
             "import": "Import",
             "export": "Export",
@@ -315,6 +316,30 @@
             "updated": "Preferences updated successfully",
             "updateError": "Failed to update preferences",
             "loadError": "Failed to load preferences"
+        },
+        "currencies": {
+            "title": "Currencies",
+            "description": "Manage your default currency and exchange rates.",
+            "defaultCurrency": "Default currency",
+            "defaultCurrencyDescription": "Choose the currency used for dashboard totals and other converted summaries.",
+            "effectiveCurrency": "Effective currency",
+            "lastRefreshed": "Last refreshed",
+            "neverRefreshed": "Not refreshed yet",
+            "manualRates": "Manual exchange rates",
+            "manualRatesDescription": "Rates are stored as 1 USD = X target currency.",
+            "rateLabel": "1 USD = X {{currency}}",
+            "refreshRates": "Refresh from provider",
+            "refreshing": "Refreshing...",
+            "saveRates": "Save manual rates",
+            "savingRates": "Saving rates...",
+            "saveDefaultCurrency": "Save default currency",
+            "saving": "Saving...",
+            "updated": "Currency settings updated successfully",
+            "ratesUpdated": "Exchange rates updated successfully",
+            "refreshed": "Exchange rates refreshed successfully",
+            "updateError": "Failed to update currency settings",
+            "refreshError": "Failed to refresh exchange rates",
+            "loadError": "Failed to load currency settings"
         },
         "placeholder": {
             "apiKey": {

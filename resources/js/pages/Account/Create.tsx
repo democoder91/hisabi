@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createAccount } from '@/Api/accounts';
+import { getCurrencySettings } from '@/Api/settings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+type CurrencyOption = {
+    value: string;
+    label: string;
+};
 
 type AccountTranslations = {
     en?: string;
@@ -17,6 +24,7 @@ type AccountRecord = {
     name: string;
     name_translations?: AccountTranslations;
     balance: number;
+    currency: string;
 };
 
 type CreateAccountProps = {
@@ -31,14 +39,27 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
     const [nameAr, setNameAr] = useState('');
     const [nameLang, setNameLang] = useState<'en' | 'ar'>('en');
     const [balance, setBalance] = useState('0');
+    const [currency, setCurrency] = useState('');
+    const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
     const [loading, setLoading] = useState(false);
+    const selectedCurrencyLabel = currencies.find((item) => item.value === currency)?.label ?? currency;
 
     useEffect(() => {
+        if (open) {
+            getCurrencySettings()
+                .then((payload) => {
+                    setCurrencies(payload.options.currencies);
+                    setCurrency(payload.settings.effective_currency);
+                })
+                .catch(console.error);
+        }
+
         if (!open) {
             setNameEn('');
             setNameAr('');
             setNameLang('en');
             setBalance('0');
+            setCurrency('');
             setLoading(false);
         }
     }, [open]);
@@ -56,6 +77,7 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
                 ar: nameAr.trim(),
             },
             balance: Number(balance || 0),
+            currency,
         })
             .then(({ data }) => {
                 onCreate(data.createAccount);
@@ -109,8 +131,25 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
                             onChange={(event) => setBalance(event.target.value)}
                         />
                     </div>
+                    <div>
+                        <Label htmlFor="account-currency">{t('settings.nav.currencies')}</Label>
+                        <Select value={currency} onValueChange={setCurrency}>
+                            <SelectTrigger id="account-currency" className="mt-1">
+                                <SelectValue placeholder={t('settings.preferences.currencyPlaceholder')}>
+                                    {selectedCurrencyLabel}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {currencies.map((item) => (
+                                    <SelectItem key={item.value} value={item.value}>
+                                        {item.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="flex justify-end">
-                        <Button onClick={handleCreate} disabled={loading || !nameEn.trim()}>
+                        <Button onClick={handleCreate} disabled={loading || !nameEn.trim() || !currency}>
                             {t('common.create')}
                         </Button>
                     </div>

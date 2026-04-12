@@ -6,7 +6,7 @@ import { ArrowLeftIcon, ClockCounterClockwiseIcon } from '@phosphor-icons/react'
 
 import Authenticated from '@/Layouts/Authenticated';
 import { getAccountAudits } from '@/Api/accounts';
-import { formatNumber, getAppCurrency } from '@/Utils';
+import { formatNumber } from '@/Utils';
 import LoadMore from '@/components/Global/LoadMore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export default function Audit({ auth, account }) {
         }
 
         if (field === 'amount') {
-            return `${getAppCurrency()} ${formatNumber(value, null)}`;
+            return `${account.currency} ${formatNumber(value, null)}`;
         }
 
         if (field.endsWith('_at')) {
@@ -188,7 +188,7 @@ export default function Audit({ auth, account }) {
                             <CardDescription>
                                 {t('account.auditSummary', {
                                     count: account.transactionsCount,
-                                    balance: `${getAppCurrency()} ${formatNumber(account.balance, null)}`,
+                                    balance: `${account.currency} ${formatNumber(account.balance, null)}`,
                                 })}
                             </CardDescription>
                         </CardHeader>

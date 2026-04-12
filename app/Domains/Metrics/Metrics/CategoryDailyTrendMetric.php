@@ -4,8 +4,6 @@ namespace App\Domains\Metrics\Metrics;
 
 use Carbon\Carbon;
 use App\Domains\Metrics\Metric;
-use App\Domains\Transaction\Models\Transaction;
-use Illuminate\Support\Facades\DB;
 
 class CategoryDailyTrendMetric extends Metric
 {
@@ -20,18 +18,12 @@ class CategoryDailyTrendMetric extends Metric
     public function calculate(): array
     {
         if (!$this->hasDateRange()) {
-            return [];
+            return $this->itemsPayload([]);
         }
 
-        $dateFormat = $this->getDateFormat('%Y-%m-%d');
-
-        $transactions = Transaction::where('transactions.category_id', $this->categoryId)
-            ->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()])
-            ->select(DB::raw("{$dateFormat} as label, SUM(transactions.amount) as value"))
-            ->groupBy(DB::raw("label"))
-            ->orderBy('label')
-            ->get()
-            ->keyBy('label');
+        $transactions = $this->transactions(fn ($query) => $query->where('transactions.category_id', $this->categoryId))
+            ->groupBy(fn ($transaction) => Carbon::parse($transaction->created_at)->format('Y-m-d'))
+            ->map(fn ($items) => $this->sumConverted($items));
 
         $startDate = Carbon::parse($this->getStartDate());
         $endDate = Carbon::parse($this->getEndDate());
@@ -42,11 +34,11 @@ class CategoryDailyTrendMetric extends Metric
             $date = $currentDate->format('Y-m-d');
             $results[] = [
                 'label' => $date,
-                'value' => $transactions->get($date)->value ?? 0,
+                'value' => $transactions->get($date, 0),
             ];
             $currentDate->addDay();
         }
 
-        return $results;
+        return $this->itemsPayload($results);
     }
 }

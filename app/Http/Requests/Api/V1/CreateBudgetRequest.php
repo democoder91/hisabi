@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Domains\Budget\Models\Budget;
+use App\Enums\Currency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,6 +21,7 @@ class CreateBudgetRequest extends FormRequest
             'name.en' => ['required', 'string', 'max:255'],
             'name.ar' => ['nullable', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'gt:0'],
+            'currency' => ['required', Rule::enum(Currency::class)],
             'start_at' => ['required', 'date'],
             'end_at' => [
                 Rule::requiredIf(fn () => $this->input('reoccurrence') === Budget::CUSTOM),
@@ -42,5 +44,14 @@ class CreateBudgetRequest extends FormRequest
                 Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)),
             ],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('currency')) {
+            $this->merge([
+                'currency' => strtoupper((string) $this->input('currency')),
+            ]);
+        }
     }
 }

@@ -267,6 +267,7 @@
         "nav": {
             "account": "الحساب",
             "preferences": "التفضيلات",
+            "currencies": "العملات",
             "apiKey": "مفتاح API",
             "import": "استيراد",
             "export": "تصدير",
@@ -316,6 +317,30 @@
             "updated": "تم تحديث التفضيلات بنجاح",
             "updateError": "فشل في تحديث التفضيلات",
             "loadError": "فشل في تحميل التفضيلات"
+        },
+        "currencies": {
+            "title": "العملات",
+            "description": "إدارة العملة الافتراضية وأسعار الصرف.",
+            "defaultCurrency": "العملة الافتراضية",
+            "defaultCurrencyDescription": "اختر العملة المستخدمة لملخصات لوحة التحكم والقيم المحوّلة.",
+            "effectiveCurrency": "العملة الفعالة",
+            "lastRefreshed": "آخر تحديث",
+            "neverRefreshed": "لم يتم التحديث بعد",
+            "manualRates": "أسعار الصرف اليدوية",
+            "manualRatesDescription": "يتم تخزين الأسعار بالشكل 1 دولار أمريكي = X من العملة المستهدفة.",
+            "rateLabel": "1 دولار أمريكي = X {{currency}}",
+            "refreshRates": "تحديث من المزود",
+            "refreshing": "جار التحديث...",
+            "saveRates": "حفظ الأسعار اليدوية",
+            "savingRates": "جار حفظ الأسعار...",
+            "saveDefaultCurrency": "حفظ العملة الافتراضية",
+            "saving": "جار الحفظ...",
+            "updated": "تم تحديث إعدادات العملات بنجاح",
+            "ratesUpdated": "تم تحديث أسعار الصرف بنجاح",
+            "refreshed": "تم جلب أسعار الصرف بنجاح",
+            "updateError": "فشل في تحديث إعدادات العملات",
+            "refreshError": "فشل في جلب أسعار الصرف",
+            "loadError": "فشل في تحميل إعدادات العملات"
         },
         "placeholder": {
             "apiKey": {

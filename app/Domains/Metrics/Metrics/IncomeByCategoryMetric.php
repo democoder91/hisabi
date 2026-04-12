@@ -3,27 +3,21 @@
 namespace App\Domains\Metrics\Metrics;
 
 use App\Domains\Metrics\Metric;
-use App\Domains\Category\Models\Category;
-use Illuminate\Support\Facades\DB;
 
 class IncomeByCategoryMetric extends Metric
 {
     public function calculate(): array
     {
-        $labelExpression = $this->localizedJsonValueExpression('categories.name');
+        $items = $this->transactions(fn ($query) => $query->income())
+            ->groupBy(fn ($transaction) => $this->categoryLabel($transaction->category))
+            ->map(fn ($transactions, $label) => [
+                'label' => $label,
+                'value' => $this->sumConverted($transactions),
+            ])
+            ->sortByDesc('value')
+            ->values()
+            ->all();
 
-        $query = Category::query()
-            ->where('type', Category::INCOME)
-            ->join('transactions', 'transactions.category_id', '=', 'categories.id')
-            ->selectRaw($this->localizedJsonSelect('categories.name') . ', SUM(transactions.amount) as value')
-            ->groupBy('categories.id')
-            ->groupBy(DB::raw($labelExpression))
-            ->orderBy('value', 'DESC');
-
-        if ($this->hasDateRange()) {
-            $query->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);
-        }
-
-        return $query->get()->toArray();
+        return $this->itemsPayload($items);
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Controllers\Api\V1\Settings\CurrencySettingsController;
 use App\Http\Controllers\Api\V1\SmsController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TranscriptionController;
@@ -69,6 +70,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/ai/transcribe/token', [TranscriptionController::class, 'token']);
         Route::get('/settings', [SettingsController::class, 'show']);
         Route::put('/settings', [SettingsController::class, 'update']);
+        Route::get('/settings/currencies', [CurrencySettingsController::class, 'show']);
+        Route::put('/settings/currencies', [CurrencySettingsController::class, 'updatePreference']);
+        Route::put('/settings/currencies/rates', [CurrencySettingsController::class, 'updateRates']);
+        Route::post('/settings/currencies/refresh', [CurrencySettingsController::class, 'refresh']);
         Route::put('/user/profile', [UserController::class, 'updateProfile']);
 
         Route::prefix('metrics')->group(function () {

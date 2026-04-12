@@ -21,6 +21,7 @@ interface PartitionMetricProps {
 
 export default function PartitionMetric({ name, metric, relation, show_currency, dateRange }: PartitionMetricProps) {
     const [data, setData] = useState(null);
+    const [currency, setCurrency] = useState(getAppCurrency());
     const [chartRef, setChartRef] = useState(null);
     const [relationData, setRelationData] = useState([]);
     const [selectedRelationId, setSelectedRelationId] = useState(0);
@@ -58,14 +59,20 @@ export default function PartitionMetric({ name, metric, relation, show_currency,
         if (relation) {
             if (selectedRelationId) {
                 fetcher(dateRange, selectedRelationId)
-                    .then((response) => setData(response.data))
+                    .then((response) => {
+                        setData(response.data.items ?? response.data);
+                        setCurrency(response.data.currency ?? getAppCurrency());
+                    })
                     .catch(console.error)
             }
             return;
         }
 
         fetcher(dateRange)
-            .then((response) => setData(response.data))
+            .then((response) => {
+                setData(response.data.items ?? response.data);
+                setCurrency(response.data.currency ?? getAppCurrency());
+            })
             .catch(console.error)
     }, [selectedRelationId, dateRange, metric, isInView])
 
@@ -133,7 +140,7 @@ export default function PartitionMetric({ name, metric, relation, show_currency,
                     <ul className="list-reset">
                         {data.map((item, index) => <li key={index} className="text-xs text-gray-700 leading-normal">
                             <span className={`inline-block rounded-full w-2 h-2 mr-2 ${getTailwindColor(index)}`} />
-                            {item.label} ({show_currency && <>{getAppCurrency()} </>}{formatNumber(item.value)} - {total > 0 && formatNumber(item.value * 100 / total) + "%"})
+                            {item.label} ({show_currency && <>{currency} </>}{formatNumber(item.value)} - {total > 0 && formatNumber(item.value * 100 / total) + "%"})
                         </li>)}
                     </ul>
 

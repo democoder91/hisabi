@@ -3,11 +3,13 @@
 namespace App\Domains\Account\Services;
 
 use App\Domains\Account\Models\Account;
+use App\Domains\Account\Models\AccountShare;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -70,7 +72,7 @@ class AccountService
     {
         return Account::query()->create([
             ...$data,
-            'user_id' => $data['user_id'] ?? auth()->id(),
+            'user_id' => $data['user_id'] ?? Auth::id(),
         ]);
     }
 
@@ -122,28 +124,40 @@ class AccountService
     {
         $shareUser = User::query()->where('email', $data['email'])->firstOrFail();
 
-        $account->sharedUsers()->syncWithoutDetaching([
-            $shareUser->id => ['permission_level' => $data['permission_level']],
-        ]);
+        AccountShare::withTrashed()->updateOrCreate(
+            [
+                'account_id' => $account->id,
+                'user_id' => $shareUser->id,
+            ],
+            [
+                'permission_level' => $data['permission_level'],
+                'deleted_at' => null,
+            ],
+        );
 
         return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
     }
 
     public function updateSharePermission(Account $account, int $shareUserId, string $permissionLevel): Account
     {
-        $account->sharedUsers()->where('users.id', $shareUserId)->firstOrFail();
-
-        $account->sharedUsers()->updateExistingPivot($shareUserId, [
+        AccountShare::query()
+            ->where('account_id', $account->id)
+            ->where('user_id', $shareUserId)
+            ->firstOrFail()
+            ->update([
             'permission_level' => $permissionLevel,
-        ]);
+            ]);
 
         return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
     }
 
     public function revokeShare(Account $account, int $shareUserId): Account
     {
-        $account->sharedUsers()->where('users.id', $shareUserId)->firstOrFail();
-        $account->sharedUsers()->detach($shareUserId);
+        AccountShare::query()
+            ->where('account_id', $account->id)
+            ->where('user_id', $shareUserId)
+            ->firstOrFail()
+            ->delete();
 
         return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
     }
@@ -158,7 +172,7 @@ class AccountService
 
     private function accessibleQuery(): Builder
     {
-        return Account::query()->accessibleTo(auth()->user());
+        return Account::query()->accessibleTo(Auth::user());
     }
 
     private function localizedNameSortSql(bool $descending = false): string

@@ -268,7 +268,7 @@ class CategoryControllerTest extends TestCase
             ->assertJsonPath('category.id', $category->id)
             ->assertJsonPath('category.name.en', 'Category to Delete');
 
-        $this->assertDatabaseMissing('categories', [
+        $this->assertSoftDeleted('categories', [
             'id' => $category->id,
         ]);
     }

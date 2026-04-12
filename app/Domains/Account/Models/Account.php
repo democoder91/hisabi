@@ -13,12 +13,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\Translatable\HasTranslations;
 
 class Account extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, SoftDeletes;
 
     public const DEFAULT_NAME = 'Checking';
     public const PERMISSION_VIEW = 'view';
@@ -55,7 +56,8 @@ class Account extends Model
     public function sharedUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot('permission_level')
+            ->wherePivotNull('deleted_at')
+            ->withPivot('id', 'permission_level', 'deleted_at')
             ->withTimestamps();
     }
 
@@ -85,7 +87,11 @@ class Account extends Model
         }
 
         if ($this->relationLoaded('sharedUsers')) {
-            return $this->sharedUsers->firstWhere('id', $user->id)?->pivot?->permission_level;
+            $sharedUser = $this->sharedUsers->firstWhere('id', $user->id);
+
+            return $sharedUser && $sharedUser->pivot
+                ? $sharedUser->pivot->permission_level
+                : null;
         }
 
         return $this->sharedUsers()

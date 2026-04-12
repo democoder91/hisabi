@@ -3,9 +3,8 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
-use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +16,7 @@ class TransactionBalanceTest extends TestCase
     private User $user;
     private Account $account;
     private Account $secondaryAccount;
-    private Brand $expenseBrand;
+    private Category $expenseCategory;
 
     protected function setUp(): void
     {
@@ -27,11 +26,10 @@ class TransactionBalanceTest extends TestCase
         $this->account = Account::factory()->create(['user_id' => $this->user->id, 'balance' => 1000]);
         $this->secondaryAccount = Account::factory()->create(['user_id' => $this->user->id, 'balance' => 300]);
 
-        $category = Category::factory()->create(['user_id' => $this->user->id, 'type' => Category::EXPENSES, 'name' => ['en' => 'Food']]);
-        $this->expenseBrand = Brand::factory()->create([
+        $this->expenseCategory = Category::factory()->create([
             'user_id' => $this->user->id,
-            'category_id' => $category->id,
-            'name' => ['en' => 'Cafe'],
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Food'],
         ]);
     }
 
@@ -39,8 +37,8 @@ class TransactionBalanceTest extends TestCase
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 150,
-            'brand_id' => $this->expenseBrand->id,
             'created_at' => now()->toDateString(),
         ]);
 
@@ -54,8 +52,12 @@ class TransactionBalanceTest extends TestCase
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'account_id' => $this->account->id,
+            'category_id' => Category::factory()->create([
+                'user_id' => $this->user->id,
+                'type' => Category::INCOME,
+                'name' => ['en' => 'Salary'],
+            ])->id,
             'amount' => 200,
-            'brand_id' => null,
             'transaction_type' => Transaction::TYPE_CREDIT,
             'created_at' => now()->toDateString(),
         ]);
@@ -70,7 +72,7 @@ class TransactionBalanceTest extends TestCase
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->expenseBrand->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 100,
         ]);
 
@@ -79,8 +81,8 @@ class TransactionBalanceTest extends TestCase
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
             'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 160,
-            'brand_id' => $this->expenseBrand->id,
             'created_at' => now()->toDateString(),
         ]);
 
@@ -94,14 +96,14 @@ class TransactionBalanceTest extends TestCase
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->expenseBrand->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 80,
         ]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
             'account_id' => $this->secondaryAccount->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 120,
-            'brand_id' => $this->expenseBrand->id,
             'created_at' => now()->toDateString(),
         ]);
 
@@ -118,7 +120,7 @@ class TransactionBalanceTest extends TestCase
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->expenseBrand->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 125,
         ]);
 
@@ -131,5 +133,25 @@ class TransactionBalanceTest extends TestCase
 
         $this->account->refresh();
         $this->assertSame(1000.0, $this->account->balance);
+        $this->assertSoftDeleted('transactions', ['id' => $transaction->id]);
+    }
+
+    public function test_restoring_a_transaction_reapplies_its_balance_effect(): void
+    {
+        $transaction = Transaction::factory()->create([
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'amount' => 125,
+        ]);
+
+        $transaction->delete();
+
+        $this->account->refresh();
+        $this->assertSame(1000.0, $this->account->balance);
+
+        $transaction->restore();
+
+        $this->account->refresh();
+        $this->assertSame(875.0, $this->account->balance);
     }
 }

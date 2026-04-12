@@ -4,6 +4,7 @@ use App\Domains\Transaction\Models\Transaction;
 use App\Models\Category;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -16,17 +17,22 @@ return new class extends Migration
                 ->after('amount');
         });
 
-        Transaction::query()
-            ->with('brand.category')
+        DB::table('transactions')
+            ->leftJoin('brands', 'brands.id', '=', 'transactions.brand_id')
+            ->leftJoin('categories', 'categories.id', '=', 'brands.category_id')
+            ->select(['transactions.id', 'categories.type as category_type'])
+            ->orderBy('transactions.id')
             ->chunkById(100, function ($transactions) {
                 foreach ($transactions as $transaction) {
-                    $categoryType = $transaction->brand?->category?->type;
-
-                    $transaction->forceFill([
-                        'transaction_type' => Transaction::transactionTypeForCategoryType($categoryType ?? Category::EXPENSES),
-                    ])->saveQuietly();
+                    DB::table('transactions')
+                        ->where('id', $transaction->id)
+                        ->update([
+                            'transaction_type' => Transaction::transactionTypeForCategoryType(
+                                $transaction->category_type ?? Category::EXPENSES,
+                            ),
+                        ]);
                 }
-            });
+            }, 'transactions.id', 'id');
     }
 
     public function down(): void

@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Domains\Transaction\Models\Transaction;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model implements Searchable
 {
-    use BelongsToUser, HasFactory, HasTranslations;
+    use BelongsToUser, HasFactory, HasTranslations, SoftDeletes;
 
     public array $translatable = ['name'];
 

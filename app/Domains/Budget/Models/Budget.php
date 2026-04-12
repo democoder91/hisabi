@@ -5,14 +5,15 @@ namespace App\Domains\Budget\Models;
 use App\Domains\Category\Models\Category;
 use App\Models\Concerns\BelongsToUser;
 use Carbon\CarbonPeriod;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\HasTranslations;
 
 class Budget extends Model
 {
-    use BelongsToUser, HasFactory, HasTranslations;
+    use BelongsToUser, HasFactory, HasTranslations, SoftDeletes;
 
     public array $translatable = ['name'];
 
@@ -45,7 +46,10 @@ class Budget extends Model
 
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(Category::class);
+        return $this->belongsToMany(Category::class)
+            ->wherePivotNull('deleted_at')
+            ->withPivot('id', 'deleted_at')
+            ->withTimestamps();
     }
 
     public function getIsSavingAttribute(): bool

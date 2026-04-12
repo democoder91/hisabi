@@ -163,7 +163,7 @@ class AccountControllerTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('account.id', $account->id);
 
-        $this->assertDatabaseMissing('accounts', ['id' => $account->id]);
+        $this->assertSoftDeleted('accounts', ['id' => $account->id]);
     }
 
     public function test_it_returns_404_when_updating_another_users_account(): void
@@ -275,9 +275,36 @@ class AccountControllerTest extends TestCase
         $response->assertOk()
             ->assertJsonCount(0, 'account.sharedUsers');
 
-        $this->assertDatabaseMissing('account_user', [
+        $this->assertSoftDeleted('account_user', [
             'account_id' => $account->id,
             'user_id' => $sharedUser->id,
+        ]);
+    }
+
+    public function test_owner_can_reinvite_a_previously_revoked_shared_user(): void
+    {
+        $account = Account::factory()->create(['user_id' => $this->user->id]);
+        $sharedUser = User::factory()->create();
+
+        $account->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
+
+        $this->actingAs($this->user)->deleteJson("/api/v1/accounts/{$account->id}/shares/{$sharedUser->id}")
+            ->assertOk();
+
+        $response = $this->actingAs($this->user)->postJson("/api/v1/accounts/{$account->id}/shares", [
+            'email' => $sharedUser->email,
+            'permission_level' => Account::PERMISSION_EDIT,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('account.sharedUsers.0.id', $sharedUser->id)
+            ->assertJsonPath('account.sharedUsers.0.permissionLevel', Account::PERMISSION_EDIT);
+
+        $this->assertDatabaseHas('account_user', [
+            'account_id' => $account->id,
+            'user_id' => $sharedUser->id,
+            'permission_level' => Account::PERMISSION_EDIT,
+            'deleted_at' => null,
         ]);
     }
 

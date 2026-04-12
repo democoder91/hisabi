@@ -3,7 +3,6 @@
 namespace Tests\Concerns;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Category\Models\Category;
 use App\Models\User;
 
@@ -22,12 +21,6 @@ trait CreatesSharedAccountContext
             'type' => Category::EXPENSES,
         ]);
 
-        $brand = Brand::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Shared Brand'],
-            'category_id' => $category->id,
-        ]);
-
-        return compact('owner', 'sharedUser', 'account', 'category', 'brand');
+        return compact('owner', 'sharedUser', 'account', 'category');
     }
 }

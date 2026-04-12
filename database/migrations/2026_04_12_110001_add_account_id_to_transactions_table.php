@@ -39,11 +39,13 @@ return new class extends Migration
 
             DB::table('transactions')->whereNull('account_id')->update(['account_id' => $defaultAccountId]);
 
-            $balance = Transaction::query()
-                ->withoutGlobalScopes()
+            $balance = (float) DB::table('transactions')
                 ->where('account_id', $defaultAccountId)
-                ->get()
-                ->sum(fn (Transaction $transaction) => $transaction->signedAmount());
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN UPPER(transaction_type) = ? THEN amount ELSE -1 * amount END), 0) as balance',
+                    [Transaction::TYPE_CREDIT],
+                )
+                ->value('balance');
 
             DB::table('accounts')->where('id', $defaultAccountId)->update([
                 'balance' => round($balance, 2),

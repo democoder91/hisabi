@@ -6,6 +6,7 @@ use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Category\Models\Category as DomainCategory;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -61,7 +62,8 @@ class User extends Authenticatable
     public function sharedAccounts(): BelongsToMany
     {
         return $this->belongsToMany(Account::class)
-            ->withPivot('permission_level')
+            ->wherePivotNull('deleted_at')
+            ->withPivot('id', 'permission_level', 'deleted_at')
             ->withTimestamps();
     }
 

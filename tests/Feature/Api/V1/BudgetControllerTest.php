@@ -165,6 +165,10 @@ class BudgetControllerTest extends TestCase
         $this->assertSame('New Budget', $budget->getTranslation('name', 'en'));
         $this->assertTrue($budget->saving);
         $this->assertSame([$newCategory->id], $budget->categories()->pluck('categories.id')->all());
+        $this->assertSoftDeleted('budget_category', [
+            'budget_id' => $budget->id,
+            'category_id' => $originalCategory->id,
+        ]);
     }
 
     public function test_it_deletes_a_budget(): void
@@ -181,7 +185,7 @@ class BudgetControllerTest extends TestCase
             ->assertJsonPath('budget.id', $budget->id)
             ->assertJsonPath('budget.name', 'Budget to Delete');
 
-        $this->assertDatabaseMissing('budgets', ['id' => $budget->id]);
+        $this->assertSoftDeleted('budgets', ['id' => $budget->id]);
     }
 
     public function test_it_returns_404_when_updating_another_users_budget(): void

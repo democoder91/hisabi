@@ -10,10 +10,11 @@ use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
-    use BelongsToUser, HasFactory, HasTranslations;
+    use BelongsToUser, HasFactory, HasTranslations, SoftDeletes;
 
     public array $translatable = ['name'];
 
@@ -36,12 +37,20 @@ class Category extends Model
 
     public static function findOrCreateFallbackForUser(int $userId, string $type): self
     {
-        $name = match ($type) {
-            self::INCOME => ['en' => 'Uncategorized Income', 'ar' => null],
-            self::SAVINGS => ['en' => 'Uncategorized Savings', 'ar' => null],
-            self::INVESTMENT => ['en' => 'Uncategorized Investment', 'ar' => null],
-            default => ['en' => 'Uncategorized Expenses', 'ar' => null],
-        };
+        switch ($type) {
+            case self::INCOME:
+                $name = ['en' => 'Uncategorized Income', 'ar' => null];
+                break;
+            case self::SAVINGS:
+                $name = ['en' => 'Uncategorized Savings', 'ar' => null];
+                break;
+            case self::INVESTMENT:
+                $name = ['en' => 'Uncategorized Investment', 'ar' => null];
+                break;
+            default:
+                $name = ['en' => 'Uncategorized Expenses', 'ar' => null];
+                break;
+        }
 
         return static::query()->firstOrCreate(
             [

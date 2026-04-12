@@ -3,6 +3,7 @@
 namespace App\Domains\Budget\Services;
 
 use App\Domains\Budget\Models\Budget;
+use App\Domains\Budget\Models\BudgetCategory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -35,7 +36,7 @@ class BudgetService
             'reoccurrence' => $data['reoccurrence'],
         ]);
 
-        $budget->categories()->sync($data['category_ids']);
+        $this->syncCategories($budget, $data['category_ids']);
 
         return $budget->load('categories');
     }
@@ -52,7 +53,7 @@ class BudgetService
             'reoccurrence' => $data['reoccurrence'],
         ]);
 
-        $budget->categories()->sync($data['category_ids']);
+        $this->syncCategories($budget, $data['category_ids']);
 
         return $budget->load('categories');
     }
@@ -63,5 +64,44 @@ class BudgetService
         $budget->delete();
 
         return $budget;
+    }
+
+    private function syncCategories(Budget $budget, array $categoryIds): void
+    {
+        $categoryIds = collect($categoryIds)
+            ->map(fn ($categoryId) => (int) $categoryId)
+            ->unique()
+            ->values();
+
+        $detachQuery = BudgetCategory::query()->where('budget_id', $budget->id);
+
+        if ($categoryIds->isNotEmpty()) {
+            $detachQuery->whereNotIn('category_id', $categoryIds->all());
+        }
+
+        $detachQuery->delete();
+
+        $existingLinks = BudgetCategory::withTrashed()
+            ->where('budget_id', $budget->id)
+            ->whereIn('category_id', $categoryIds->all())
+            ->get()
+            ->keyBy('category_id');
+
+        foreach ($categoryIds as $categoryId) {
+            $existingLink = $existingLinks->get($categoryId);
+
+            if ($existingLink) {
+                if ($existingLink->trashed()) {
+                    $existingLink->restore();
+                }
+
+                continue;
+            }
+
+            BudgetCategory::create([
+                'budget_id' => $budget->id,
+                'category_id' => $categoryId,
+            ]);
+        }
     }
 }

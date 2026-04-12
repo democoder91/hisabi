@@ -4,6 +4,7 @@ namespace App\Domains\Transaction\Models;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
+use App\Models\User;
 use App\Scopes\OwnedAccountScope;
 use Database\Factories\TransactionFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,11 +12,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class Transaction extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected array $balanceSnapshot = [];
     protected array $auditSnapshot = [];
@@ -68,6 +71,22 @@ class Transaction extends Model
         });
 
         static::deleted(function (self $transaction) {
+            if ($transaction->isForceDeleting() || ! $transaction->trashed()) {
+                return;
+            }
+
+            $transaction->applyAccountBalanceDelta($transaction->account_id, -1 * $transaction->signedAmount());
+        });
+
+        static::restored(function (self $transaction) {
+            $transaction->applyAccountBalanceDelta($transaction->account_id, $transaction->signedAmount());
+        });
+
+        static::forceDeleted(function (self $transaction) {
+            if ($transaction->getOriginal('deleted_at') !== null) {
+                return;
+            }
+
             $transaction->applyAccountBalanceDelta($transaction->account_id, -1 * $transaction->signedAmount());
         });
     }
@@ -156,9 +175,9 @@ class Transaction extends Model
 
     public static function tryCreateFromSms($sms)
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if (! $user) {
+        if (! $user instanceof User) {
             return;
         }
 

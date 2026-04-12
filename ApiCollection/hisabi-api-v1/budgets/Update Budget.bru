@@ -1,0 +1,31 @@
+meta {
+  name: Update Budget
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/budgets/{{budgetId}}
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": {
+      "en": "Monthly Groceries Updated",
+      "ar": "ميزانية البقالة الشهرية المحدثة"
+    },
+    "amount": 650,
+    "start_at": "2024-01-01",
+    "end_at": "2024-12-31",
+    "saving": false,
+    "period": 1,
+    "reoccurrence": "MONTHLY",
+    "category_ids": [{{categoryId}}]
+  }
+}

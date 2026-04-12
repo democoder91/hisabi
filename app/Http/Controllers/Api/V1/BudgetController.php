@@ -25,6 +25,15 @@ class BudgetController extends Controller
         return $this->getBudgetsQueryHandler->handle($query)->toResponse();
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $budget = $this->budgetService->findOwnedOrFail($id);
+
+        return response()->json([
+            'budget' => new BudgetResource($budget),
+        ]);
+    }
+
     public function store(CreateBudgetRequest $request): JsonResponse
     {
         $budget = $this->budgetService->create($request->validated());

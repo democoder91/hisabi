@@ -1,0 +1,31 @@
+meta {
+  name: Continue Chat
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/ai/chat
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "conversation_id": "{{conversationId}}",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Here is your spending summary."
+      },
+      {
+        "role": "user",
+        "content": "Break that down by category"
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 import { getCsrfToken } from './common.js';
 
-export const chat = async (messages) => {
+export const chat = async (messages, conversationId = null) => {
     const response = await fetch('/api/v1/ai/chat', {
         method: 'POST',
         headers: {
@@ -9,7 +9,10 @@ export const chat = async (messages) => {
             'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ messages })
+        body: JSON.stringify({
+            messages,
+            conversation_id: conversationId,
+        })
     });
 
     if (!response.ok) {

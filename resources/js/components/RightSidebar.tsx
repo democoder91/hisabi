@@ -1,132 +1,54 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
-import { SparkleIcon, ChatCircleTextIcon, X } from '@phosphor-icons/react';
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from '@/components/ui/sidebar';
+import { SparkleIcon } from '@phosphor-icons/react';
 import HisabiAIChat from './Global/HisabiAIChat';
-import SmsParser from './Global/SmsParser';
 
 export default function RightSidebar() {
+  const { direction = 'ltr' } = usePage<{ direction?: string }>().props as {
+    direction?: string;
+  };
   const { t } = useTranslation();
-  const [activePanel, setActivePanel] = useState<'ai' | 'sms' | null>(null);
-  const [mobileFabOpen, setMobileFabOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const togglePanel = (panel: 'ai' | 'sms') => {
-    if (activePanel === panel) {
-      setActivePanel(null);
-      setMobileFabOpen(false);
-    } else {
-      setActivePanel(panel);
-    }
-  };
-
-  const closePanel = () => {
-    setActivePanel(null);
-    setMobileFabOpen(false);
-  };
+  const closePanel = () => setIsOpen(false);
+  const buttonPositionClass = direction === 'rtl' ? 'left-4 sm:left-6' : 'right-4 sm:right-6';
+  const panelPositionClass = direction === 'rtl'
+    ? 'left-4 sm:left-6 origin-bottom-left'
+    : 'right-4 sm:right-6 origin-bottom-right';
 
   return (
     <>
-      {/* Desktop: existing right sidebar */}
-      <div className="hidden md:flex h-screen bg-sidebar">
-        {/* Narrow sidebar with vertical labels */}
-        <div className="w-12 flex-shrink-0 bg-sidebar flex flex-col items-center pr-2 py-2 gap-1">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => togglePanel('ai')}
-                isActive={activePanel === 'ai'}
-                size="sm"
-                className="flex flex-col items-center gap-1 h-auto py-3"
-              >
-                <SparkleIcon size={18} />
-                <span
-                  className="font-medium whitespace-nowrap"
-                  style={{ writingMode: 'vertical-lr', transform: 'rotate(0deg)' }}
-                >
-                  {t('ai.titleBeta')}
-                </span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Close NexoAi panel overlay"
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+          onClick={closePanel}
+        />
+      )}
 
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => togglePanel('sms')}
-                isActive={activePanel === 'sms'}
-                size="sm"
-                className="flex flex-col items-center gap-1 h-auto py-3"
-              >
-                <ChatCircleTextIcon size={18} />
-                <span
-                  className="font-medium whitespace-nowrap"
-                  style={{ writingMode: 'vertical-lr', transform: 'rotate(0deg)' }}
-                >
-                  {t('smsParser.title')}
-                </span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+      {!isOpen && (
+        <button
+          type="button"
+          aria-label={t('ai.title')}
+          data-testid="ai-floating-button"
+          onClick={() => setIsOpen(true)}
+          className={`fixed bottom-4 ${buttonPositionClass} z-50 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:bg-primary/90 active:scale-95`}
+        >
+          <SparkleIcon size={18} weight="fill" />
+          <span>{t('ai.title')}</span>
+        </button>
+      )}
+
+      {isOpen && (
+        <div
+          data-testid="ai-floating-panel"
+          className={`fixed bottom-4 ${panelPositionClass} z-50 h-[min(42rem,calc(100vh-5rem))] w-[calc(100vw-2rem)] max-w-[26rem] overflow-hidden rounded-3xl border bg-background shadow-2xl`}
+        >
+          <HisabiAIChat onClose={closePanel} />
         </div>
-
-        {/* Expandable content panel */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out border-l ${activePanel ? 'w-[400px]' : 'w-0'
-          }`}>
-          {activePanel === 'ai' && <HisabiAIChat onClose={closePanel} />}
-          {activePanel === 'sms' && <SmsParser onClose={closePanel} />}
-        </div>
-      </div>
-
-      {/* Mobile: floating action button + full-screen overlay */}
-      <div className="md:hidden">
-        {/* FAB */}
-        {!activePanel && (
-          <button
-            onClick={() => setMobileFabOpen(!mobileFabOpen)}
-            className="fixed bottom-6 right-6 z-50 size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform"
-          >
-            {mobileFabOpen ? <X size={24} /> : <SparkleIcon size={24} />}
-          </button>
-        )}
-
-        {/* FAB menu options */}
-        {mobileFabOpen && !activePanel && (
-          <div className="fixed bottom-24 right-6 z-50 flex flex-col gap-3 items-end">
-            <button
-              onClick={() => { setMobileFabOpen(false); togglePanel('ai'); }}
-              className="flex items-center gap-2 rounded-full bg-background border shadow-lg px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
-            >
-              <SparkleIcon size={18} />
-              {t('ai.title')}
-            </button>
-            <button
-              onClick={() => { setMobileFabOpen(false); togglePanel('sms'); }}
-              className="flex items-center gap-2 rounded-full bg-background border shadow-lg px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
-            >
-              <ChatCircleTextIcon size={18} />
-              {t('smsParser.title')}
-            </button>
-          </div>
-        )}
-
-        {/* Backdrop to close FAB menu */}
-        {mobileFabOpen && !activePanel && (
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setMobileFabOpen(false)}
-          />
-        )}
-
-        {/* Full-screen panel overlay */}
-        {activePanel && (
-          <div className="fixed inset-0 z-50 bg-background flex flex-col">
-            {activePanel === 'ai' && <HisabiAIChat onClose={closePanel} />}
-            {activePanel === 'sms' && <SmsParser onClose={closePanel} />}
-          </div>
-        )}
-      </div>
+      )}
     </>
   );
 }

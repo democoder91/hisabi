@@ -16,8 +16,11 @@ class AIController extends Controller
 
     public function chat(AIChatRequest $request): JsonResponse
     {
+        $validated = $request->validated();
+
         $command = new ChatCommand(
-            messages: $request->validated()['messages']
+            messages: $validated['messages'],
+            conversationId: $validated['conversation_id'] ?? null,
         );
 
         return $this->chatCommandHandler->handle($command)->toResponse();

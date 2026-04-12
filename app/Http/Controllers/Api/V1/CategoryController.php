@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domains\Category\Models\Category;
 use App\Http\Controllers\Controller;
 use App\Http\Commands\Category\CreateCategoryCommand\CreateCategoryCommand;
 use App\Http\Commands\Category\CreateCategoryCommand\CreateCategoryCommandHandler;
@@ -13,6 +14,7 @@ use App\Http\Queries\Category\GetAllCategoriesQuery\GetAllCategoriesQuery;
 use App\Http\Queries\Category\GetAllCategoriesQuery\GetAllCategoriesQueryHandler;
 use App\Http\Requests\Api\V1\CreateCategoryRequest;
 use App\Http\Requests\Api\V1\UpdateCategoryRequest;
+use App\Http\Resources\CategoryResource;
 use Illuminate\Http\JsonResponse;
 
 class CategoryController extends Controller
@@ -29,6 +31,17 @@ class CategoryController extends Controller
         $query = new GetAllCategoriesQuery();
 
         return $this->getAllCategoriesQueryHandler->handle($query)->toResponse();
+    }
+
+    public function show(int $id): JsonResponse
+    {
+        $category = Category::query()
+            ->withCount('transactions')
+            ->findOrFail($id);
+
+        return response()->json([
+            'category' => new CategoryResource($category),
+        ]);
     }
 
     public function store(CreateCategoryRequest $request): JsonResponse

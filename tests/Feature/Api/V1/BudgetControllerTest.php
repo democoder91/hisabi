@@ -92,6 +92,22 @@ class BudgetControllerTest extends TestCase
             ->assertJsonPath('data.0.amount', 1000);
     }
 
+    public function test_it_shows_a_budget(): void
+    {
+        $budget = Budget::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Emergency Budget', 'ar' => 'ميزانية الطوارئ'],
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/budgets/{$budget->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('budget.id', $budget->id)
+            ->assertJsonPath('budget.name', 'Emergency Budget')
+            ->assertJsonPath('budget.name_translations.ar', 'ميزانية الطوارئ');
+    }
+
     public function test_it_creates_a_budget(): void
     {
         $category = Category::factory()->create(['user_id' => $this->user->id]);
@@ -204,6 +220,16 @@ class BudgetControllerTest extends TestCase
                 'reoccurrence' => Budget::CUSTOM,
                 'category_ids' => [$category->id],
             ]);
+
+        $response->assertNotFound();
+    }
+
+    public function test_it_returns_404_when_showing_another_users_budget(): void
+    {
+        $budget = Budget::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/budgets/{$budget->id}");
 
         $response->assertNotFound();
     }

@@ -1,0 +1,18 @@
+meta {
+  name: List Transactions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/transactions
+  body: none
+}
+
+params:query {
+  perPage: 50
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

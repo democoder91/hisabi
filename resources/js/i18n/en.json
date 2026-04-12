@@ -41,6 +41,73 @@
         "noAccount": "Don't have an account?",
         "hasAccount": "Already have an account?"
     },
+    "landing": {
+        "metaTitle": "Personal finance with clarity",
+        "tagline": "Independent personal finance for people who want control.",
+        "badge": "Personal Finance, Rebuilt",
+        "headline": "Take control of every account, budget, and transaction from one calm workspace.",
+        "subheadline": "Nexo helps you capture spending faster, explain where your money moves, and keep a reliable audit trail without handing your financial data to someone else.",
+        "primaryCta": "Create your account",
+        "secondaryCta": "Sign in",
+        "previewTitle": "A clearer financial command center",
+        "previewBody": "Track balances, budgets, categories, and trends from one place.",
+        "previewBadge": "Live dashboard",
+        "previewAlt": "Nexo dashboard preview",
+        "featuresEyebrow": "Why teams and individuals start here",
+        "featuresTitle": "Built for disciplined money tracking",
+        "featuresSubtitle": "The product is designed to reduce manual entry, improve visibility, and keep each financial change understandable.",
+        "workflowEyebrow": "How it works",
+        "workflowTitle": "A simple flow from capture to understanding",
+        "workflowSubtitle": "You do not need a separate spreadsheet, notebook, and reporting tool. Nexo keeps the flow connected.",
+        "finalTitle": "Start with a cleaner first mile for personal finance",
+        "finalSubtitle": "Open an account, record transactions, and let the application build structure around your money from day one.",
+        "highlights": {
+            "bilingual": {
+                "value": "EN + AR",
+                "label": "Bilingual experience ready for daily use"
+            },
+            "audit": {
+                "value": "Full audit",
+                "label": "Trace account-level changes with confidence"
+            },
+            "ai": {
+                "value": "AI ready",
+                "label": "Built-in analysis and assistant workflows"
+            }
+        },
+        "features": {
+            "capture": {
+                "title": "Capture faster",
+                "description": "Record transactions manually or accelerate entry with SMS parsing and structured forms."
+            },
+            "insights": {
+                "title": "See patterns early",
+                "description": "Watch totals, category behavior, trends, and budget performance without assembling reports by hand."
+            },
+            "control": {
+                "title": "Keep control of your data",
+                "description": "Run Nexo yourself and preserve a detailed audit trail for high-trust financial records."
+            },
+            "assistant": {
+                "title": "Use AI where it helps",
+                "description": "Lean on built-in AI tools for financial explanations and follow-up workflows when raw numbers are not enough."
+            }
+        },
+        "workflow": {
+            "capture": {
+                "title": "Capture accounts and transactions",
+                "description": "Create your financial structure first, then add transactions as they happen across multiple accounts and categories."
+            },
+            "review": {
+                "title": "Review budgets and categories",
+                "description": "Organize spending with clear categories and recurring or custom budgets that reflect how money is actually used."
+            },
+            "understand": {
+                "title": "Understand what changed",
+                "description": "Use dashboards, metrics, and audit logs to explain movement, catch anomalies, and make decisions faster."
+            }
+        }
+    },
     "dashboard": {
         "title": "Dashboard",
         "noData": "No enough data to show reports",
@@ -187,11 +254,7 @@
         "clearFilters": "Clear Filters"
     },
     "ai": {
-        "title": "Hisabi AI",
-        "titleBeta": "Hisabi AI (BETA)"
-    },
-    "smsParser": {
-        "title": "SMS Parser"
+        "title": "NexoAi"
     },
     "settings": {
         "title": "Settings",

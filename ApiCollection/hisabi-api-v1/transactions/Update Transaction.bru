@@ -1,0 +1,27 @@
+meta {
+  name: Update Transaction
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/transactions/{{transactionId}}
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "amount": 96.25,
+    "account_id": {{accountId}},
+    "category_id": {{categoryId}},
+    "created_at": "2024-01-15T11:00:00Z",
+    "transaction_type": "DEBIT",
+    "currency": "USD",
+    "note": "Groceries and household items"
+  }
+}

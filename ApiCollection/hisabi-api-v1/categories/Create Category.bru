@@ -1,0 +1,33 @@
+meta {
+  name: Create Category
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/categories
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": {
+      "en": "Groceries",
+      "ar": "البقالة"
+    },
+    "type": "EXPENSES",
+    "color": "#16a34a",
+    "icon": "shopping-cart"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.category) {
+    bru.setEnvVar("categoryId", res.body.category.id, { persist: true });
+  }
+}

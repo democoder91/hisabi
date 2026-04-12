@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -75,5 +76,70 @@ class TranscriptionControllerTest extends TestCase
 
         $response->assertStatus(502)
             ->assertJson(['error' => 'Failed to generate transcription token.']);
+    }
+
+    public function test_it_transcribes_an_uploaded_audio_file(): void
+    {
+        config(['ai.providers.openai.key' => 'openai-test-key']);
+        config(['ai.providers.openai.url' => 'https://api.openai.com/v1']);
+
+        Http::fake([
+            'api.openai.com/v1/audio/transcriptions' => Http::response([
+                'text' => 'Coffee purchase for 18 dirhams',
+                'language' => 'en',
+                'duration' => 3.2,
+            ], 200),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/transcribe', [
+                'audio' => UploadedFile::fake()->create('memo.mp3', 128, 'audio/mpeg'),
+            ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'text' => 'Coffee purchase for 18 dirhams',
+                'language' => 'en',
+                'duration' => 3.2,
+            ]);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://api.openai.com/v1/audio/transcriptions'
+                && $request->hasHeader('Authorization', 'Bearer openai-test-key')
+                && str_contains((string) $request->body(), 'whisper-1');
+        });
+    }
+
+    public function test_it_returns_503_when_upload_transcription_is_not_configured(): void
+    {
+        config(['ai.providers.openai.key' => null]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/transcribe', [
+                'audio' => UploadedFile::fake()->create('memo.mp3', 64, 'audio/mpeg'),
+            ]);
+
+        $response->assertStatus(503)
+            ->assertJson(['error' => 'Transcription is not configured.']);
+    }
+
+    public function test_it_returns_502_when_upload_transcription_fails(): void
+    {
+        config(['ai.providers.openai.key' => 'openai-test-key']);
+        config(['ai.providers.openai.url' => 'https://api.openai.com/v1']);
+
+        Http::fake([
+            'api.openai.com/v1/audio/transcriptions' => Http::response([
+                'error' => 'provider down',
+            ], 500),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/transcribe', [
+                'audio' => UploadedFile::fake()->create('memo.mp3', 64, 'audio/mpeg'),
+            ]);
+
+        $response->assertStatus(502)
+            ->assertJson(['error' => 'Failed to transcribe audio.']);
     }
 }

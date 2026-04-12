@@ -15,9 +15,10 @@ class CirclePackMetricLocalizationTest extends TestCase
 
     public function test_it_returns_localized_category_labels_for_financial_visualization(): void
     {
-        app()->setLocale('ar');
-
-        $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->createOne([
+            'locale' => 'ar',
+        ]);
         $account = Account::factory()->create([
             'user_id' => $user->id,
             'name' => ['en' => 'Main Account', 'ar' => 'الحساب الرئيسي'],

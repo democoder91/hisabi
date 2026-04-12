@@ -14,14 +14,15 @@ use App\Ai\Tools\ListAccountsTool;
 use App\Ai\Tools\ListBudgetsTool;
 use App\Ai\Tools\ListCategoriesTool;
 use App\Ai\Tools\ListTransactionsTool;
+use App\Models\User;
 use App\Services\AI\FinancialAnalyzer;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Model;
 use Laravel\Ai\Attributes\Provider;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
@@ -30,14 +31,12 @@ use Stringable;
 #[MaxSteps(5)]
 class HisabiAgent implements Agent, Conversational, HasTools
 {
-    use Promptable;
+    use Promptable, RemembersConversations;
 
-    private array $conversationMessages;
-    private $user;
+    private ?User $user;
 
-    public function __construct(array $messages = [], $user = null)
+    public function __construct(?User $user = null)
     {
-        $this->conversationMessages = $messages;
         $this->user = $user;
     }
 
@@ -86,16 +85,6 @@ Your role is to help users understand and manage their personal finances effecti
 - Keep responses concise and actionable
 - When appropriate, suggest 2-3 relevant follow-up actions
 PROMPT;
-    }
-
-    public function messages(): iterable
-    {
-        return array_map(function ($message) {
-            $content = is_array($message) ? $message['content'] : $message->content;
-            $role = is_array($message) ? $message['role'] : $message->role;
-
-            return new Message($role, $content);
-        }, $this->conversationMessages);
     }
 
     public function tools(): iterable

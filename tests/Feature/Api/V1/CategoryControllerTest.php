@@ -64,6 +64,23 @@ class CategoryControllerTest extends TestCase
             ->assertJsonPath('data.0.transactionsCount', 0);
     }
 
+    public function test_it_shows_a_category(): void
+    {
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Housing', 'ar' => 'السكن'],
+            'type' => Category::EXPENSES,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/categories/{$category->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('category.id', $category->id)
+            ->assertJsonPath('category.name', 'Housing')
+            ->assertJsonPath('category.name_translations.ar', 'السكن');
+    }
+
     public function test_it_requires_authentication_for_store(): void
     {
         $response = $this->postJson('/api/v1/categories', []);
@@ -238,6 +255,16 @@ class CategoryControllerTest extends TestCase
             ]);
 
         $response->assertStatus(404);
+    }
+
+    public function test_it_returns_404_when_showing_another_users_category(): void
+    {
+        $category = Category::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/categories/{$category->id}");
+
+        $response->assertNotFound();
     }
 
     public function test_it_requires_authentication_for_destroy(): void

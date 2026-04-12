@@ -1,0 +1,25 @@
+meta {
+  name: Update Account
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/accounts/{{accountId}}
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": {
+      "en": "Emergency Fund Updated",
+      "ar": "صندوق الطوارئ المحدث"
+    },
+    "balance": 1499.25
+  }
+}

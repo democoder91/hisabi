@@ -1,0 +1,14 @@
+meta {
+  name: Show Budget
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/budgets/{{budgetId}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

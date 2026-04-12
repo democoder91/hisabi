@@ -17,6 +17,7 @@ use App\Http\Commands\Transaction\DeleteTransactionCommand\DeleteTransactionComm
 use App\Http\Requests\Api\V1\CreateTransactionRequest;
 use App\Http\Requests\Api\V1\UpdateTransactionRequest;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\TransactionResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -48,6 +49,21 @@ class TransactionController extends Controller
         );
 
         return $this->createTransactionCommandHandler->handle($command)->toResponse();
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $transaction = Transaction::query()
+            ->withoutGlobalScopes()
+            ->forAccessibleAccounts($request->user())
+            ->with(['account', 'category'])
+            ->findOrFail($id);
+
+        $this->authorize('view', $transaction);
+
+        return response()->json([
+            'transaction' => new TransactionResource($transaction),
+        ]);
     }
 
     public function update(UpdateTransactionRequest $request, int $id): JsonResponse

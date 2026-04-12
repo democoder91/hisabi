@@ -3,9 +3,8 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
-use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,8 +14,10 @@ class TransactionControllerTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Account $account;
-    private Brand $brand;
+
+    private Category $expenseCategory;
 
     protected function setUp(): void
     {
@@ -25,19 +26,12 @@ class TransactionControllerTest extends TestCase
         $this->user = User::factory()->create();
         $this->account = Account::factory()->create([
             'user_id' => $this->user->id,
-            'name' => 'Checking',
+            'name' => ['en' => 'Checking'],
         ]);
-
-        $category = Category::factory()->create([
+        $this->expenseCategory = Category::factory()->create([
             'user_id' => $this->user->id,
-            'name' => ['en' => 'Food'],
+            'name' => ['en' => 'Food', 'ar' => 'طعام'],
             'type' => Category::EXPENSES,
-        ]);
-
-        $this->brand = Brand::factory()->create([
-            'user_id' => $this->user->id,
-            'name' => ['en' => 'Cafe'],
-            'category_id' => $category->id,
         ]);
     }
 
@@ -48,11 +42,11 @@ class TransactionControllerTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_it_returns_only_transactions_for_owned_accounts(): void
+    public function test_it_returns_only_transactions_for_accessible_accounts(): void
     {
         Transaction::factory()->count(3)->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
+            'category_id' => $this->expenseCategory->id,
         ]);
 
         Transaction::factory()->count(2)->create();
@@ -69,12 +63,9 @@ class TransactionControllerTest extends TestCase
                         'transaction_type',
                         'created_at',
                         'note',
-                        'account' => ['id', 'name', 'balance'],
-                        'brand' => [
-                            'id',
-                            'name',
-                            'category' => ['id', 'name', 'type', 'color', 'icon'],
-                        ],
+                        'canEdit',
+                        'account' => ['id', 'name', 'name_translations', 'balance', 'canEditTransactions'],
+                        'category' => ['id', 'name', 'name_translations', 'type', 'color', 'icon'],
                     ],
                 ],
             ]);
@@ -83,124 +74,90 @@ class TransactionControllerTest extends TestCase
         $this->assertSame($this->account->id, $response->json('data.0.account.id'));
     }
 
-    public function test_it_returns_transactions_sorted_by_id_descending(): void
+    public function test_it_filters_transactions_by_account_and_search_term(): void
     {
-        $first = Transaction::factory()->create([
-            'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
-        ]);
-        $second = Transaction::factory()->create([
-            'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
-        ]);
-        $third = Transaction::factory()->create([
-            'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
-        ]);
-
-        $response = $this->actingAs($this->user)->getJson('/api/v1/transactions');
-
-        $response->assertOk();
-
-        $data = $response->json('data');
-        $this->assertSame($third->id, $data[0]['id']);
-        $this->assertSame($second->id, $data[1]['id']);
-        $this->assertSame($first->id, $data[2]['id']);
-    }
-
-    public function test_it_paginates_and_filters_by_account(): void
-    {
-        $secondary = Account::factory()->create([
+        $secondaryAccount = Account::factory()->create([
             'user_id' => $this->user->id,
-            'name' => 'Savings',
+            'name' => ['en' => 'Savings'],
         ]);
 
-        Transaction::factory()->count(12)->create([
-            'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
-        ]);
-        Transaction::factory()->count(4)->create([
-            'account_id' => $secondary->id,
-            'brand_id' => $this->brand->id,
-        ]);
-
-        $response = $this->actingAs($this->user)
-            ->getJson("/api/v1/transactions?perPage=10&filter[account_id]={$secondary->id}");
-
-        $response->assertOk()
-            ->assertJsonPath('paginatorInfo.total', 4)
-            ->assertJsonPath('paginatorInfo.perPage', 10);
-
-        $this->assertCount(4, $response->json('data'));
-    }
-
-    public function test_it_searches_by_amount_note_and_brand_name(): void
-    {
         Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
-            'amount' => 25.5,
+            'category_id' => $this->expenseCategory->id,
             'note' => 'Morning coffee',
         ]);
 
         Transaction::factory()->create([
-            'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
-            'amount' => 500,
-            'note' => 'Groceries',
+            'account_id' => $secondaryAccount->id,
+            'category_id' => $this->expenseCategory->id,
+            'note' => 'Lunch prep',
         ]);
 
-        $byAmount = $this->actingAs($this->user)->getJson('/api/v1/transactions?filter[search]=25.5');
-        $byAmount->assertOk();
-        $this->assertCount(1, $byAmount->json('data'));
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/transactions?filter[account_id]={$secondaryAccount->id}&filter[search]=Lunch");
 
-        $byNote = $this->actingAs($this->user)->getJson('/api/v1/transactions?filter[search]=coffee');
-        $byNote->assertOk();
-        $this->assertCount(1, $byNote->json('data'));
-
-        $byBrand = $this->actingAs($this->user)->getJson('/api/v1/transactions?filter[search]=cafe');
-        $byBrand->assertOk();
-        $this->assertCount(2, $byBrand->json('data'));
+        $response->assertOk()
+            ->assertJsonPath('paginatorInfo.total', 1)
+            ->assertJsonPath('data.0.account.id', $secondaryAccount->id)
+            ->assertJsonPath('data.0.note', 'Lunch prep');
     }
 
     public function test_it_creates_a_transaction_for_an_owned_account(): void
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 42,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'Lunch',
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('transaction.account.id', $this->account->id)
-            ->assertJsonPath('transaction.brand.name', 'Cafe')
-            ->assertJsonPath('transaction.note', 'Lunch');
+            ->assertJsonPath('transaction.category.id', $this->expenseCategory->id)
+            ->assertJsonPath('transaction.note', 'Lunch')
+            ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_DEBIT);
+    }
+
+    public function test_it_shows_an_accessible_transaction(): void
+    {
+        $transaction = Transaction::factory()->create([
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'note' => 'Groceries',
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/transactions/{$transaction->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('transaction.id', $transaction->id)
+            ->assertJsonPath('transaction.account.id', $this->account->id)
+            ->assertJsonPath('transaction.category.id', $this->expenseCategory->id)
+            ->assertJsonPath('transaction.note', 'Groceries');
     }
 
     public function test_it_updates_a_transaction_and_its_account_reference(): void
     {
-        $secondary = Account::factory()->create([
+        $secondaryAccount = Account::factory()->create([
             'user_id' => $this->user->id,
-            'name' => 'Savings',
+            'name' => ['en' => 'Savings'],
         ]);
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 50,
         ]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
-            'account_id' => $secondary->id,
+            'account_id' => $secondaryAccount->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 75,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'Moved',
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('transaction.account.id', $secondary->id)
+            ->assertJsonPath('transaction.account.id', $secondaryAccount->id)
             ->assertJsonPath('transaction.amount', 75)
             ->assertJsonPath('transaction.note', 'Moved');
     }
@@ -209,7 +166,7 @@ class TransactionControllerTest extends TestCase
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
+            'category_id' => $this->expenseCategory->id,
         ]);
 
         $response = $this->actingAs($this->user)->deleteJson("/api/v1/transactions/{$transaction->id}");
@@ -217,30 +174,33 @@ class TransactionControllerTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('transaction.id', $transaction->id);
 
-        $this->assertDatabaseMissing('transactions', ['id' => $transaction->id]);
+        $this->assertSoftDeleted('transactions', ['id' => $transaction->id]);
     }
 
     public function test_it_returns_404_for_transactions_on_other_users_accounts(): void
     {
         $transaction = Transaction::factory()->create();
 
+        $showResponse = $this->actingAs($this->user)->getJson("/api/v1/transactions/{$transaction->id}");
+
         $updateResponse = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
             'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
             'amount' => 10,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
         ]);
 
         $deleteResponse = $this->actingAs($this->user)->deleteJson("/api/v1/transactions/{$transaction->id}");
 
-        $updateResponse->assertStatus(404);
-        $deleteResponse->assertStatus(404);
+        $showResponse->assertNotFound();
+        $updateResponse->assertNotFound();
+        $deleteResponse->assertNotFound();
     }
 
     public function test_view_shared_user_can_read_transactions_for_shared_accounts(): void
     {
-        $owner = User::factory()->create();
-        $sharedUser = User::factory()->create();
+        $owner = User::factory()->createOne();
+        $sharedUser = User::factory()->createOne();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
@@ -249,30 +209,29 @@ class TransactionControllerTest extends TestCase
             'name' => ['en' => 'Travel'],
             'type' => Category::EXPENSES,
         ]);
-        $brand = Brand::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Airline'],
+
+        $transaction = Transaction::factory()->create([
+            'account_id' => $account->id,
             'category_id' => $category->id,
         ]);
 
-        Transaction::factory()->count(2)->create([
-            'account_id' => $account->id,
-            'brand_id' => $brand->id,
-        ]);
+        $indexResponse = $this->actingAs($sharedUser)->getJson('/api/v1/transactions');
+        $showResponse = $this->actingAs($sharedUser)->getJson("/api/v1/transactions/{$transaction->id}");
 
-        $response = $this->actingAs($sharedUser)->getJson('/api/v1/transactions');
-
-        $response->assertOk()
-            ->assertJsonPath('paginatorInfo.total', 2)
-            ->assertJsonPath('data.0.brand.name', 'Airline')
-            ->assertJsonPath('data.0.brand.category.name', 'Travel')
+        $indexResponse->assertOk()
+            ->assertJsonPath('paginatorInfo.total', 1)
+            ->assertJsonPath('data.0.category.name', 'Travel')
             ->assertJsonPath('data.0.canEdit', false);
+
+        $showResponse->assertOk()
+            ->assertJsonPath('transaction.id', $transaction->id)
+            ->assertJsonPath('transaction.canEdit', false);
     }
 
     public function test_view_shared_user_cannot_write_transactions(): void
     {
-        $owner = User::factory()->create();
-        $viewer = User::factory()->create();
+        $owner = User::factory()->createOne();
+        $viewer = User::factory()->createOne();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($viewer->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
@@ -281,27 +240,22 @@ class TransactionControllerTest extends TestCase
             'name' => ['en' => 'Bills'],
             'type' => Category::EXPENSES,
         ]);
-        $brand = Brand::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Utility'],
-            'category_id' => $category->id,
-        ]);
         $transaction = Transaction::factory()->create([
             'account_id' => $account->id,
-            'brand_id' => $brand->id,
+            'category_id' => $category->id,
         ]);
 
         $createResponse = $this->actingAs($viewer)->postJson('/api/v1/transactions', [
             'account_id' => $account->id,
+            'category_id' => $category->id,
             'amount' => 20,
-            'brand_id' => $brand->id,
             'created_at' => now()->toDateString(),
         ]);
 
         $updateResponse = $this->actingAs($viewer)->putJson("/api/v1/transactions/{$transaction->id}", [
             'account_id' => $account->id,
+            'category_id' => $category->id,
             'amount' => 55,
-            'brand_id' => $brand->id,
             'created_at' => now()->toDateString(),
         ]);
 
@@ -314,8 +268,8 @@ class TransactionControllerTest extends TestCase
 
     public function test_edit_shared_user_can_write_transactions(): void
     {
-        $owner = User::factory()->create();
-        $editor = User::factory()->create();
+        $owner = User::factory()->createOne();
+        $editor = User::factory()->createOne();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($editor->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
@@ -324,16 +278,11 @@ class TransactionControllerTest extends TestCase
             'name' => ['en' => 'Food'],
             'type' => Category::EXPENSES,
         ]);
-        $brand = Brand::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Shared Cafe'],
-            'category_id' => $category->id,
-        ]);
 
         $createResponse = $this->actingAs($editor)->postJson('/api/v1/transactions', [
             'account_id' => $account->id,
+            'category_id' => $category->id,
             'amount' => 44,
-            'brand_id' => $brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'Shared write',
         ]);
@@ -346,8 +295,8 @@ class TransactionControllerTest extends TestCase
 
         $updateResponse = $this->actingAs($editor)->putJson("/api/v1/transactions/{$transactionId}", [
             'account_id' => $account->id,
+            'category_id' => $category->id,
             'amount' => 66,
-            'brand_id' => $brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'Updated shared write',
         ]);
@@ -362,8 +311,8 @@ class TransactionControllerTest extends TestCase
 
     public function test_shared_user_can_fetch_transaction_form_options_for_shared_account_owners(): void
     {
-        $owner = User::factory()->create();
-        $viewer = User::factory()->create();
+        $owner = User::factory()->createOne();
+        $viewer = User::factory()->createOne();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($viewer->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
@@ -372,36 +321,25 @@ class TransactionControllerTest extends TestCase
             'name' => ['en' => 'Health'],
             'type' => Category::EXPENSES,
         ]);
-        $brand = Brand::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Pharmacy'],
-            'category_id' => $category->id,
-        ]);
 
         $response = $this->actingAs($viewer)->getJson('/api/v1/transactions/form-options');
 
         $response->assertOk();
 
-        $this->assertContains($brand->id, collect($response->json('brands'))->pluck('id'));
         $this->assertContains($category->id, collect($response->json('categories'))->pluck('id'));
     }
 
-    public function test_edit_shared_user_cannot_create_transaction_with_a_brand_not_owned_by_the_account_owner(): void
+    public function test_edit_shared_user_cannot_create_transaction_with_a_category_not_owned_by_the_account_owner(): void
     {
-        $owner = User::factory()->create();
-        $editor = User::factory()->create();
+        $owner = User::factory()->createOne();
+        $editor = User::factory()->createOne();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($editor->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
-        $ownerCategory = Category::factory()->create([
+        Category::factory()->create([
             'user_id' => $owner->id,
-            'name' => ['en' => 'Food'],
+            'name' => ['en' => 'Owner Food'],
             'type' => Category::EXPENSES,
-        ]);
-        Brand::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Owner Brand'],
-            'category_id' => $ownerCategory->id,
         ]);
 
         $editorCategory = Category::factory()->create([
@@ -409,21 +347,16 @@ class TransactionControllerTest extends TestCase
             'name' => ['en' => 'Editor Food'],
             'type' => Category::EXPENSES,
         ]);
-        $editorBrand = Brand::factory()->create([
-            'user_id' => $editor->id,
-            'name' => ['en' => 'Editor Brand'],
-            'category_id' => $editorCategory->id,
-        ]);
 
         $response = $this->actingAs($editor)->postJson('/api/v1/transactions', [
             'account_id' => $account->id,
+            'category_id' => $editorCategory->id,
             'amount' => 22,
-            'brand_id' => $editorBrand->id,
             'created_at' => now()->toDateString(),
-            'note' => 'Invalid shared brand',
+            'note' => 'Invalid shared category',
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['brand_id']);
+            ->assertJsonValidationErrors(['category_id']);
     }
 }

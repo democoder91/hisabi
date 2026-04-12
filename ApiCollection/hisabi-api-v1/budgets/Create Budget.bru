@@ -1,0 +1,37 @@
+meta {
+  name: Create Budget
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/budgets
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": {
+      "en": "Monthly Groceries",
+      "ar": "ميزانية البقالة الشهرية"
+    },
+    "amount": 500,
+    "start_at": "2024-01-01",
+    "end_at": "2024-12-31",
+    "saving": false,
+    "period": 1,
+    "reoccurrence": "MONTHLY",
+    "category_ids": [{{categoryId}}]
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.budget) {
+    bru.setEnvVar("budgetId", res.body.budget.id, { persist: true });
+  }
+}

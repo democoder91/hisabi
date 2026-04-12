@@ -1,0 +1,32 @@
+meta {
+  name: Chat
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/ai/chat
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Show me a quick spending summary for this month"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.conversation_id) {
+    bru.setEnvVar("conversationId", res.body.conversation_id, { persist: true });
+  }
+}

@@ -14,6 +14,7 @@ class AIChatRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'conversation_id' => 'nullable|uuid',
             'messages' => 'required|array|min:1',
             'messages.*.role' => 'required|string|in:user,assistant',
             'messages.*.content' => 'required|string',

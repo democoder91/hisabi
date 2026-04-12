@@ -15,6 +15,7 @@ readonly class ChatCommandResponse
         return response()->json([
             'role' => $this->response['role'],
             'content' => $this->response['content'],
+            'conversation_id' => $this->response['conversation_id'] ?? null,
             'charts' => $this->response['charts'] ?? [],
             'components' => $this->response['components'] ?? [],
             'suggestions' => $this->response['suggestions'] ?? [],

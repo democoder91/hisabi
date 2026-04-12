@@ -72,6 +72,21 @@ class AccountControllerTest extends TestCase
         $this->assertSame('صندوق الطوارئ', $account->getTranslation('name', 'ar'));
     }
 
+    public function test_it_shows_an_accessible_account(): void
+    {
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Travel Fund', 'ar' => 'صندوق السفر'],
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/accounts/{$account->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('account.id', $account->id)
+            ->assertJsonPath('account.name', 'Travel Fund')
+            ->assertJsonPath('account.name_translations.ar', 'صندوق السفر');
+    }
+
     public function test_it_updates_an_account(): void
     {
         $account = Account::factory()->create([
@@ -176,6 +191,15 @@ class AccountControllerTest extends TestCase
         ]);
 
         $response->assertStatus(404);
+    }
+
+    public function test_it_returns_404_when_showing_another_users_account(): void
+    {
+        $account = Account::factory()->create();
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/accounts/{$account->id}");
+
+        $response->assertNotFound();
     }
 
     public function test_it_returns_404_when_deleting_another_users_account(): void

@@ -69,7 +69,7 @@ export default function Dashboard({ auth, hasData }: any) {
 
     return (
         <Authenticated auth={auth} header={header}>
-            <Head title="Hisabi Dashboard" />
+            <Head title={t('dashboard.title')} />
 
             <div className="py-4">
                 <div className="max-w-7xl overflow-hidden mx-auto px-4 grid grid-cols-1 gap-4">

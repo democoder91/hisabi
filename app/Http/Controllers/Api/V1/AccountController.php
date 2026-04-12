@@ -41,6 +41,16 @@ class AccountController extends Controller
         ]);
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $account = $this->accountService->findAccessibleOrFail($id);
+        $this->authorize('view', $account);
+
+        return response()->json([
+            'account' => new AccountResource($account),
+        ]);
+    }
+
     public function store(CreateAccountRequest $request): JsonResponse
     {
         $account = $this->accountService->create($request->validated());

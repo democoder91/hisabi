@@ -28,6 +28,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(event.target.value);
@@ -63,10 +64,14 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
         content: msg.content
       }));
 
-      const aiResponse = await chat(messages);
+      const aiResponse = await chat(messages, conversationId);
+
+      if (aiResponse.conversation_id) {
+        setConversationId(aiResponse.conversation_id);
+      }
 
       const assistantMessage: ChatMessage = {
-        id: chatHistory.length + 1,
+        id: newChat.length + 1,
         role: 'assistant',
         content: aiResponse.content,
         charts: aiResponse.charts || [],
@@ -74,18 +79,18 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
         suggestions: aiResponse.suggestions || []
       };
 
-      setChatHistory([...chatHistory, assistantMessage]);
+      setChatHistory([...newChat, assistantMessage]);
     } catch (error) {
       console.error('AI Chat Error:', error);
       const errorMessage: ChatMessage = {
-        id: chatHistory.length + 1,
+        id: newChat.length + 1,
         role: 'assistant',
         content: 'I apologize, but I encountered an error. Please try again.',
         charts: [],
         components: [],
         suggestions: []
       };
-      setChatHistory([...chatHistory, errorMessage]);
+      setChatHistory([...newChat, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -109,7 +114,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
       <div className="border-b p-4">
         <div className='flex justify-between items-center'>
           <div>
-            <h2 className='text-lg font-semibold'>Hisabi AI</h2>
+            <h2 className='text-lg font-semibold'>NexoAi</h2>
           </div>
           <button
             onClick={onClose}
@@ -121,7 +126,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
       </div>
 
       {/* Conversation Area */}
-      <Conversation className="flex-1 border-r">
+      <Conversation className="flex-1">
         <ConversationContent>
           {chatHistory.length === 0 && (
             <div className="flex items-center justify-center h-full">

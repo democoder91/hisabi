@@ -1,0 +1,27 @@
+meta {
+  name: Update Category
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/categories/{{categoryId}}
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": {
+      "en": "Groceries Updated",
+      "ar": "البقالة المحدثة"
+    },
+    "type": "EXPENSES",
+    "color": "#15803d",
+    "icon": "shopping-bag"
+  }
+}

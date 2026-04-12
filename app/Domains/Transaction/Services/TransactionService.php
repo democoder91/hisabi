@@ -2,9 +2,11 @@
 
 namespace App\Domains\Transaction\Services;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 
@@ -12,7 +14,7 @@ class TransactionService
 {
     public function getPaginated(int $perPage = 50): LengthAwarePaginator
     {
-        return QueryBuilder::for(Transaction::class)
+        return QueryBuilder::for($this->accessibleQuery())
             ->allowedFilters([
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function($q) use ($value) {
@@ -24,6 +26,7 @@ class TransactionService
                     });
                 }),
                 AllowedFilter::exact('brand_id'),
+                AllowedFilter::exact('account_id'),
                 AllowedFilter::exact('transaction_type'),
                 AllowedFilter::callback('category_id', function ($query, $value) {
                     $query->whereHas('brand', function($builder) use($value) {
@@ -37,10 +40,10 @@ class TransactionService
                     $query->whereDate('created_at', '<=', $value);
                 }),
             ])
-            ->allowedIncludes(['brand.category'])
+                ->allowedIncludes(['brand.category', 'account'])
             ->allowedSorts(['id', 'amount', 'created_at'])
             ->defaultSort('-id')
-            ->with(['brand.category'])
+                ->with(['brand.category', 'account'])
             ->paginate($perPage);
     }
 
@@ -51,14 +54,14 @@ class TransactionService
 
     public function update(int $id, array $data): Transaction
     {
-        $transaction = Transaction::query()->findOrFail($id);
+        $transaction = $this->accessibleQuery()->findOrFail($id);
         $transaction->update($this->prepareData($data, $transaction));
         return $transaction->fresh();
     }
 
     public function delete(int $id): Transaction
     {
-        $transaction = Transaction::query()->findOrFail($id);
+        $transaction = $this->accessibleQuery()->findOrFail($id);
         $transaction->delete();
         return $transaction;
     }
@@ -68,7 +71,11 @@ class TransactionService
         $brand = null;
 
         if (! empty($data['brand_id'])) {
-            $brand = Brand::query()->with('category')->find($data['brand_id']);
+            $brand = Brand::withoutGlobalScopes()->with('category')->find($data['brand_id']);
+        }
+
+        if (! empty($data['account_id'])) {
+            Account::query()->findOrFail($data['account_id']);
         }
 
         $data['transaction_type'] = $brand?->category?->type
@@ -76,6 +83,13 @@ class TransactionService
             : strtoupper($data['transaction_type'] ?? $transaction?->transaction_type ?? Transaction::TYPE_DEBIT);
 
         return $data;
+    }
+
+    private function accessibleQuery(): Builder
+    {
+        return Transaction::query()
+            ->withoutGlobalScopes()
+            ->forAccessibleAccounts(auth()->user());
     }
 }
 

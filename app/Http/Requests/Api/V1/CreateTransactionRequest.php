@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateTransactionRequest extends FormRequest
 {
@@ -17,10 +19,18 @@ class CreateTransactionRequest extends FormRequest
     {
         return [
             'amount' => 'required|numeric|min:0',
+            'account_id' => [
+                'required',
+                'integer',
+                Rule::exists('accounts', 'id'),
+            ],
             'brand_id' => [
                 'nullable',
                 'integer',
-                'exists:brands,id',
+                Rule::exists('brands', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $this->validateBrandBelongsToAccountOwner($value, $fail);
+                },
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $this->validateBrandMatchesTransactionType($value, $fail);
                 },
@@ -41,13 +51,32 @@ class CreateTransactionRequest extends FormRequest
         }
     }
 
+    private function validateBrandBelongsToAccountOwner(mixed $brandId, \Closure $fail): void
+    {
+        if (! $brandId) {
+            return;
+        }
+
+        $account = Account::query()->accessibleTo($this->user())->find($this->input('account_id'));
+
+        if (! $account) {
+            return;
+        }
+
+        $brand = Brand::withoutGlobalScopes()->find($brandId);
+
+        if (! $brand || (int) $brand->user_id !== (int) $account->user_id) {
+            $fail('The selected brand is invalid for the chosen account.');
+        }
+    }
+
     private function validateBrandMatchesTransactionType(mixed $brandId, \Closure $fail): void
     {
         if (! $brandId || ! $this->filled('transaction_type')) {
             return;
         }
 
-        $brand = Brand::query()->with('category')->find($brandId);
+        $brand = Brand::withoutGlobalScopes()->with('category')->find($brandId);
 
         if (! $brand?->category?->type) {
             return;

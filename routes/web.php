@@ -3,12 +3,15 @@
 use Illuminate\Http\Request;
 use App\Contracts\ReportManager;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AccountAuditController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\V1\MetricsController;
 
 Route::redirect('/', '/dashboard');
@@ -16,6 +19,8 @@ Route::redirect('/', '/dashboard');
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::get('/accounts', [AccountController::class, 'index'])->name('accounts');
+    Route::get('/accounts/{account}/audit', [AccountAuditController::class, 'show'])->name('accounts.audit');
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions');
     Route::get('/brands', [BrandController::class, 'index'])->name('brands');
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories');
@@ -36,6 +41,16 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('api/v1')->group(function () {
         Route::apiResource('transactions', \App\Http\Controllers\Api\V1\TransactionController::class)
             ->except(['show']);
+        Route::get('/transactions/form-options', [\App\Http\Controllers\Api\V1\TransactionController::class, 'formOptions']);
+        Route::get('/accounts', [\App\Http\Controllers\Api\V1\AccountController::class, 'index']);
+        Route::get('/accounts/all', [\App\Http\Controllers\Api\V1\AccountController::class, 'all']);
+        Route::post('/accounts', [\App\Http\Controllers\Api\V1\AccountController::class, 'store']);
+        Route::put('/accounts/{id}', [\App\Http\Controllers\Api\V1\AccountController::class, 'update']);
+        Route::delete('/accounts/{id}', [\App\Http\Controllers\Api\V1\AccountController::class, 'destroy']);
+        Route::post('/accounts/{id}/shares', [\App\Http\Controllers\Api\V1\AccountController::class, 'share']);
+        Route::put('/accounts/{id}/shares/{shareUserId}', [\App\Http\Controllers\Api\V1\AccountController::class, 'updateShare']);
+        Route::delete('/accounts/{id}/shares/{shareUserId}', [\App\Http\Controllers\Api\V1\AccountController::class, 'revokeShare']);
+        Route::get('/accounts/{account}/audits', [\App\Http\Controllers\Api\V1\AccountAuditController::class, 'index']);
         Route::get('/brands', [\App\Http\Controllers\Api\V1\BrandController::class, 'index']);
         Route::get('/brands/all', [\App\Http\Controllers\Api\V1\BrandController::class, 'all']);
         Route::post('/brands', [\App\Http\Controllers\Api\V1\BrandController::class, 'store']);
@@ -89,6 +104,8 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
 
     Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('/register', [RegisteredUserController::class, 'store']);
 });

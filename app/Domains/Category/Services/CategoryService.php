@@ -26,19 +26,22 @@ class CategoryService
 
     public function create(array $data): Category
     {
-        return Category::create($data);
+        return Category::query()->create([
+            ...$data,
+            'user_id' => $data['user_id'] ?? auth()->id(),
+        ]);
     }
 
     public function update(int $id, array $data): Category
     {
-        $category = Category::findOrFail($id);
+        $category = Category::query()->findOrFail($id);
         $category->update($data);
         return $category;
     }
 
     public function delete(int $id): Category
     {
-        $category = Category::findOrFail($id);
+        $category = Category::query()->findOrFail($id);
         $category->delete();
         return $category;
     }

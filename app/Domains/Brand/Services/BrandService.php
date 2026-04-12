@@ -55,19 +55,22 @@ class BrandService
 
     public function create(array $data): Brand
     {
-        return Brand::create($data);
+        return Brand::query()->create([
+            ...$data,
+            'user_id' => $data['user_id'] ?? auth()->id(),
+        ]);
     }
 
     public function update(int $id, array $data): Brand
     {
-        $brand = Brand::findOrFail($id);
+        $brand = Brand::query()->findOrFail($id);
         $brand->update($data);
         return $brand;
     }
 
     public function delete(int $id): Brand
     {
-        $brand = Brand::findOrFail($id);
+        $brand = Brand::query()->findOrFail($id);
         $brand->delete();
         return $brand;
     }

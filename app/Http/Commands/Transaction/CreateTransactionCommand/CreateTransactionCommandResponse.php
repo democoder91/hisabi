@@ -3,6 +3,7 @@
 namespace App\Http\Commands\Transaction\CreateTransactionCommand;
 
 use App\Domains\Transaction\Models\Transaction;
+use App\Http\Resources\TransactionResource;
 use Illuminate\Http\JsonResponse;
 
 readonly class CreateTransactionCommandResponse
@@ -14,7 +15,7 @@ readonly class CreateTransactionCommandResponse
     public function toResponse(): JsonResponse
     {
         return response()->json([
-            'transaction' => $this->transaction->load('brand.category'),
+            'transaction' => new TransactionResource($this->transaction->load(['brand.category', 'account'])),
         ], 201);
     }
 }

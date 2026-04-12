@@ -1,6 +1,7 @@
 {
     "navigation": {
         "dashboard": "Dashboard",
+        "accounts": "Accounts",
         "transactions": "Transactions",
         "brands": "Brands",
         "categories": "Categories"
@@ -8,6 +9,10 @@
     "common": {
         "create": "Create",
         "update": "Update",
+        "owner": "Owner",
+        "shared": "Shared",
+        "view": "View",
+        "edit": "Edit",
         "delete": "Delete",
         "save": "Save",
         "cancel": "Cancel",
@@ -22,9 +27,16 @@
     "auth": {
         "welcomeBack": "Welcome back",
         "loginWithEmail": "Login with your email",
+        "createAccount": "Create your account",
+        "registerWithEmail": "Register with your email",
+        "name": "Name",
         "email": "Email",
         "password": "Password",
-        "login": "Login"
+        "confirmPassword": "Confirm password",
+        "login": "Login",
+        "register": "Register",
+        "noAccount": "Don't have an account?",
+        "hasAccount": "Already have an account?"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -62,6 +74,38 @@
         "lang_en": "EN",
         "lang_ar": "AR"
     },
+    "account": {
+        "title": "Accounts",
+        "createAccount": "Create Account",
+        "createTitle": "Create Account",
+        "editTitle": "Edit Account",
+        "name": "Name",
+        "balance": "Balance",
+        "searchAccounts": "Search accounts..",
+        "detailsTab": "Details",
+        "sharingTab": "Sharing",
+        "sharedWithCount": "Shared with {{count}} people",
+        "transactionsOnlyAccess": "You can work with transactions on this account, but only the owner can change account settings.",
+        "ownerOnlySettings": "This account is shared with you. Account settings and sharing are owner-only.",
+        "inviteByEmail": "Invite by email",
+        "invitePlaceholder": "name@example.com",
+        "permissionLevel": "Permission level",
+        "inviteUser": "Invite user",
+        "revokeAccess": "Revoke access",
+        "noShares": "No shared users yet.",
+        "viewOnlyTransactionAccess": "You can view transactions on this account, but transaction changes require edit permission.",
+        "auditTrail": "Audit trail",
+        "auditDescription": "Review every transaction create, update, and delete on this account.",
+        "backToAccounts": "Back to Accounts",
+        "performedBy": "By {{name}}",
+        "changedFields": "Changed fields",
+        "noAudits": "No audit entries yet.",
+        "emptyValue": "Empty",
+        "createdAction": "Created",
+        "updatedAction": "Updated",
+        "deletedAction": "Deleted",
+        "auditSummary": "{{count}} transactions currently live in this account. Current balance: {{balance}}."
+    },
     "category": {
         "title": "Categories",
         "createCategory": "Create Category",
@@ -86,6 +130,7 @@
         "totalTransactions": "Total transactions",
         "filters": "Filters",
         "search": "Search transactions..",
+        "account": "Account",
         "brand": "Brand",
         "category": "Category",
         "type": "Type",

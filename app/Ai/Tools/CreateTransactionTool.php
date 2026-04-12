@@ -10,6 +10,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
+use RuntimeException;
 use Stringable;
 
 class CreateTransactionTool implements Tool
@@ -21,6 +22,12 @@ class CreateTransactionTool implements Tool
 
     public function handle(Request $request): Stringable|string
     {
+        $user = Auth::user();
+
+        if (! $user) {
+            throw new RuntimeException('An authenticated user is required to create a transaction.');
+        }
+
         $amount = (float) $request['amount'];
         $brandName = $request['brand_name'] ?? null;
         $categoryType = strtoupper($request['category_type']);
@@ -32,9 +39,13 @@ class CreateTransactionTool implements Tool
         if ($brandName) {
             $brand = Brand::findOrCreateNew($brandName);
 
-            if (!$brand->category_id) {
+            if (! $brand->category_id) {
                 $category = Category::firstOrCreate(
-                    ['type' => $categoryType, 'name' => ucfirst(strtolower($categoryType))],
+                    [
+                        'user_id' => $user->id,
+                        'type' => $categoryType,
+                        'name' => ['en' => ucfirst(strtolower($categoryType))],
+                    ],
                 );
                 $brand->update(['category_id' => $category->id]);
             }
@@ -43,6 +54,7 @@ class CreateTransactionTool implements Tool
         $transactionService = app(TransactionService::class);
 
         $transaction = $transactionService->create([
+            'account_id' => $user->getOrCreateDefaultAccount()->id,
             'amount' => $amount,
             'brand_id' => $brand?->id,
             'transaction_type' => $categoryType === Category::INCOME ? 'CREDIT' : 'DEBIT',

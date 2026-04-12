@@ -18,9 +18,10 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function Create({ brands, showCreate, onClose, onCreate }) {
+export default function Create({ accounts, brands, showCreate, onClose, onCreate }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(0);
+    const [account, setAccount] = useState(null);
     const [brand, setBrand] = useState(null);
     const [createdAt, setCreatedAt] = useState('');
     const [note, setNote] = useState('');
@@ -28,13 +29,29 @@ export default function Create({ brands, showCreate, onClose, onCreate }) {
     const [isReady, setIsReady] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const editableAccounts = useMemo(() => {
+        return accounts.filter((item) => item.canEditTransactions);
+    }, [accounts]);
+
     const filteredBrands = useMemo(() => {
         return brands.filter((item) => isBrandCompatibleWithTransactionType(item, transactionType));
     }, [brands, transactionType]);
 
     useEffect(() => {
-        setIsReady(amount != 0 && createdAt != '' ? true : false);
-    }, [amount, createdAt]);
+        setIsReady(amount != 0 && createdAt != '' && account !== null ? true : false);
+    }, [amount, createdAt, account]);
+
+    useEffect(() => {
+        if (!account && editableAccounts.length > 0) {
+            setAccount(editableAccounts[0]);
+        }
+    }, [editableAccounts, account]);
+
+    useEffect(() => {
+        if (account && !editableAccounts.some((item) => item.id === account.id)) {
+            setAccount(editableAccounts[0] ?? null);
+        }
+    }, [editableAccounts, account]);
 
     useEffect(() => {
         if (brand && !isBrandCompatibleWithTransactionType(brand, transactionType)) {
@@ -57,6 +74,7 @@ export default function Create({ brands, showCreate, onClose, onCreate }) {
 
         createTransaction({
             amount,
+            accountId: account?.id,
             brandId: brand?.id,
             createdAt,
             note,
@@ -66,6 +84,7 @@ export default function Create({ brands, showCreate, onClose, onCreate }) {
                 onCreate(data.transaction);
                 // Reset form
                 setBrand(null);
+                setAccount(editableAccounts[0] ?? null);
                 setAmount(0);
                 setCreatedAt('');
                 setNote('');
@@ -114,6 +133,17 @@ export default function Create({ brands, showCreate, onClose, onCreate }) {
                             value={createdAt}
                             className="mt-1"
                             onChange={(e) => setCreatedAt(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <Combobox
+                            label={t('transaction.account')}
+                            items={editableAccounts}
+                            initialSelectedItem={account}
+                            onChange={setAccount}
+                            displayInputValue={(item) => item ? item.name : ''}
+                            displayOptionValue={(item) => item ? item.name : ''}
                         />
                     </div>
 

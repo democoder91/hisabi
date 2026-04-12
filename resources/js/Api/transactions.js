@@ -44,7 +44,26 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     };
 }
 
-export const createTransaction = async ({amount, brandId, createdAt, note, transactionType}) => {
+export const getTransactionFormOptions = async () => {
+    const response = await fetch('/api/v1/transactions/form-options', {
+        method: 'GET',
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+        data: {
+            brands: data.brands,
+            categories: data.categories,
+        },
+    };
+};
+
+export const createTransaction = async ({amount, accountId, brandId, createdAt, note, transactionType}) => {
     const response = await fetch('/api/v1/transactions', {
         method: 'POST',
         headers: {
@@ -55,6 +74,7 @@ export const createTransaction = async ({amount, brandId, createdAt, note, trans
         credentials: 'same-origin',
         body: JSON.stringify({
             amount,
+            account_id: accountId,
             brand_id: brandId || null,
             transaction_type: transactionType || null,
             created_at: createdAt,
@@ -73,7 +93,7 @@ export const createTransaction = async ({amount, brandId, createdAt, note, trans
     };
 }
 
-export const updateTransaction = async ({id, amount, brandId, createdAt, note, transactionType}) => {
+export const updateTransaction = async ({id, amount, accountId, brandId, createdAt, note, transactionType}) => {
     const response = await fetch(`/api/v1/transactions/${id}`, {
         method: 'PUT',
         headers: {
@@ -84,6 +104,7 @@ export const updateTransaction = async ({id, amount, brandId, createdAt, note, t
         credentials: 'same-origin',
         body: JSON.stringify({
             amount,
+            account_id: accountId,
             brand_id: brandId || null,
             transaction_type: transactionType || null,
             created_at: createdAt,

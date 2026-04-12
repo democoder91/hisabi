@@ -1,6 +1,7 @@
 {
     "navigation": {
         "dashboard": "لوحة التحكم",
+        "accounts": "الحسابات",
         "transactions": "المعاملات",
         "brands": "العلامات التجارية",
         "categories": "الفئات"
@@ -8,6 +9,10 @@
     "common": {
         "create": "إنشاء",
         "update": "تحديث",
+        "owner": "المالك",
+        "shared": "مشترك",
+        "view": "عرض",
+        "edit": "تعديل",
         "delete": "حذف",
         "save": "حفظ",
         "cancel": "إلغاء",
@@ -23,9 +28,16 @@
     "auth": {
         "welcomeBack": "مرحبًا بعودتك",
         "loginWithEmail": "تسجيل الدخول بالبريد الإلكتروني",
+        "createAccount": "أنشئ حسابك",
+        "registerWithEmail": "سجّل باستخدام بريدك الإلكتروني",
+        "name": "الاسم",
         "email": "البريد الإلكتروني",
         "password": "كلمة المرور",
-        "login": "تسجيل الدخول"
+        "confirmPassword": "تأكيد كلمة المرور",
+        "login": "تسجيل الدخول",
+        "register": "إنشاء حساب",
+        "noAccount": "ليس لديك حساب؟",
+        "hasAccount": "لديك حساب بالفعل؟"
     },
     "dashboard": {
         "title": "لوحة التحكم",
@@ -63,6 +75,38 @@
         "lang_en": "EN",
         "lang_ar": "AR"
     },
+    "account": {
+        "title": "الحسابات",
+        "createAccount": "إنشاء حساب",
+        "createTitle": "إنشاء حساب",
+        "editTitle": "تعديل حساب",
+        "name": "الاسم",
+        "balance": "الرصيد",
+        "searchAccounts": "بحث في الحسابات..",
+        "detailsTab": "التفاصيل",
+        "sharingTab": "المشاركة",
+        "sharedWithCount": "تمت المشاركة مع {{count}} مستخدمين",
+        "transactionsOnlyAccess": "يمكنك العمل على معاملات هذا الحساب، لكن إعدادات الحساب لا يغيّرها إلا المالك.",
+        "ownerOnlySettings": "هذا الحساب تمت مشاركته معك. إعدادات الحساب والمشاركة مخصصة للمالك فقط.",
+        "inviteByEmail": "دعوة عبر البريد الإلكتروني",
+        "invitePlaceholder": "name@example.com",
+        "permissionLevel": "مستوى الصلاحية",
+        "inviteUser": "دعوة مستخدم",
+        "revokeAccess": "إلغاء الوصول",
+        "noShares": "لا يوجد مستخدمون مشتركون بعد.",
+        "viewOnlyTransactionAccess": "يمكنك عرض معاملات هذا الحساب، لكن تعديل المعاملات يتطلب صلاحية التعديل.",
+        "auditTrail": "سجل التدقيق",
+        "auditDescription": "راجع كل عمليات إنشاء المعاملات وتحديثها وحذفها لهذا الحساب.",
+        "backToAccounts": "العودة إلى الحسابات",
+        "performedBy": "بواسطة {{name}}",
+        "changedFields": "الحقول المتغيرة",
+        "noAudits": "لا توجد قيود تدقيق بعد.",
+        "emptyValue": "فارغ",
+        "createdAction": "تم الإنشاء",
+        "updatedAction": "تم التحديث",
+        "deletedAction": "تم الحذف",
+        "auditSummary": "يوجد حاليًا {{count}} معاملة في هذا الحساب. الرصيد الحالي: {{balance}}."
+    },
     "category": {
         "title": "الفئات",
         "createCategory": "إنشاء فئة",
@@ -87,6 +131,7 @@
         "totalTransactions": "إجمالي المعاملات",
         "filters": "الفلاتر",
         "search": "بحث في المعاملات..",
+        "account": "الحساب",
         "brand": "العلامة التجارية",
         "category": "الفئة",
         "type": "النوع",

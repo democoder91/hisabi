@@ -6,6 +6,7 @@ use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Services\TransactionService;
 use App\Domains\Brand\Models\Brand;
 use App\Models\Category;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,10 +15,14 @@ class TransactionServiceTest extends TestCase
     use RefreshDatabase;
 
     private TransactionService $service;
+    private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
         $this->service = new TransactionService();
     }
 

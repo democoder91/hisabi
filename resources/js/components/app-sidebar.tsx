@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import {
+  BankIcon,
   Receipt,
   StorefrontIcon,
   CirclesThreeIcon,
@@ -39,6 +40,11 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       title: t('navigation.dashboard'),
       url: "dashboard",
       icon: ChartDonutIcon,
+    },
+    {
+      title: t('navigation.accounts'),
+      url: "accounts",
+      icon: BankIcon,
     },
     {
       title: t('navigation.transactions'),

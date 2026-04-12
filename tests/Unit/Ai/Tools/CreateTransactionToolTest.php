@@ -16,17 +16,21 @@ class CreateTransactionToolTest extends TestCase
     use RefreshDatabase;
 
     private CreateTransactionTool $tool;
+    private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
         $this->tool = new CreateTransactionTool();
     }
 
     public function test_it_creates_transaction_with_all_parameters(): void
     {
-        $category = Category::factory()->create(['type' => Category::EXPENSES, 'name' => 'Food']);
-        $brand = Brand::factory()->create(['name' => 'Starbucks', 'category_id' => $category->id]);
+        $category = Category::factory()->create(['type' => Category::EXPENSES, 'name' => ['en' => 'Food']]);
+        $brand = Brand::factory()->create(['name' => ['en' => 'Starbucks'], 'category_id' => $category->id]);
 
         $request = new Request([
             'amount' => 25.50,
@@ -62,7 +66,7 @@ class CreateTransactionToolTest extends TestCase
 
         $this->tool->handle($request);
 
-        $brand = Brand::where('name', 'NewMerchant')->first();
+    $brand = Brand::all()->first(fn (Brand $brand) => $brand->name === 'NewMerchant');
         $this->assertNotNull($brand);
         $this->assertNotNull($brand->category_id);
 
@@ -74,7 +78,7 @@ class CreateTransactionToolTest extends TestCase
     public function test_it_reuses_existing_brand(): void
     {
         $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        Brand::factory()->create(['name' => 'McDonald', 'category_id' => $category->id]);
+        Brand::factory()->create(['name' => ['en' => 'McDonald'], 'category_id' => $category->id]);
 
         $request = new Request([
             'amount' => 30,
@@ -85,14 +89,14 @@ class CreateTransactionToolTest extends TestCase
 
         $this->tool->handle($request);
 
-        $this->assertEquals(1, Brand::where('name', 'McDonald')->count());
+        $this->assertCount(1, Brand::all()->filter(fn (Brand $brand) => $brand->name === 'McDonald'));
         $transaction = Transaction::latest()->first();
         $this->assertEquals(30, $transaction->amount);
     }
 
     public function test_it_assigns_category_to_uncategorized_brand(): void
     {
-        $brand = Brand::factory()->create(['name' => 'UnknownShop', 'category_id' => null]);
+        $brand = Brand::factory()->create(['name' => ['en' => 'UnknownShop'], 'category_id' => null]);
 
         $request = new Request([
             'amount' => 50,
@@ -114,7 +118,7 @@ class CreateTransactionToolTest extends TestCase
         $this->actingAs($user);
 
         $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        Brand::factory()->create(['name' => 'TestBrand', 'category_id' => $category->id]);
+        Brand::factory()->create(['name' => ['en' => 'TestBrand'], 'category_id' => $category->id]);
 
         $request = new Request([
             'amount' => 75,
@@ -135,7 +139,7 @@ class CreateTransactionToolTest extends TestCase
         $this->actingAs($user);
 
         $category = Category::factory()->create(['type' => Category::SAVINGS]);
-        Brand::factory()->create(['name' => 'Bank', 'category_id' => $category->id]);
+        Brand::factory()->create(['name' => ['en' => 'Bank'], 'category_id' => $category->id]);
 
         $request = new Request([
             'amount' => 500,
@@ -152,7 +156,7 @@ class CreateTransactionToolTest extends TestCase
     public function test_it_defaults_date_to_today(): void
     {
         $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        Brand::factory()->create(['name' => 'Shop', 'category_id' => $category->id]);
+        Brand::factory()->create(['name' => ['en' => 'Shop'], 'category_id' => $category->id]);
 
         $request = new Request([
             'amount' => 10,
@@ -170,7 +174,7 @@ class CreateTransactionToolTest extends TestCase
     public function test_it_returns_confirmation_with_note(): void
     {
         $category = Category::factory()->create(['type' => Category::INVESTMENT]);
-        Brand::factory()->create(['name' => 'Broker', 'category_id' => $category->id]);
+        Brand::factory()->create(['name' => ['en' => 'Broker'], 'category_id' => $category->id]);
 
         $request = new Request([
             'amount' => 1000,

@@ -59,4 +59,34 @@ abstract class Metric
         }
         return "date_format(created_at, '{$format}')";
     }
+
+    protected function localizedJsonValueExpression(string $column): string
+    {
+        $locale = app()->getLocale() ?: 'en';
+        $fallbackLocale = 'en';
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return sprintf(
+                "coalesce(json_extract(%s, '$.%s'), json_extract(%s, '$.%s'))",
+                $column,
+                $locale,
+                $column,
+                $fallbackLocale
+            );
+        }
+
+        return sprintf(
+            "coalesce(JSON_UNQUOTE(JSON_EXTRACT(%s, '$.\"%s\"')), JSON_UNQUOTE(JSON_EXTRACT(%s, '$.\"%s\"')))",
+            $column,
+            $locale,
+            $column,
+            $fallbackLocale
+        );
+    }
+
+    protected function localizedJsonSelect(string $column, string $alias = 'label'): string
+    {
+        return $this->localizedJsonValueExpression($column) . " as {$alias}";
+    }
 }

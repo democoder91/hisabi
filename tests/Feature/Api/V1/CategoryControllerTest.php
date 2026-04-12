@@ -2,13 +2,16 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CreatesSharedAccountContext;
 use Tests\TestCase;
 
 class CategoryControllerTest extends TestCase
 {
+    use CreatesSharedAccountContext;
     use RefreshDatabase;
 
     private User $user;
@@ -27,7 +30,7 @@ class CategoryControllerTest extends TestCase
 
     public function test_it_returns_all_categories(): void
     {
-        $categories = Category::factory()->count(10)->create();
+        Category::factory()->count(10)->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/categories/all');
@@ -38,6 +41,7 @@ class CategoryControllerTest extends TestCase
                     '*' => [
                         'id',
                         'name',
+                        'name_translations',
                         'type',
                         'color',
                         'icon',
@@ -51,7 +55,7 @@ class CategoryControllerTest extends TestCase
 
     public function test_it_includes_transactions_count(): void
     {
-        $category = Category::factory()->create();
+        Category::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/categories/all');
@@ -70,7 +74,7 @@ class CategoryControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/categories', [
-                'name' => 'Test Category',
+                'name' => ['en' => 'Test Category', 'ar' => 'فئة تجريبية'],
                 'type' => 'EXPENSES',
                 'color' => 'red',
                 'icon' => 'wallet',
@@ -81,23 +85,23 @@ class CategoryControllerTest extends TestCase
                 'category' => [
                     'id',
                     'name',
+                    'user_id',
                     'type',
                     'color',
                     'icon',
                     'transactions_count',
                 ],
             ])
-            ->assertJsonPath('category.name', 'Test Category')
+            ->assertJsonPath('category.name.en', 'Test Category')
             ->assertJsonPath('category.type', 'EXPENSES')
             ->assertJsonPath('category.color', 'red')
             ->assertJsonPath('category.icon', 'wallet');
 
-        $this->assertDatabaseHas('categories', [
-            'name' => 'Test Category',
-            'type' => 'EXPENSES',
-            'color' => 'red',
-            'icon' => 'wallet',
-        ]);
+        $category = Category::query()->latest('id')->first();
+
+        $this->assertNotNull($category);
+        $this->assertSame($this->user->id, $category->user_id);
+        $this->assertSame('Test Category', $category->getTranslation('name', 'en'));
     }
 
     public function test_it_validates_required_fields_for_store(): void
@@ -113,7 +117,7 @@ class CategoryControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/categories', [
-                'name' => 'Test Category',
+                'name' => ['en' => 'Test Category'],
                 'type' => 'INVALID_TYPE',
                 'color' => 'red',
                 'icon' => 'wallet',
@@ -130,7 +134,7 @@ class CategoryControllerTest extends TestCase
         foreach ($types as $type) {
             $response = $this->actingAs($this->user)
                 ->postJson('/api/v1/categories', [
-                    'name' => "Test Category {$type}",
+                    'name' => ['en' => "Test Category {$type}"],
                     'type' => $type,
                     'color' => 'blue',
                     'icon' => 'wallet',
@@ -144,7 +148,7 @@ class CategoryControllerTest extends TestCase
 
     public function test_it_requires_authentication_for_update(): void
     {
-        $category = Category::factory()->create();
+        $category = Category::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->putJson("/api/v1/categories/{$category->id}", []);
         $response->assertStatus(401);
@@ -153,7 +157,8 @@ class CategoryControllerTest extends TestCase
     public function test_it_updates_a_category(): void
     {
         $category = Category::factory()->create([
-            'name' => 'Old Name',
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Old Name'],
             'type' => 'EXPENSES',
             'color' => 'red',
             'icon' => 'wallet',
@@ -161,7 +166,7 @@ class CategoryControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/categories/{$category->id}", [
-                'name' => 'New Name',
+                'name' => ['en' => 'New Name', 'ar' => 'اسم جديد'],
                 'type' => 'INCOME',
                 'color' => 'blue',
                 'icon' => 'money',
@@ -172,29 +177,26 @@ class CategoryControllerTest extends TestCase
                 'category' => [
                     'id',
                     'name',
+                    'user_id',
                     'type',
                     'color',
                     'icon',
                     'transactions_count',
                 ],
             ])
-            ->assertJsonPath('category.name', 'New Name')
+            ->assertJsonPath('category.name.en', 'New Name')
             ->assertJsonPath('category.type', 'INCOME')
             ->assertJsonPath('category.color', 'blue')
             ->assertJsonPath('category.icon', 'money');
 
-        $this->assertDatabaseHas('categories', [
-            'id' => $category->id,
-            'name' => 'New Name',
-            'type' => 'INCOME',
-            'color' => 'blue',
-            'icon' => 'money',
-        ]);
+        $category->refresh();
+        $this->assertSame('New Name', $category->getTranslation('name', 'en'));
+        $this->assertSame($this->user->id, $category->user_id);
     }
 
     public function test_it_validates_required_fields_for_update(): void
     {
-        $category = Category::factory()->create();
+        $category = Category::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/categories/{$category->id}", []);
@@ -205,7 +207,7 @@ class CategoryControllerTest extends TestCase
 
     public function test_it_validates_type_is_valid_for_update(): void
     {
-        $category = Category::factory()->create();
+        $category = Category::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/categories/{$category->id}", [
@@ -223,7 +225,7 @@ class CategoryControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->putJson('/api/v1/categories/999', [
-                'name' => 'Test Category',
+                'name' => ['en' => 'Test Category'],
                 'type' => 'EXPENSES',
                 'color' => 'red',
                 'icon' => 'wallet',
@@ -234,7 +236,7 @@ class CategoryControllerTest extends TestCase
 
     public function test_it_requires_authentication_for_destroy(): void
     {
-        $category = Category::factory()->create();
+        $category = Category::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->deleteJson("/api/v1/categories/{$category->id}");
         $response->assertStatus(401);
@@ -243,7 +245,8 @@ class CategoryControllerTest extends TestCase
     public function test_it_deletes_a_category(): void
     {
         $category = Category::factory()->create([
-            'name' => 'Category to Delete',
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Category to Delete'],
             'type' => 'EXPENSES',
             'color' => 'red',
             'icon' => 'wallet',
@@ -263,7 +266,7 @@ class CategoryControllerTest extends TestCase
                 ],
             ])
             ->assertJsonPath('category.id', $category->id)
-            ->assertJsonPath('category.name', 'Category to Delete');
+            ->assertJsonPath('category.name.en', 'Category to Delete');
 
         $this->assertDatabaseMissing('categories', [
             'id' => $category->id,
@@ -276,5 +279,53 @@ class CategoryControllerTest extends TestCase
             ->deleteJson('/api/v1/categories/999');
 
         $response->assertStatus(404);
+    }
+
+    public function test_it_only_returns_categories_owned_by_the_authenticated_user(): void
+    {
+        Category::factory()->count(2)->create(['user_id' => $this->user->id]);
+        Category::factory()->count(3)->create();
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/categories/all');
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_it_returns_404_when_updating_another_users_category(): void
+    {
+        $category = Category::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/categories/{$category->id}", [
+                'name' => ['en' => 'Blocked'],
+                'type' => 'EXPENSES',
+                'color' => 'red',
+                'icon' => 'wallet',
+            ]);
+
+        $response->assertStatus(404);
+    }
+
+    public function test_it_returns_404_when_deleting_another_users_category(): void
+    {
+        $category = Category::factory()->create();
+
+        $response = $this->actingAs($this->user)
+            ->deleteJson("/api/v1/categories/{$category->id}");
+
+        $response->assertStatus(404);
+    }
+
+    public function test_shared_users_do_not_see_owner_categories_via_generic_category_endpoints(): void
+    {
+        $context = $this->createSharedAccountContext(Account::PERMISSION_VIEW);
+
+        $response = $this->actingAs($context['sharedUser'])
+            ->getJson('/api/v1/categories/all');
+
+        $response->assertOk();
+        $this->assertEmpty($response->json('data'));
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Brands;
 
 use App\Domains\Brand\Models\Brand;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,7 +28,15 @@ class AllBrandsTest extends TestCase
 
     public function test_it_returns_correct_data(): void
     {
-        $brand = Brand::factory()->create();
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Category Test'],
+        ]);
+        $brand = Brand::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Brand Test'],
+            'category_id' => $category->id,
+        ]);
 
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/brands/all');
@@ -37,10 +46,10 @@ class AllBrandsTest extends TestCase
                 'data' => [
                     [
                         'id' => $brand->id,
-                        'name' => $brand->name,
+                        'name' => 'Brand Test',
                         'category' => [
                             'id' => $brand->category->id,
-                            'name' => $brand->category->name,
+                            'name' => 'Category Test',
                             'color' => $brand->category->color,
                             'icon' => $brand->category->icon,
                         ],

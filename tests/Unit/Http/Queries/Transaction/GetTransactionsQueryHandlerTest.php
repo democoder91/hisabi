@@ -7,7 +7,7 @@ use App\Domains\Transaction\Services\TransactionService;
 use App\Http\Queries\Transaction\GetTransactionsQuery\GetTransactionsQuery;
 use App\Http\Queries\Transaction\GetTransactionsQuery\GetTransactionsQueryHandler;
 use App\Http\Queries\Transaction\GetTransactionsQuery\GetTransactionsQueryResponse;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,10 +17,14 @@ class GetTransactionsQueryHandlerTest extends TestCase
 
     private GetTransactionsQueryHandler $handler;
     private TransactionService $service;
+    private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
         $this->service = new TransactionService();
         $this->handler = new GetTransactionsQueryHandler($this->service);
     }

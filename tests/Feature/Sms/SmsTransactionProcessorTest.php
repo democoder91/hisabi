@@ -5,12 +5,20 @@ namespace Tests\Feature\Sms;
 use App\Contracts\SmsTransactionProcessor;
 use App\Domains\Brand\Models\Brand;
 use App\Domains\Sms\Models\Sms;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SmsTransactionProcessorTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->actingAs(User::factory()->create());
+    }
 
     public function test_not_valid_template_should_create_sms_without_transaction()
     {
@@ -42,7 +50,7 @@ class SmsTransactionProcessorTest extends TestCase
 
     public function test_it_stores_processed_sms_with_known_purchase_template_and_link_with_transaction_if_brand_is_found()
     {
-        $knownBrand = Brand::factory()->create(['name' => 'ENOC']);
+        $knownBrand = Brand::factory()->create(['name' => ['en' => 'ENOC']]);
 
         $sms = "Purchase of AED 106.00 with Credit Card at ENOC,";
 
@@ -56,7 +64,7 @@ class SmsTransactionProcessorTest extends TestCase
 
     public function test_it_stores_processed_sms_with_known_payment_template_and_link_with_transaction_if_brand_is_found()
     {
-        $knownBrand = Brand::factory()->create(['name' => 'someBrand']);
+        $knownBrand = Brand::factory()->create(['name' => ['en' => 'someBrand']]);
 
         $sms = "Payment of AED 38.7 to someBrand with Credit Card ending 9048. Avl Cr. Limit is AED 53,750.64.";
 
@@ -70,7 +78,7 @@ class SmsTransactionProcessorTest extends TestCase
 
     public function test_it_stores_processed_sms_with_known_salary_template_and_link_with_transaction()
     {
-        $knownBrand = Brand::factory()->create(['name' => 'Salary']);
+        $knownBrand = Brand::factory()->create(['name' => ['en' => 'Salary']]);
 
         $sms = "Salary of AED 70,000.00 has been credited into your account XXX99XXX.";
 
@@ -115,7 +123,7 @@ class SmsTransactionProcessorTest extends TestCase
 
     public function test_it_creates_transaction_with_provided_datetime_if_passed_and_valid()
     {
-        $knownBrand = Brand::factory()->create(['name' => 'someBrand']);
+        $knownBrand = Brand::factory()->create(['name' => ['en' => 'someBrand']]);
 
         $sms = "AED 5.65 has been debited from account 8118 using debit card at someBrand on 25-06-2022 13:29.";
 
@@ -131,7 +139,7 @@ class SmsTransactionProcessorTest extends TestCase
 
     public function test_it_creates_transaction_with_provided_default_datetime_if_no_datetime_found()
     {
-        $knownBrand = Brand::factory()->create(['name' => 'someBrand']);
+        $knownBrand = Brand::factory()->create(['name' => ['en' => 'someBrand']]);
 
         $sms = "Payment of AED 38.7 to someBrand with Credit Card ending 9048. Avl Cr. Limit is AED 53,750.64.";
 

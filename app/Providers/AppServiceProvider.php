@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\BusinessLogic\SmsParser;
+use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Support\ServiceProvider;
 use App\BusinessLogic\SmsTemplateDetector;
 use App\BusinessLogic\ReportManager;
@@ -11,6 +12,7 @@ use App\Contracts\SmsParser as SmsParserContract;
 use App\Contracts\SmsTemplateDetector as SmsTemplateDetectorContract;
 use App\Contracts\ReportManager as ReportManagerContract;
 use App\Contracts\SmsTransactionProcessor as SmsTransactionProcessorContract;
+use App\Observers\TransactionObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +36,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        Transaction::observe(TransactionObserver::class);
     }
 }

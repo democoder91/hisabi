@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
+use App\Models\User;
 
 class TransactionsCountMetricTest extends MetricsTestCase
 {
@@ -57,6 +59,22 @@ class TransactionsCountMetricTest extends MetricsTestCase
 
         $response->assertOk();
         $this->assertIsArray($response->json('data'));
+        $this->assertEmpty($response->json('data'));
+    }
+
+    public function test_shared_users_do_not_receive_metrics_for_accounts_shared_with_them(): void
+    {
+        Transaction::factory()->count(2)->create(['brand_id' => $this->expensesBrand->id]);
+
+        $sharedUser = User::factory()->create();
+        $sharedAccount = Account::withoutGlobalScopes()->firstWhere('user_id', $this->user->id);
+        $sharedAccount->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
+
+        $this->actingAs($sharedUser);
+
+        $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
+
+        $response->assertOk();
         $this->assertEmpty($response->json('data'));
     }
 }

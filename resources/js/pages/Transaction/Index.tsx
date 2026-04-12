@@ -11,8 +11,7 @@ import RecordTransactionButton from '@/components/Domain/RecordTransactionButton
 import Filters from './Filters';
 import LoadMore from '@/components/Global/LoadMore';
 import { Button } from '@/components/ui/button';
-import { getTransactions, getAllBrands } from '@/Api';
-import { getAllCategories } from '@/Api/categories';
+import { getTransactions, getAllAccounts, getTransactionFormOptions } from '@/Api';
 import { animateRowItem, formatNumber, getAppCurrency, isCreditTransaction } from '@/Utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,6 +38,7 @@ export default function Index({ auth }: { auth: any }) {
     };
 
     const [transactions, setTransactions] = useState<any[]>([]);
+    const [allAccounts, setAllAccounts] = useState<any[]>([]);
     const [allBrands, setAllBrands] = useState<any[]>([]);
     const [allCategories, setAllCategories] = useState<any[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -53,15 +53,16 @@ export default function Index({ auth }: { auth: any }) {
     });
 
     useEffect(() => {
-        getAllBrands()
+        getAllAccounts()
             .then(({ data }) => {
-                setAllBrands(data.allBrands)
+                setAllAccounts(data.allAccounts)
             })
             .catch(console.error);
 
-        getAllCategories()
+        getTransactionFormOptions()
             .then(({ data }) => {
-                setAllCategories(data.allCategories)
+                setAllBrands(data.brands)
+                setAllCategories(data.categories)
             })
             .catch(console.error);
     }, []);
@@ -197,6 +198,7 @@ export default function Index({ auth }: { auth: any }) {
                     initialDate={dateRange}
                 />
                 <RecordTransactionButton
+                    accounts={allAccounts}
                     brands={allBrands}
                     onSuccess={onCreate}
                 />
@@ -210,6 +212,7 @@ export default function Index({ auth }: { auth: any }) {
 
             <Edit
                 transaction={editItem}
+                accounts={allAccounts}
                 brands={allBrands}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
@@ -310,7 +313,11 @@ export default function Index({ auth }: { auth: any }) {
                                                 <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{hasBrand ? transaction.brand.name : t('common.noBrand')} </button>
                                                 <div className='flex gap-1 text-muted-foreground items-center'>
                                                     <ArrowElbowDownRightIcon size={10} weight="bold" />
-                                                    <p className=' text-xs'>{hasCategory ? <span>{transaction.brand.category.name} -</span> : ''} {transaction.created_at}</p>
+                                                    <p className=' text-xs'>
+                                                        {transaction.account ? <span>{transaction.account.name} - </span> : ''}
+                                                        {hasCategory ? <span>{transaction.brand.category.name} - </span> : ''}
+                                                        {transaction.created_at}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

@@ -20,9 +20,10 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function Edit({ transaction, brands, onUpdate, onDelete, onClose }) {
+export default function Edit({ transaction, accounts, brands, onUpdate, onDelete, onClose }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(0);
+    const [account, setAccount] = useState(null);
     const [createdAt, setCreatedAt] = useState('');
     const [brand, setBrand] = useState(null);
     const [note, setNote] = useState('');
@@ -32,10 +33,17 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
         return brands.filter((item) => isBrandCompatibleWithTransactionType(item, transactionType));
     }, [brands, transactionType]);
 
+    const editableAccounts = useMemo(() => {
+        return accounts.filter((item) => item.canEditTransactions);
+    }, [accounts]);
+
+    const canEdit = transaction?.canEdit ?? false;
+
     useEffect(() => {
         if (!transaction) return;
 
         setAmount(transaction.amount);
+        setAccount(transaction.account);
         setBrand(transaction.brand);
         setCreatedAt(transaction.created_at);
         setNote(transaction.note ?? '');
@@ -66,6 +74,7 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
         updateTransaction({
             id: transactionId,
             amount,
+            accountId: account?.id,
             brandId: brand?.id,
             createdAt,
             note,
@@ -96,12 +105,18 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
                 <DialogTitle className="sr-only">Edit Transaction</DialogTitle>
                 {transaction && (
                     <div className="space-y-4">
+                        {!canEdit && (
+                            <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                                {t('account.viewOnlyTransactionAccess')}
+                            </div>
+                        )}
+
                         <div>
                             <Label htmlFor="transaction_type">{t('transaction.type')}</Label>
                             <Tabs value={transactionType} onValueChange={setTransactionType} className="mt-2">
                                 <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value={TRANSACTION_TYPES.DEBIT}>{t('transaction.debit')}</TabsTrigger>
-                                    <TabsTrigger value={TRANSACTION_TYPES.CREDIT}>{t('transaction.credit')}</TabsTrigger>
+                                    <TabsTrigger value={TRANSACTION_TYPES.DEBIT} disabled={!canEdit}>{t('transaction.debit')}</TabsTrigger>
+                                    <TabsTrigger value={TRANSACTION_TYPES.CREDIT} disabled={!canEdit}>{t('transaction.credit')}</TabsTrigger>
                                 </TabsList>
                             </Tabs>
                         </div>
@@ -114,6 +129,7 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
                                 type="number"
                                 name="amount"
                                 value={amount}
+                                disabled={!canEdit}
                                 className="mt-1"
                                 onChange={(e) => setAmount(e.target.value)}
                             />
@@ -127,8 +143,20 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
                                 type="date"
                                 name="date"
                                 value={createdAt}
+                                disabled={!canEdit}
                                 className="mt-1"
                                 onChange={(e) => setCreatedAt(e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <Combobox
+                                label={t('transaction.account')}
+                                items={editableAccounts}
+                                initialSelectedItem={account}
+                                onChange={(item) => canEdit && setAccount(item)}
+                                displayInputValue={(item) => item ? item.name : ''}
+                                displayOptionValue={(item) => item ? item.name : ''}
                             />
                         </div>
 
@@ -137,7 +165,7 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
                                 label={t('transaction.brand')}
                                 items={filteredBrands}
                                 initialSelectedItem={brand}
-                                onChange={handleBrandChange}
+                                onChange={(item) => canEdit && handleBrandChange(item)}
                                 displayInputValue={(item) => item ? `${item.name} (${item.category?.name ?? 'N/A'})` : ''}
                                 displayOptionValue={(item) => item ? `${item.name} (${item.category?.name ?? 'N/A'})` : ''}
                             />
@@ -151,19 +179,22 @@ export default function Edit({ transaction, brands, onUpdate, onDelete, onClose 
                                 type="text"
                                 name="note"
                                 value={note}
+                                disabled={!canEdit}
                                 className="mt-1"
                                 onChange={(e) => setNote(e.target.value)}
                             />
                         </div>
 
-                        <div className="flex items-center justify-end pt-2 gap-2">
-                            <LongPressButton onLongPress={handleDelete}>
-                                Hold to Delete
-                            </LongPressButton>
-                            <Button onClick={handleUpdate}>
-                                Update
-                            </Button>
-                        </div>
+                        {canEdit && (
+                            <div className="flex items-center justify-end pt-2 gap-2">
+                                <LongPressButton onLongPress={handleDelete}>
+                                    Hold to Delete
+                                </LongPressButton>
+                                <Button onClick={handleUpdate}>
+                                    Update
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
             </DialogContent>

@@ -2,6 +2,7 @@
 
 namespace App\Domains\Category\Models;
 
+use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Category extends Model
 {
-    use HasFactory, HasTranslations;
+    use BelongsToUser, HasFactory, HasTranslations;
 
     public array $translatable = ['name'];
 

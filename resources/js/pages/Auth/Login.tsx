@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import Guest from '@/Layouts/Guest';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export default function Login() {
@@ -61,6 +61,12 @@ export default function Login() {
                                 <Button type="submit" disabled={processing} className="w-full">
                                     {t('auth.login')}
                                 </Button>
+                                <p className="text-center text-sm text-muted-foreground">
+                                    {t('auth.noAccount')}{' '}
+                                    <Link href={route('register')} className="font-medium text-foreground underline underline-offset-4">
+                                        {t('auth.register')}
+                                    </Link>
+                                </p>
                             </div>
                         </div>
                     </form>

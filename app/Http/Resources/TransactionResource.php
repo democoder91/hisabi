@@ -14,12 +14,23 @@ class TransactionResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $user = $request->user();
+
         return [
             'id' => $this->id,
             'amount' => $this->amount,
             'transaction_type' => $this->transaction_type,
             'note' => $this->note,
             'created_at' => $this->created_at?->format('Y-m-d'),
+            'canEdit' => $this->account?->canBeEditedBy($user) ?? false,
+            'account' => $this->whenLoaded('account', function () {
+                return [
+                    'id' => $this->account->id,
+                    'name' => $this->account->name,
+                    'balance' => (float) $this->account->balance,
+                    'canEditTransactions' => $this->account->canBeEditedBy(request()->user()),
+                ];
+            }),
             'brand' => $this->whenLoaded('brand', function () {
                 if (!$this->brand) {
                     return null;

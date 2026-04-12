@@ -18,11 +18,14 @@ class TransactionsByBrandMetric extends Metric
 
     public function calculate(): array
     {
+        $labelExpression = $this->localizedJsonValueExpression('brands.name');
+
         $query = Transaction::query()
             ->join('brands', 'brands.id', '=', 'transactions.brand_id')
             ->where('brands.category_id', $this->categoryId)
-            ->select("brands.name as label", DB::raw("count(transactions.id) as value"))
-            ->groupBy("brands.id")
+            ->selectRaw($this->localizedJsonSelect('brands.name') . ', count(transactions.id) as value')
+            ->groupBy('brands.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('value', 'DESC');
 
         if ($this->hasDateRange()) {

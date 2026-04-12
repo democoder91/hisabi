@@ -10,11 +10,14 @@ class HighestTransactionMetric extends Metric
 {
     public function calculate(): array
     {
+        $labelExpression = $this->localizedJsonValueExpression('categories.name');
+
         $query = Transaction::query()
             ->join('brands', 'brands.id', '=', 'transactions.brand_id')
             ->join('categories', 'categories.id', '=', 'brands.category_id')
-            ->select("categories.name as label", DB::raw("max(transactions.amount) as value"))
-            ->groupBy("categories.name")
+            ->selectRaw($this->localizedJsonSelect('categories.name') . ', max(transactions.amount) as value')
+            ->groupBy('categories.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('value', 'DESC');
 
         if ($this->hasDateRange()) {

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\Category;
@@ -14,20 +15,23 @@ class TransactionCurrencyTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+    private Account $account;
     private Brand $brand;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->user = User::factory()->create();
-        $category = Category::factory()->create(['type' => Category::EXPENSES]);
-        $this->brand = Brand::factory()->create(['category_id' => $category->id]);
+        $this->account = Account::factory()->create(['user_id' => $this->user->id]);
+        $category = Category::factory()->create(['user_id' => $this->user->id, 'type' => Category::EXPENSES]);
+        $this->brand = Brand::factory()->create(['user_id' => $this->user->id, 'category_id' => $category->id]);
     }
 
     public function test_it_creates_transaction_with_explicit_currency(): void
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
+                'account_id' => $this->account->id,
                 'amount' => 100,
                 'brand_id' => $this->brand->id,
                 'created_at' => now()->toDateString(),
@@ -43,6 +47,7 @@ class TransactionCurrencyTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
+                'account_id' => $this->account->id,
                 'amount' => 100,
                 'brand_id' => $this->brand->id,
                 'created_at' => now()->toDateString(),
@@ -58,6 +63,7 @@ class TransactionCurrencyTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
+                'account_id' => $this->account->id,
                 'amount' => 100,
                 'brand_id' => $this->brand->id,
                 'created_at' => now()->toDateString(),
@@ -108,12 +114,14 @@ class TransactionCurrencyTest extends TestCase
     public function test_transaction_update_preserves_currency(): void
     {
         $transaction = Transaction::factory()->create([
+            'account_id' => $this->account->id,
             'brand_id' => $this->brand->id,
             'currency' => 'EUR',
         ]);
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/transactions/{$transaction->id}", [
+                'account_id' => $this->account->id,
                 'amount' => 200,
                 'brand_id' => $this->brand->id,
                 'created_at' => now()->toDateString(),

@@ -11,6 +11,8 @@ class CategoryStatsMetric extends Metric
 {
     public function calculate(): array
     {
+        $labelExpression = $this->localizedJsonValueExpression('categories.name');
+
         $query = Transaction::query()
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
             ->join('categories', 'brands.category_id', '=', 'categories.id');
@@ -20,22 +22,25 @@ class CategoryStatsMetric extends Metric
         }
 
         $mostUsedCategory = (clone $query)
-            ->select('categories.id', 'categories.name', DB::raw('COUNT(transactions.id) as transaction_count'))
-            ->groupBy('categories.id', 'categories.name')
+            ->selectRaw("categories.id, {$labelExpression} as name, COUNT(transactions.id) as transaction_count")
+            ->groupBy('categories.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('transaction_count', 'DESC')
             ->first();
 
         $highestSpendingCategory = (clone $query)
-            ->select('categories.id', 'categories.name', DB::raw('SUM(transactions.amount) as total_amount'))
+            ->selectRaw("categories.id, {$labelExpression} as name, SUM(transactions.amount) as total_amount")
             ->where('categories.type', Category::EXPENSES)
-            ->groupBy('categories.id', 'categories.name')
+            ->groupBy('categories.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('total_amount', 'DESC')
             ->first();
 
         $highestIncomeCategory = (clone $query)
-            ->select('categories.id', 'categories.name', DB::raw('SUM(transactions.amount) as total_amount'))
+            ->selectRaw("categories.id, {$labelExpression} as name, SUM(transactions.amount) as total_amount")
             ->where('categories.type', Category::INCOME)
-            ->groupBy('categories.id', 'categories.name')
+            ->groupBy('categories.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('total_amount', 'DESC')
             ->first();
 

@@ -11,33 +11,38 @@ class BrandStatsMetric extends Metric
 {
     public function calculate(): array
     {
+        $labelExpression = $this->localizedJsonValueExpression('brands.name');
+
         $query = Transaction::query();
         if ($this->hasDateRange()) {
             $query->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);
         }
 
         $mostUsedBrand = (clone $query)
-            ->select('brands.id', 'brands.name', DB::raw('COUNT(transactions.id) as transaction_count'))
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->groupBy('brands.id', 'brands.name')
+            ->selectRaw("brands.id, {$labelExpression} as name, COUNT(transactions.id) as transaction_count")
+            ->groupBy('brands.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('transaction_count', 'DESC')
             ->first();
 
         $highestSpendingBrand = (clone $query)
-            ->select('brands.id', 'brands.name', DB::raw('SUM(transactions.amount) as total_amount'))
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
             ->join('categories', 'brands.category_id', '=', 'categories.id')
+            ->selectRaw("brands.id, {$labelExpression} as name, SUM(transactions.amount) as total_amount")
             ->where('categories.type', Category::EXPENSES)
-            ->groupBy('brands.id', 'brands.name')
+            ->groupBy('brands.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('total_amount', 'DESC')
             ->first();
 
         $highestIncomeBrand = (clone $query)
-            ->select('brands.id', 'brands.name', DB::raw('SUM(transactions.amount) as total_amount'))
             ->join('brands', 'transactions.brand_id', '=', 'brands.id')
             ->join('categories', 'brands.category_id', '=', 'categories.id')
+            ->selectRaw("brands.id, {$labelExpression} as name, SUM(transactions.amount) as total_amount")
             ->where('categories.type', Category::INCOME)
-            ->groupBy('brands.id', 'brands.name')
+            ->groupBy('brands.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('total_amount', 'DESC')
             ->first();
 

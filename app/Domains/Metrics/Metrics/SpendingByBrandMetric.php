@@ -18,11 +18,14 @@ class SpendingByBrandMetric extends Metric
 
     public function calculate(): array
     {
+        $labelExpression = $this->localizedJsonValueExpression('brands.name');
+
         $query = Brand::query()
             ->where('category_id', $this->categoryId)
             ->join('transactions', 'transactions.brand_id', '=', 'brands.id')
-            ->select("brands.name as label", DB::raw("SUM(transactions.amount) as value"))
-            ->groupBy("brands.id")
+            ->selectRaw($this->localizedJsonSelect('brands.name') . ', SUM(transactions.amount) as value')
+            ->groupBy('brands.id')
+            ->groupBy(DB::raw($labelExpression))
             ->orderBy('value', 'DESC');
 
         if ($this->hasDateRange()) {

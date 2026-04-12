@@ -27,7 +27,7 @@ class BudgetControllerTest extends TestCase
 
     public function test_it_returns_all_budgets(): void
     {
-        Budget::factory()->count(3)->create();
+        Budget::factory()->count(3)->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/budgets');
@@ -69,6 +69,7 @@ class BudgetControllerTest extends TestCase
     public function test_it_returns_budget_with_computed_fields(): void
     {
         $budget = Budget::factory()->create([
+            'user_id' => $this->user->id,
             'name' => 'Test Budget',
             'amount' => 1000,
             'start_at' => now()->subDays(10),
@@ -82,5 +83,17 @@ class BudgetControllerTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.0.name', 'Test Budget')
             ->assertJsonPath('data.0.amount', 1000);
+    }
+
+    public function test_it_only_returns_budgets_owned_by_the_authenticated_user(): void
+    {
+        Budget::factory()->count(2)->create(['user_id' => $this->user->id]);
+        Budget::factory()->count(3)->create();
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/budgets');
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('data'));
     }
 }

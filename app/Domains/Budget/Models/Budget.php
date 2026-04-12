@@ -3,6 +3,7 @@
 namespace App\Domains\Budget\Models;
 
 use App\Domains\Category\Models\Category;
+use App\Models\Concerns\BelongsToUser;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Budget extends Model
 {
-    use HasFactory;
+    use BelongsToUser, HasFactory;
 
     const CUSTOM = "CUSTOM";
     const DAILY = "DAILY";
@@ -106,6 +107,8 @@ class Budget extends Model
         return $this->categories()
             ->join('brands', 'categories.id', '=', 'brands.category_id')
             ->join('transactions', 'brands.id', '=', 'transactions.brand_id')
+            ->where('categories.user_id', $this->user_id)
+            ->where('brands.user_id', $this->user_id)
             ->whereBetween('transactions.created_at', [$startAt, $endAt])
             ->sum('transactions.amount');
     }

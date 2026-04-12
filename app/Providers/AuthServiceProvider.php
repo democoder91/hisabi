@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Domains\Account\Models\Account;
+use App\Domains\Transaction\Models\Transaction;
+use App\Policies\AccountPolicy;
+use App\Policies\TransactionPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -13,7 +16,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        Account::class => AccountPolicy::class,
+        Transaction::class => TransactionPolicy::class,
     ];
 
     /**
@@ -23,7 +27,6 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-
-        //
+        $this->registerPolicies();
     }
 }

@@ -28,14 +28,46 @@ abstract class MetricsTestCase extends TestCase
 
         $this->user = User::factory()->create();
 
-        $this->incomeCategory = Category::factory()->create(['type' => Category::INCOME, 'name' => 'Salary']);
-        $this->expensesCategory = Category::factory()->create(['type' => Category::EXPENSES, 'name' => 'Food']);
-        $this->savingsCategory = Category::factory()->create(['type' => Category::SAVINGS, 'name' => 'Emergency Fund']);
-        $this->investmentCategory = Category::factory()->create(['type' => Category::INVESTMENT, 'name' => 'Stocks']);
+        $this->incomeCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::INCOME,
+            'name' => ['en' => 'Salary'],
+        ]);
+        $this->expensesCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Food'],
+        ]);
+        $this->savingsCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::SAVINGS,
+            'name' => ['en' => 'Emergency Fund'],
+        ]);
+        $this->investmentCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::INVESTMENT,
+            'name' => ['en' => 'Stocks'],
+        ]);
 
-        $this->incomeBrand = Brand::factory()->create(['category_id' => $this->incomeCategory->id, 'name' => 'Company A']);
-        $this->expensesBrand = Brand::factory()->create(['category_id' => $this->expensesCategory->id, 'name' => 'Restaurant']);
-        $this->savingsBrand = Brand::factory()->create(['category_id' => $this->savingsCategory->id, 'name' => 'Bank']);
-        $this->investmentBrand = Brand::factory()->create(['category_id' => $this->investmentCategory->id, 'name' => 'Broker']);
+        $this->incomeBrand = Brand::factory()->create([
+            'user_id' => $this->user->id,
+            'category_id' => $this->incomeCategory->id,
+            'name' => ['en' => 'Company A'],
+        ]);
+        $this->expensesBrand = Brand::factory()->create([
+            'user_id' => $this->user->id,
+            'category_id' => $this->expensesCategory->id,
+            'name' => ['en' => 'Restaurant'],
+        ]);
+        $this->savingsBrand = Brand::factory()->create([
+            'user_id' => $this->user->id,
+            'category_id' => $this->savingsCategory->id,
+            'name' => ['en' => 'Bank'],
+        ]);
+        $this->investmentBrand = Brand::factory()->create([
+            'user_id' => $this->user->id,
+            'category_id' => $this->investmentCategory->id,
+            'name' => ['en' => 'Broker'],
+        ]);
     }
 }

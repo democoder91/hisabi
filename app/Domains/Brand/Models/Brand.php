@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Category;
+use App\Models\Concerns\BelongsToUser;
 use Database\Factories\BrandFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Spatie\Translatable\HasTranslations;
+use Illuminate\Support\Facades\Auth;
 
 class Brand extends Model
 {
-    use HasFactory, HasTranslations;
+    use BelongsToUser, HasFactory, HasTranslations;
 
     public array $translatable = ['name'];
 
@@ -33,7 +35,7 @@ class Brand extends Model
 
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class)->withoutGlobalScopes();
     }
 
     public function transactions()
@@ -54,7 +56,10 @@ class Brand extends Model
             }
         }
 
-        return static::create(['name' => $name]);
+        return static::create([
+            'name' => ['en' => $name],
+            'user_id' => Auth::id(),
+        ]);
     }
 
     public static function search($query): Builder

@@ -78,9 +78,17 @@ class User extends Authenticatable
 
     public function getOrCreateDefaultAccount(): Account
     {
-        return $this->accounts()->firstOrCreate(
-            ['name' => Account::DEFAULT_NAME],
-            ['balance' => 0]
-        );
+        $account = $this->accounts()
+            ->where('name->en', Account::DEFAULT_NAME)
+            ->first();
+
+        if ($account) {
+            return $account;
+        }
+
+        return $this->accounts()->create([
+            'name' => ['en' => Account::DEFAULT_NAME],
+            'balance' => 0,
+        ]);
     }
 }

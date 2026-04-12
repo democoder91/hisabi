@@ -14,7 +14,9 @@ class CreateAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'array'],
+            'name.en' => ['required', 'string', 'max:255'],
+            'name.ar' => ['nullable', 'string', 'max:255'],
             'balance' => ['required', 'numeric'],
         ];
     }

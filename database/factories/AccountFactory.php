@@ -13,9 +13,11 @@ class AccountFactory extends Factory
 
     public function definition(): array
     {
+        $name = $this->faker->randomElement(['Checking', 'Savings', 'Cash']);
+
         return [
             'user_id' => Auth::id() ?? User::factory(),
-            'name' => $this->faker->randomElement(['Checking', 'Savings', 'Cash']),
+            'name' => ['en' => $name],
             'balance' => 0,
         ];
     }

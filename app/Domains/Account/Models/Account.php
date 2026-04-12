@@ -13,14 +13,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
 
 class Account extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     public const DEFAULT_NAME = 'Checking';
     public const PERMISSION_VIEW = 'view';
     public const PERMISSION_EDIT = 'edit';
+
+    public array $translatable = ['name'];
 
     protected $guarded = [];
 
@@ -104,5 +107,13 @@ class Account extends Model
         $this->forceFill([
             'balance' => round((float) $this->balance + $delta, 2),
         ])->saveQuietly();
+    }
+
+    public function getLocalizedName(?string $locale = null): ?string
+    {
+        $locale ??= app()->getLocale();
+
+        return $this->getTranslation('name', $locale, false)
+            ?: $this->getTranslation('name', 'en', false);
     }
 }

@@ -26,7 +26,8 @@ class TransactionResource extends JsonResource
             'account' => $this->whenLoaded('account', function () {
                 return [
                     'id' => $this->account->id,
-                    'name' => $this->account->name,
+                    'name' => $this->account->getLocalizedName(),
+                    'name_translations' => $this->account->getTranslations('name'),
                     'balance' => (float) $this->account->balance,
                     'canEditTransactions' => $this->account->canBeEditedBy(request()->user()),
                 ];

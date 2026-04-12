@@ -40,7 +40,7 @@ class AccountControllerTest extends TestCase
             ->assertJsonPath('paginatorInfo.total', 2)
             ->assertJsonStructure([
                 'data' => [
-                    '*' => ['id', 'name', 'balance', 'transactionsCount', 'created_at', 'isOwner', 'canManage', 'canEditTransactions', 'permissionLevel'],
+                    '*' => ['id', 'name', 'name_translations', 'balance', 'transactionsCount', 'created_at', 'isOwner', 'canManage', 'canEditTransactions', 'permissionLevel'],
                 ],
             ]);
 
@@ -52,36 +52,71 @@ class AccountControllerTest extends TestCase
     public function test_it_creates_an_account(): void
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
-            'name' => 'Emergency Fund',
+            'name' => [
+                'en' => 'Emergency Fund',
+                'ar' => 'صندوق الطوارئ',
+            ],
             'balance' => 1250.75,
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('account.name', 'Emergency Fund')
+            ->assertJsonPath('account.name_translations.en', 'Emergency Fund')
+            ->assertJsonPath('account.name_translations.ar', 'صندوق الطوارئ')
             ->assertJsonPath('account.balance', 1250.75);
 
-        $this->assertDatabaseHas('accounts', [
-            'user_id' => $this->user->id,
-            'name' => 'Emergency Fund',
-        ]);
+        $account = Account::query()->where('user_id', $this->user->id)->latest('id')->firstOrFail();
+
+        $this->assertSame('Emergency Fund', $account->getTranslation('name', 'en'));
+        $this->assertSame('صندوق الطوارئ', $account->getTranslation('name', 'ar'));
     }
 
     public function test_it_updates_an_account(): void
     {
-        $account = Account::factory()->create(['user_id' => $this->user->id, 'name' => 'Checking', 'balance' => 200]);
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Checking'],
+            'balance' => 200,
+        ]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
-            'name' => 'Main Checking',
+            'name' => [
+                'en' => 'Main Checking',
+                'ar' => 'الحساب الرئيسي',
+            ],
             'balance' => 450.50,
         ]);
 
         $response->assertOk()
             ->assertJsonPath('account.name', 'Main Checking')
+            ->assertJsonPath('account.name_translations.en', 'Main Checking')
+            ->assertJsonPath('account.name_translations.ar', 'الحساب الرئيسي')
             ->assertJsonPath('account.balance', 450.5);
 
         $account->refresh();
-        $this->assertSame('Main Checking', $account->name);
+        $this->assertSame('Main Checking', $account->getTranslation('name', 'en'));
+        $this->assertSame('الحساب الرئيسي', $account->getTranslation('name', 'ar'));
         $this->assertSame(450.5, $account->balance);
+    }
+
+    public function test_it_filters_accounts_by_translated_name(): void
+    {
+        Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Emergency Fund', 'ar' => 'صندوق الطوارئ'],
+        ]);
+
+        Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Savings', 'ar' => 'المدخرات'],
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/accounts?filter[search]=الطوارئ');
+
+        $response->assertOk()
+            ->assertJsonPath('paginatorInfo.total', 1)
+            ->assertJsonPath('data.0.name', 'Emergency Fund')
+            ->assertJsonPath('data.0.name_translations.ar', 'صندوق الطوارئ');
     }
 
     public function test_it_deletes_an_account(): void
@@ -101,7 +136,7 @@ class AccountControllerTest extends TestCase
         $account = Account::factory()->create();
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
-            'name' => 'Blocked',
+            'name' => ['en' => 'Blocked'],
             'balance' => 99,
         ]);
 
@@ -181,7 +216,7 @@ class AccountControllerTest extends TestCase
         $account->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
-            'name' => 'Not Allowed',
+            'name' => ['en' => 'Not Allowed'],
             'balance' => 999,
         ]);
 

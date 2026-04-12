@@ -26,7 +26,7 @@ class AccountAuditControllerTest extends TestCase
         $this->user = User::factory()->create();
         $this->account = Account::factory()->create([
             'user_id' => $this->user->id,
-            'name' => 'Checking',
+            'name' => ['en' => 'Checking', 'ar' => 'الحساب الجاري'],
         ]);
 
         $category = Category::factory()->create([
@@ -61,6 +61,7 @@ class AccountAuditControllerTest extends TestCase
         $this->assertSame($this->account->id, $audit->account_id);
         $this->assertSame($this->user->id, $audit->user_id);
         $this->assertNull($audit->old_values);
+        $this->assertSame('Checking', $audit->new_values['account_name']);
         $this->assertEquals(42.0, $audit->new_values['amount']);
         $this->assertSame('Lunch', $audit->new_values['note']);
         $this->assertSame('Cafe', $audit->new_values['brand_name']);
@@ -182,7 +183,7 @@ class AccountAuditControllerTest extends TestCase
     {
         $secondaryAccount = Account::factory()->create([
             'user_id' => $this->user->id,
-            'name' => 'Savings',
+            'name' => ['en' => 'Savings', 'ar' => 'المدخرات'],
         ]);
 
         $transaction = Transaction::factory()->create([

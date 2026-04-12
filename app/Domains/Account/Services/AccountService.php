@@ -5,35 +5,65 @@ namespace App\Domains\Account\Services;
 use App\Domains\Account\Models\Account;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class AccountService
 {
     public function getPaginated(int $perPage = 50): LengthAwarePaginator
     {
-        return QueryBuilder::for($this->accessibleQuery())
+        $query = QueryBuilder::for($this->accessibleQuery())
             ->allowedFilters([
-                AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where('name', 'like', "%{$value}%");
+                AllowedFilter::callback('search', function (Builder $query, $value) {
+                    $search = "%{$value}%";
+
+                    $query->where(function (Builder $builder) use ($search) {
+                        $builder->where('name->en', 'like', $search)
+                            ->orWhere('name->ar', 'like', $search);
+                    });
                 }),
             ])
-            ->allowedSorts(['id', 'name', 'balance', 'created_at'])
-            ->defaultSort('name')
+            ->allowedSorts([
+                'id',
+                'balance',
+                'created_at',
+                AllowedSort::callback('name', function (Builder $query, bool $descending) {
+                    $query->orderByRaw($this->localizedNameSortSql($descending));
+                }),
+            ])
             ->with(['sharedUsers:id,name,email'])
-            ->withCount('transactions')
-            ->paginate($perPage);
+            ->withCount('transactions');
+
+        if (! request()->filled('sort')) {
+            $query->orderByRaw($this->localizedNameSortSql());
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function getAll(): Collection
     {
-        return QueryBuilder::for($this->accessibleQuery())
-            ->allowedSorts(['id', 'name', 'balance', 'created_at'])
-            ->defaultSort('name')
+        $query = QueryBuilder::for($this->accessibleQuery())
+            ->allowedSorts([
+                'id',
+                'balance',
+                'created_at',
+                AllowedSort::callback('name', function (Builder $query, bool $descending) {
+                    $query->orderByRaw($this->localizedNameSortSql($descending));
+                }),
+            ])
             ->with(['sharedUsers:id,name,email'])
-            ->withCount('transactions')
-            ->get();
+            ->withCount('transactions');
+
+        if (! request()->filled('sort')) {
+            $query->orderByRaw($this->localizedNameSortSql());
+        }
+
+        return $query->get();
     }
 
     public function create(array $data): Account
@@ -97,8 +127,28 @@ class AccountService
             ->findOrFail($id);
     }
 
-    private function accessibleQuery()
+    private function accessibleQuery(): Builder
     {
         return Account::query()->accessibleTo(auth()->user());
+    }
+
+    private function localizedNameSortSql(bool $descending = false): string
+    {
+        $direction = $descending ? 'DESC' : 'ASC';
+        $locale = app()->getLocale();
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return sprintf(
+                "COALESCE(json_extract(name, '$.\"%s\"'), json_extract(name, '$.en')) %s",
+                $locale,
+                $direction,
+            );
+        }
+
+        return sprintf(
+            'COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, "$.%s")), JSON_UNQUOTE(JSON_EXTRACT(name, "$.en"))) %s',
+            $locale,
+            $direction,
+        );
     }
 }

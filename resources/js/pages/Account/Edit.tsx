@@ -9,10 +9,40 @@ import { LongPressButton } from '@/components/ui/long-press-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
-export default function Edit({ account, onClose, onDelete, onUpdate }) {
+type AccountTranslations = {
+    en?: string;
+    ar?: string;
+};
+
+type SharedUser = {
+    id: number;
+    name: string;
+    email: string;
+    permissionLevel: string;
+};
+
+type AccountRecord = {
+    id: number;
+    name: string;
+    name_translations?: AccountTranslations;
+    balance: number;
+    canManage: boolean;
+    permissionLevel: string;
+    sharedUsers?: SharedUser[];
+};
+
+type EditAccountProps = {
+    account: AccountRecord | null;
+    onClose: () => void;
+    onDelete: (account: AccountRecord) => void;
+    onUpdate: (account: AccountRecord) => void;
+};
+
+export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccountProps) {
     const { t } = useTranslation();
-    const [currentAccount, setCurrentAccount] = useState(null);
-    const [name, setName] = useState('');
+    const [currentAccount, setCurrentAccount] = useState<AccountRecord | null>(null);
+    const [nameEn, setNameEn] = useState('');
+    const [nameAr, setNameAr] = useState('');
     const [balance, setBalance] = useState('0');
     const [loading, setLoading] = useState(false);
     const [shareEmail, setShareEmail] = useState('');
@@ -26,7 +56,8 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
         }
 
         setCurrentAccount(account);
-        setName(account.name);
+        setNameEn(account.name_translations?.en ?? account.name ?? '');
+        setNameAr(account.name_translations?.ar ?? '');
         setBalance(String(account.balance ?? 0));
         setShareEmail('');
         setSharePermission('view');
@@ -36,7 +67,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
     const canManage = currentAccount?.canManage ?? false;
 
     const handleUpdate = () => {
-        if (!currentAccount || loading || !name.trim()) {
+        if (!currentAccount || loading || !nameEn.trim()) {
             return;
         }
 
@@ -44,7 +75,10 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
 
         updateAccount({
             id: currentAccount.id,
-            name: name.trim(),
+            name: {
+                en: nameEn.trim(),
+                ar: nameAr.trim(),
+            },
             balance: Number(balance || 0),
         })
             .then(({ data }) => {
@@ -90,7 +124,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
             .finally(() => setShareLoading(false));
     };
 
-    const handleSharePermissionUpdate = (shareUserId, permissionLevel) => {
+    const handleSharePermissionUpdate = (shareUserId: number, permissionLevel: string) => {
         if (!currentAccount) {
             return;
         }
@@ -110,7 +144,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
             .finally(() => setUpdatingShareId(null));
     };
 
-    const handleShareRevoke = (shareUserId) => {
+    const handleShareRevoke = (shareUserId: number) => {
         if (!currentAccount) {
             return;
         }
@@ -149,14 +183,37 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
 
                             <TabsContent value="details" className="space-y-4 pt-2">
                                 <div>
-                                    <Label htmlFor="account-name">{t('account.name')}</Label>
-                                    <Input
-                                        id="account-name"
-                                        value={name}
-                                        className="mt-1"
-                                        disabled={!canManage}
-                                        onChange={(event) => setName(event.target.value)}
-                                    />
+                                    <Label>{t('account.name')}</Label>
+                                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <Label htmlFor="account-name-en" className="text-xs text-muted-foreground">
+                                                {t('account.lang_en')}
+                                            </Label>
+                                            <Input
+                                                id="account-name-en"
+                                                value={nameEn}
+                                                className="mt-1"
+                                                placeholder={t('account.namePlaceholder_en')}
+                                                disabled={!canManage}
+                                                onChange={(event) => setNameEn(event.target.value)}
+                                                dir="ltr"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="account-name-ar" className="text-xs text-muted-foreground">
+                                                {t('account.lang_ar')}
+                                            </Label>
+                                            <Input
+                                                id="account-name-ar"
+                                                value={nameAr}
+                                                className="mt-1"
+                                                placeholder={t('account.namePlaceholder_ar')}
+                                                disabled={!canManage}
+                                                onChange={(event) => setNameAr(event.target.value)}
+                                                dir="rtl"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <Label htmlFor="account-balance">{t('account.balance')}</Label>
@@ -180,7 +237,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }) {
                                 {canManage && (
                                     <div className="flex justify-end gap-2">
                                         <LongPressButton onLongPress={handleDelete}>{t('common.holdToDelete')}</LongPressButton>
-                                        <Button onClick={handleUpdate} disabled={loading || !name.trim()}>
+                                        <Button onClick={handleUpdate} disabled={loading || !nameEn.trim()}>
                                             {t('common.update')}
                                         </Button>
                                     </div>

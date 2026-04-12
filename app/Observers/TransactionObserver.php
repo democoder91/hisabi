@@ -145,7 +145,7 @@ class TransactionObserver
         return [
             'id' => isset($attributes['id']) ? (int) $attributes['id'] : null,
             'account_id' => isset($attributes['account_id']) ? (int) $attributes['account_id'] : null,
-            'account_name' => $account?->name,
+            'account_name' => $account?->getLocalizedName(),
             'brand_id' => isset($attributes['brand_id']) && $attributes['brand_id'] !== null ? (int) $attributes['brand_id'] : null,
             'brand_name' => $brand?->name,
             'category_name' => $brand?->category?->name,

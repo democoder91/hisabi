@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
+import { type ColumnDef } from '@tanstack/react-table';
 import { ArrowLeftIcon, ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 
 import Authenticated from '@/Layouts/Authenticated';
@@ -9,8 +10,8 @@ import { formatNumber, getAppCurrency } from '@/Utils';
 import LoadMore from '@/components/Global/LoadMore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const hiddenDiffFields = ['id'];
 
@@ -98,6 +99,80 @@ export default function Audit({ auth, account }) {
         };
     }), [audits]);
 
+    const columns = useMemo<ColumnDef<any>[]>(() => [
+        {
+            id: 'action',
+            header: t('account.action'),
+            cell: ({ row }) => (
+                <Badge variant={getActionVariant(row.original.action)} className="capitalize">
+                    {getActionLabel(row.original.action)}
+                </Badge>
+            ),
+        },
+        {
+            id: 'transaction',
+            header: t('account.transactionDetails'),
+            cell: ({ row }) => {
+                const audit = row.original;
+
+                return (
+                    <div className="space-y-1 text-sm">
+                        <p className="font-medium">
+                            {audit.subject?.transaction_type ?? 'N/A'} · {formatAuditValue('amount', audit.subject?.amount)}
+                        </p>
+                        <p className="text-muted-foreground">
+                            {audit.subject?.category_name ?? t('account.emptyValue')}
+                        </p>
+                        <p className="text-muted-foreground">
+                            {audit.subject?.note || t('account.emptyValue')}
+                        </p>
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'performedBy',
+            header: t('account.performedByLabel'),
+            cell: ({ row }) => (
+                <span className="text-sm text-muted-foreground">
+                    {row.original.user?.name ?? row.original.user?.email ?? t('account.emptyValue')}
+                </span>
+            ),
+        },
+        {
+            id: 'changes',
+            header: t('account.changes'),
+            cell: ({ row }) => {
+                const audit = row.original;
+
+                if (audit.action !== 'updated' || audit.changedFields.length === 0) {
+                    return <span className="text-sm text-muted-foreground">-</span>;
+                }
+
+                return (
+                    <div className="space-y-2 rounded-lg bg-muted/40 p-3">
+                        {audit.changedFields.map((field) => (
+                            <div key={`${audit.id}-${field}`} className="grid gap-1 text-sm">
+                                <span className="font-medium capitalize">{field.replaceAll('_', ' ')}</span>
+                                <span className="text-muted-foreground">{formatAuditValue(field, audit.oldValues?.[field])}</span>
+                                <span>{formatAuditValue(field, audit.newValues?.[field])}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'created_at',
+            header: t('account.timestamp'),
+            cell: ({ row }) => (
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    {new Date(row.original.created_at).toLocaleString()}
+                </span>
+            ),
+        },
+    ], [t, renderedAudits]);
+
     return (
         <Authenticated auth={auth} header={header}>
             <Head title={`${account.name} ${t('account.auditTrail')}`} />
@@ -118,57 +193,14 @@ export default function Audit({ auth, account }) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ScrollArea className="max-h-[70vh] pr-4">
-                                <div className="space-y-3">
-                                    {renderedAudits.map((audit) => (
-                                        <Card key={audit.id} className="border-dashed">
-                                            <CardContent className="space-y-4 p-4">
-                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                                    <div className="space-y-2">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <Badge variant={getActionVariant(audit.action)} className="capitalize">
-                                                                {getActionLabel(audit.action)}
-                                                            </Badge>
-                                                            <span className="text-sm text-muted-foreground">
-                                                                {t('account.performedBy', { name: audit.user?.name ?? audit.user?.email ?? t('account.emptyValue') })}
-                                                            </span>
-                                                        </div>
-                                                        <div className="space-y-1 text-sm">
-                                                            <p className="font-medium">
-                                                                {audit.subject?.transaction_type ?? 'N/A'} · {formatAuditValue('amount', audit.subject?.amount)}
-                                                            </p>
-                                                            <p className="text-muted-foreground">
-                                                                {audit.subject?.category_name ?? t('account.emptyValue')}
-                                                            </p>
-                                                            <p className="text-muted-foreground">
-                                                                {audit.subject?.note || t('account.emptyValue')}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {new Date(audit.created_at).toLocaleString()}
-                                                    </p>
-                                                </div>
-
-                                                {audit.action === 'updated' && audit.changedFields.length > 0 && (
-                                                    <div className="space-y-2 rounded-lg bg-muted/40 p-3">
-                                                        <p className="text-sm font-medium">{t('account.changedFields')}</p>
-                                                        <div className="grid gap-2">
-                                                            {audit.changedFields.map((field) => (
-                                                                <div key={`${audit.id}-${field}`} className="grid gap-1 text-sm sm:grid-cols-[1fr_1fr_1fr] sm:items-center">
-                                                                    <span className="font-medium capitalize">{field.replaceAll('_', ' ')}</span>
-                                                                    <span className="text-muted-foreground">{formatAuditValue(field, audit.oldValues?.[field])}</span>
-                                                                    <span>{formatAuditValue(field, audit.newValues?.[field])}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </ScrollArea>
+                            <DataTable
+                                columns={columns}
+                                data={renderedAudits}
+                                loading={loading}
+                                loadingMessage={t('common.loading')}
+                                emptyMessage={t('account.noAudits')}
+                                getRowId={(audit) => audit.id}
+                            />
 
                             {renderedAudits.length > 0 && (
                                 <LoadMore
@@ -177,10 +209,6 @@ export default function Audit({ auth, account }) {
                                     loading={loading}
                                     onClick={() => setCurrentPage((page) => page + 1)}
                                 />
-                            )}
-
-                            {!loading && renderedAudits.length === 0 && (
-                                <p className="pb-2 text-center text-sm text-muted-foreground">{t('account.noAudits')}</p>
                             )}
                         </CardContent>
                     </Card>

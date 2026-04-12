@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +17,10 @@ import { IconColorSelector } from '@/components/ui/icon-color-selector';
 import { PencilSimple } from '@phosphor-icons/react';
 
 export default function Edit({ category, onUpdate, onDelete, onClose }) {
-    const [name, setName] = useState('');
+    const { t } = useTranslation();
+    const [nameEn, setNameEn] = useState('');
+    const [nameAr, setNameAr] = useState('');
+    const [nameLang, setNameLang] = useState('en');
     const [type, setType] = useState('');
     const [color, setColor] = useState('gray');
     const [icon, setIcon] = useState('wallet');
@@ -25,7 +29,9 @@ export default function Edit({ category, onUpdate, onDelete, onClose }) {
     useEffect(() => {
         if (!category) return;
 
-        setName(category.name);
+        const translations = category.name_translations ?? {};
+        setNameEn(translations.en ?? category.name ?? '');
+        setNameAr(translations.ar ?? '');
         setType(category.type);
         setColor(category.color);
         setIcon(category.icon || 'wallet');
@@ -37,7 +43,7 @@ export default function Edit({ category, onUpdate, onDelete, onClose }) {
         const categoryId = category.id;
         updateCategory({
             id: categoryId,
-            name,
+            name: { en: nameEn, ar: nameAr },
             type,
             color,
             icon
@@ -65,7 +71,7 @@ export default function Edit({ category, onUpdate, onDelete, onClose }) {
         <>
             <Dialog open={!!category} onOpenChange={(open) => !open && onClose()}>
                 <DialogContent>
-                    <DialogTitle className="sr-only">Edit Category</DialogTitle>
+                    <DialogTitle className="sr-only">{t('category.editTitle')}</DialogTitle>
                     {category && (
                         <div className="space-y-4">
                             <div className="flex justify-center">
@@ -84,40 +90,52 @@ export default function Edit({ category, onUpdate, onDelete, onClose }) {
                             </div>
 
                             <div>
-                                <Label htmlFor="name">
-                                    Name
-                                </Label>
-                                <div className="relative mt-1">
-                                    <Input
-                                        type="text"
-                                        name="name"
-                                        value={name}
-                                        placeholder="Category name"
-                                        onChange={(e) => setName(e.target.value)}
-                                    />
-                                </div>
+                                <Label>{t('category.name')}</Label>
+                                <Tabs value={nameLang} onValueChange={setNameLang} className="mt-1">
+                                    <TabsList className="grid w-full grid-cols-2">
+                                        <TabsTrigger value="en">{t('category.lang_en')}</TabsTrigger>
+                                        <TabsTrigger value="ar">{t('category.lang_ar')}</TabsTrigger>
+                                    </TabsList>
+                                    {nameLang === 'en' ? (
+                                        <Input
+                                            type="text"
+                                            value={nameEn}
+                                            className="mt-2"
+                                            placeholder={t('category.namePlaceholder_en')}
+                                            onChange={(e) => setNameEn(e.target.value)}
+                                            dir="ltr"
+                                        />
+                                    ) : (
+                                        <Input
+                                            type="text"
+                                            value={nameAr}
+                                            className="mt-2"
+                                            placeholder={t('category.namePlaceholder_ar')}
+                                            onChange={(e) => setNameAr(e.target.value)}
+                                            dir="rtl"
+                                        />
+                                    )}
+                                </Tabs>
                             </div>
 
                             <div>
-                                <Label htmlFor="type">
-                                    Type
-                                </Label>
+                                <Label>{t('category.type')}</Label>
                                 <Tabs value={type} onValueChange={setType} className="mt-1">
                                     <TabsList className="grid w-full grid-cols-4">
-                                        <TabsTrigger value="EXPENSES">Expenses</TabsTrigger>
-                                        <TabsTrigger value="INCOME">Income</TabsTrigger>
-                                        <TabsTrigger value="SAVINGS">Savings</TabsTrigger>
-                                        <TabsTrigger value="INVESTMENT">Investment</TabsTrigger>
+                                        <TabsTrigger value="EXPENSES">{t('category.expenses')}</TabsTrigger>
+                                        <TabsTrigger value="INCOME">{t('category.income')}</TabsTrigger>
+                                        <TabsTrigger value="SAVINGS">{t('category.savings')}</TabsTrigger>
+                                        <TabsTrigger value="INVESTMENT">{t('category.investment')}</TabsTrigger>
                                     </TabsList>
                                 </Tabs>
                             </div>
 
                             <div className="flex items-center justify-end pt-2 gap-2">
                                 <LongPressButton onLongPress={handleDelete}>
-                                    Hold to Delete
+                                    {t('common.holdToDelete')}
                                 </LongPressButton>
                                 <Button onClick={handleUpdate}>
-                                    Update
+                                    {t('common.update')}
                                 </Button>
                             </div>
                         </div>

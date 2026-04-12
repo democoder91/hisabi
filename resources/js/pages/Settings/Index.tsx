@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     UserCircleIcon,
     CaretLeftIcon,
@@ -52,70 +53,8 @@ interface User {
     email: string;
 }
 
-const settingsNavItems = [
-    {
-        section: "General",
-        items: [
-            {
-                title: "Account",
-                value: "account",
-                icon: UserCircleIcon,
-            },
-            {
-                title: "Preferences",
-                value: "preferences",
-                icon: SlidersHorizontalIcon,
-            },
-            {
-                title: "API Key",
-                value: "api-key",
-                icon: KeyIcon,
-            },
-            {
-                title: "Import",
-                value: "import",
-                icon: DownloadIcon,
-            },
-            {
-                title: "Export",
-                value: "export",
-                icon: UploadIcon,
-            },
-        ]
-    },
-    {
-        section: "Transactions",
-        items: [
-            {
-                title: "Tags",
-                value: "tags",
-                icon: TagIcon,
-            },
-            {
-                title: "SMS Parser Rules",
-                value: "sms-parser-rules",
-                icon: FunnelIcon,
-            },
-        ]
-    },
-    {
-        section: "More",
-        items: [
-            {
-                title: "Product Updates",
-                value: "product-updates",
-                icon: BellRingingIcon,
-            },
-            {
-                title: "Feedback",
-                value: "feedback",
-                icon: ChatCircleDotsIcon,
-            },
-        ]
-    },
-];
-
 export default function Index({ auth }: { auth: { user: User } }) {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('account');
     const [name, setName] = useState(auth.user.name);
     const [email, setEmail] = useState(auth.user.email);
@@ -130,6 +69,33 @@ export default function Index({ auth }: { auth: { user: User } }) {
     const [passwordError, setPasswordError] = useState('');
     const [isProfileOpen, setIsProfileOpen] = useState(true);
     const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+
+    const settingsNavItems = [
+        {
+            section: t('settings.sections.general'),
+            items: [
+                { title: t('settings.nav.account'), value: "account", icon: UserCircleIcon },
+                { title: t('settings.nav.preferences'), value: "preferences", icon: SlidersHorizontalIcon },
+                { title: t('settings.nav.apiKey'), value: "api-key", icon: KeyIcon },
+                { title: t('settings.nav.import'), value: "import", icon: DownloadIcon },
+                { title: t('settings.nav.export'), value: "export", icon: UploadIcon },
+            ]
+        },
+        {
+            section: t('settings.sections.transactions'),
+            items: [
+                { title: t('settings.nav.tags'), value: "tags", icon: TagIcon },
+                { title: t('settings.nav.smsParserRules'), value: "sms-parser-rules", icon: FunnelIcon },
+            ]
+        },
+        {
+            section: t('settings.sections.more'),
+            items: [
+                { title: t('settings.nav.productUpdates'), value: "product-updates", icon: BellRingingIcon },
+                { title: t('settings.nav.feedback'), value: "feedback", icon: ChatCircleDotsIcon },
+            ]
+        },
+    ];
 
     // Auto-dismiss profile messages after 5 seconds
     useEffect(() => {
@@ -162,11 +128,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
 
         updateUserProfile({ name, email, currentPassword: undefined, password: undefined })
             .then(({ data }) => {
-                setProfileMessage('Profile updated successfully');
+                setProfileMessage(t('settings.account.profileUpdated'));
                 setLoadingProfile(false);
             })
             .catch((err) => {
-                setProfileError(err.message || 'Failed to update profile');
+                setProfileError(err.message || t('settings.account.profileError'));
                 setLoadingProfile(false);
             });
     };
@@ -175,15 +141,13 @@ export default function Index({ auth }: { auth: { user: User } }) {
         setPasswordError('');
         setPasswordMessage('');
 
-        // Validate password match
         if (password !== confirmPassword) {
-            setPasswordError('New passwords do not match');
+            setPasswordError(t('settings.account.passwordsDoNotMatch'));
             return;
         }
 
-        // Require current password
         if (!currentPassword) {
-            setPasswordError('Current password is required');
+            setPasswordError(t('settings.account.currentPasswordRequired'));
             return;
         }
 
@@ -192,14 +156,14 @@ export default function Index({ auth }: { auth: { user: User } }) {
 
         updateUserProfile({ name, email, currentPassword, password })
             .then(({ data }) => {
-                setPasswordMessage('Password changed successfully');
+                setPasswordMessage(t('settings.account.passwordChanged'));
                 setCurrentPassword('');
                 setPassword('');
                 setConfirmPassword('');
                 setLoadingPassword(false);
             })
             .catch((err) => {
-                setPasswordError(err.message || 'Failed to change password');
+                setPasswordError(err.message || t('settings.account.passwordError'));
                 setLoadingPassword(false);
             });
     };
@@ -213,7 +177,7 @@ export default function Index({ auth }: { auth: { user: User } }) {
 
     return (
         <>
-            <Head title="Settings" />
+            <Head title={t('settings.title')} />
             <SidebarProvider>
                 <Sidebar variant="inset">
                     <SidebarHeader>
@@ -260,7 +224,7 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                         >
                                             <SignOutIcon />
-                                            <span>Logout</span>
+                                            <span>{t('userNav.logout')}</span>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
                                 </SidebarMenu>
@@ -272,7 +236,7 @@ export default function Index({ auth }: { auth: { user: User } }) {
                     <header className="flex h-16 shrink-0 items-center justify-center gap-2 border-b px-4 sticky top-0 bg-background z-10">
                         <div className="flex items-center gap-2 w-full max-w-7xl">
                             <SidebarTrigger className="-ml-1" />
-                            <h2 className="text-lg">Settings</h2>
+                            <h2 className="text-lg">{t('settings.title')}</h2>
                         </div>
                     </header>
                     <main className="flex flex-1 flex-col gap-4 p-4 items-center">
@@ -286,9 +250,9 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                                 <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
                                                     <div className="flex items-center justify-between">
                                                         <div className="text-left">
-                                                            <CardTitle>Profile Information</CardTitle>
+                                                            <CardTitle>{t('settings.account.profileInformation')}</CardTitle>
                                                             <CardDescription>
-                                                                Update your name and email address
+                                                                {t('settings.account.profileDescription')}
                                                             </CardDescription>
                                                         </div>
                                                         <CaretDownIcon
@@ -313,24 +277,24 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                                     )}
 
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="name">Name</Label>
+                                                        <Label htmlFor="name">{t('settings.account.name')}</Label>
                                                         <Input
                                                             id="name"
                                                             type="text"
                                                             value={name}
                                                             onChange={(e) => setName(e.target.value)}
-                                                            placeholder="Enter your name"
+                                                            placeholder={t('settings.account.namePlaceholder')}
                                                         />
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="email">Email</Label>
+                                                        <Label htmlFor="email">{t('settings.account.email')}</Label>
                                                         <Input
                                                             id="email"
                                                             type="email"
                                                             value={email}
                                                             onChange={(e) => setEmail(e.target.value)}
-                                                            placeholder="Enter your email"
+                                                            placeholder={t('settings.account.emailPlaceholder')}
                                                         />
                                                     </div>
 
@@ -340,7 +304,7 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                                             disabled={!isProfileValid || loadingProfile}
                                                             className="w-full sm:w-auto"
                                                         >
-                                                            {loadingProfile ? 'Saving...' : 'Save Profile'}
+                                                            {loadingProfile ? t('settings.account.saving') : t('settings.account.saveProfile')}
                                                         </Button>
                                                     </div>
                                                 </CardContent>
@@ -355,9 +319,9 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                                 <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
                                                     <div className="flex items-center justify-between">
                                                         <div className="text-left">
-                                                            <CardTitle>Change Password</CardTitle>
+                                                            <CardTitle>{t('settings.account.changePassword')}</CardTitle>
                                                             <CardDescription>
-                                                                Update your password
+                                                                {t('settings.account.changePasswordDescription')}
                                                             </CardDescription>
                                                         </div>
                                                         <CaretDownIcon
@@ -382,35 +346,35 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                                     )}
 
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="currentPassword">Current Password</Label>
+                                                        <Label htmlFor="currentPassword">{t('settings.account.currentPassword')}</Label>
                                                         <Input
                                                             id="currentPassword"
                                                             type="password"
                                                             value={currentPassword}
                                                             onChange={(e) => setCurrentPassword(e.target.value)}
-                                                            placeholder="Enter current password"
+                                                            placeholder={t('settings.account.currentPasswordPlaceholder')}
                                                         />
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="password">New Password</Label>
+                                                        <Label htmlFor="password">{t('settings.account.newPassword')}</Label>
                                                         <Input
                                                             id="password"
                                                             type="password"
                                                             value={password}
                                                             onChange={(e) => setPassword(e.target.value)}
-                                                            placeholder="Enter new password (min. 8 characters)"
+                                                            placeholder={t('settings.account.newPasswordPlaceholder')}
                                                         />
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                                                        <Label htmlFor="confirmPassword">{t('settings.account.confirmPassword')}</Label>
                                                         <Input
                                                             id="confirmPassword"
                                                             type="password"
                                                             value={confirmPassword}
                                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                                            placeholder="Confirm new password"
+                                                            placeholder={t('settings.account.confirmPasswordPlaceholder')}
                                                         />
                                                     </div>
 
@@ -420,7 +384,7 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                                             disabled={!isPasswordValid || loadingPassword}
                                                             className="w-full sm:w-auto"
                                                         >
-                                                            {loadingPassword ? 'Changing...' : 'Change Password'}
+                                                            {loadingPassword ? t('settings.account.changingPassword') : t('settings.account.changePasswordButton')}
                                                         </Button>
                                                     </div>
                                                 </CardContent>
@@ -430,15 +394,14 @@ export default function Index({ auth }: { auth: { user: User } }) {
                                 </div>
                             )}
 
-                            {/* Placeholder pages for other settings */}
                             {activeTab === 'preferences' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Preferences</CardTitle>
-                                        <CardDescription>Manage your application preferences</CardDescription>
+                                        <CardTitle>{t('settings.preferences.title')}</CardTitle>
+                                        <CardDescription>{t('settings.preferences.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -446,11 +409,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'api-key' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>API Key</CardTitle>
-                                        <CardDescription>Manage your API keys</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.apiKey.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.apiKey.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -458,11 +421,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'import' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Import</CardTitle>
-                                        <CardDescription>Import your data</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.import.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.import.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -470,11 +433,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'export' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Export</CardTitle>
-                                        <CardDescription>Export your data</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.export.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.export.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -482,11 +445,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'tags' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Tags</CardTitle>
-                                        <CardDescription>Manage transaction tags</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.tags.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.tags.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -494,11 +457,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'sms-parser-rules' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>SMS Parser Rules</CardTitle>
-                                        <CardDescription>Configure SMS parsing rules</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.smsParserRules.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.smsParserRules.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -506,11 +469,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'product-updates' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Product Updates</CardTitle>
-                                        <CardDescription>Stay updated with the latest features</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.productUpdates.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.productUpdates.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -518,11 +481,11 @@ export default function Index({ auth }: { auth: { user: User } }) {
                             {activeTab === 'feedback' && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Feedback</CardTitle>
-                                        <CardDescription>Share your feedback with us</CardDescription>
+                                        <CardTitle>{t('settings.placeholder.feedback.title')}</CardTitle>
+                                        <CardDescription>{t('settings.placeholder.feedback.description')}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground">Coming soon...</p>
+                                        <p className="text-muted-foreground">{t('common.comingSoon')}</p>
                                     </CardContent>
                                 </Card>
                             )}

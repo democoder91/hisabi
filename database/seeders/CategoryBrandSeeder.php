@@ -14,51 +14,51 @@ class CategoryBrandSeeder extends Seeder
      */
     public function run()
     {
-        Category::create(['name' => 'Income', 'type' => Category::INCOME, 'color' => 'red'])
+        Category::create(['name' => ['en' => 'Income', 'ar' => 'دخل'], 'type' => Category::INCOME, 'color' => 'red'])
             ->brands()
-            ->create(['name' => 'Salary']);
+            ->create(['name' => ['en' => 'Salary', 'ar' => 'راتب']]);
 
-        Category::create(['name' => 'Housing', 'type' => Category::EXPENSES, 'color' => 'blue'])
+        Category::create(['name' => ['en' => 'Housing', 'ar' => 'سكن'], 'type' => Category::EXPENSES, 'color' => 'blue'])
             ->brands()
-            ->create(['name' => 'House Rent']);
+            ->create(['name' => ['en' => 'House Rent', 'ar' => 'إيجار المنزل']]);
 
-        Category::create(['name' => 'Groceries', 'type' => Category::EXPENSES, 'color' => 'green'])
+        Category::create(['name' => ['en' => 'Groceries', 'ar' => 'بقالة'], 'type' => Category::EXPENSES, 'color' => 'green'])
             ->brands()
             ->createMany([
-                ['name' => 'LULU'],
-                ['name' => 'CARREFOUR'],
+                ['name' => ['en' => 'LULU', 'ar' => 'لولو']],
+                ['name' => ['en' => 'CARREFOUR', 'ar' => 'كارفور']],
             ]);
 
-        Category::create(['name' => 'Utilities', 'type' => Category::EXPENSES, 'color' => 'orange'])
+        Category::create(['name' => ['en' => 'Utilities', 'ar' => 'خدمات'], 'type' => Category::EXPENSES, 'color' => 'orange'])
             ->brands()
             ->createMany([
-                ['name' => 'Smart Dubai'],
+                ['name' => ['en' => 'Smart Dubai', 'ar' => 'دبي الذكية']],
             ]);
 
-        Category::create(['name' => 'Transportation', 'type' => Category::EXPENSES, 'color' => 'purple'])
+        Category::create(['name' => ['en' => 'Transportation', 'ar' => 'مواصلات'], 'type' => Category::EXPENSES, 'color' => 'purple'])
             ->brands()
             ->createMany([
-                ['name' => 'ENOC'],
+                ['name' => ['en' => 'ENOC', 'ar' => 'إينوك']],
             ]);
 
-        Category::create(['name' => 'Shopping', 'type' => Category::EXPENSES, 'color' => 'pink'])
+        Category::create(['name' => ['en' => 'Shopping', 'ar' => 'تسوق'], 'type' => Category::EXPENSES, 'color' => 'pink'])
             ->brands()
             ->createMany([
-                ['name' => 'IKEA'],
-                ['name' => 'HOME CENTRE'],
-                ['name' => 'MCDONALDS'],
+                ['name' => ['en' => 'IKEA', 'ar' => 'إيكيا']],
+                ['name' => ['en' => 'HOME CENTRE', 'ar' => 'هوم سنتر']],
+                ['name' => ['en' => 'MCDONALDS', 'ar' => 'ماكدونالدز']],
             ]);
 
-        Category::create(['name' => 'Support', 'type' => Category::EXPENSES, 'color' => 'indigo'])
+        Category::create(['name' => ['en' => 'Support', 'ar' => 'دعم'], 'type' => Category::EXPENSES, 'color' => 'indigo'])
             ->brands()
             ->createMany([
-                ['name' => 'Family Support'],
+                ['name' => ['en' => 'Family Support', 'ar' => 'دعم الأسرة']],
             ]);
 
-        Category::create(['name' => 'Debt', 'type' => Category::EXPENSES, 'color' => 'gray'])
+        Category::create(['name' => ['en' => 'Debt', 'ar' => 'ديون'], 'type' => Category::EXPENSES, 'color' => 'gray'])
             ->brands()
             ->createMany([
-                ['name' => 'Debt'],
+                ['name' => ['en' => 'Debt', 'ar' => 'دين']],
             ]);
     }
 }

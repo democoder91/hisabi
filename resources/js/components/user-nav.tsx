@@ -1,15 +1,18 @@
-import { Link } from '@inertiajs/react';
-import { SignOut, CaretUpDown, GearIcon } from "@phosphor-icons/react";
+import { Link, router, usePage } from '@inertiajs/react';
+import { SignOut, CaretUpDown, GearIcon, CheckIcon, GlobeIcon } from "@phosphor-icons/react";
+import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { updateUserProfile } from '@/Api/user';
 
 interface UserNavProps {
   user: {
@@ -28,7 +31,18 @@ function getInitials(name: string): string {
 
 export function UserNav({ user }: UserNavProps) {
   const { state } = useSidebar();
+  const { t } = useTranslation();
   const initials = getInitials(user.name);
+  const { locale } = usePage<{ locale: string }>().props as any;
+
+  const handleLanguageChange = (newLocale: string) => {
+    if (newLocale === locale) return;
+    updateUserProfile({ locale: newLocale } as any)
+      .then(() => {
+        router.reload();
+      })
+      .catch(console.error);
+  };
 
   return (
     <SidebarMenu>
@@ -68,8 +82,27 @@ export function UserNav({ user }: UserNavProps) {
                 className="cursor-pointer w-full"
               >
                 <GearIcon className="mr-2 size-4" />
-                <span>Settings</span>
+                <span>{t('userNav.settings')}</span>
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+              <GlobeIcon className="size-3" />
+              {t('userNav.language')}
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => handleLanguageChange('en')}
+            >
+              <span className="flex-1">{t('userNav.english')}</span>
+              {locale === 'en' && <CheckIcon className="size-4 text-primary" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => handleLanguageChange('ar')}
+            >
+              <span className="flex-1 font-arabic">{t('userNav.arabic')}</span>
+              {locale === 'ar' && <CheckIcon className="size-4 text-primary" />}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -80,7 +113,7 @@ export function UserNav({ user }: UserNavProps) {
                 className="cursor-pointer w-full"
               >
                 <SignOut className="mr-2 size-4" />
-                <span>Log out</span>
+                <span>{t('userNav.logout')}</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>

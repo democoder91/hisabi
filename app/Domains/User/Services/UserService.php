@@ -22,6 +22,10 @@ class UserService
             $updateData['email'] = $data['email'];
         }
 
+        if (isset($data['locale'])) {
+            $updateData['locale'] = $data['locale'];
+        }
+
         if (isset($data['password']) && !empty($data['password'])) {
             // Verify current password before allowing password change
             if (!isset($data['currentPassword']) || !Hash::check($data['currentPassword'], $user->password)) {

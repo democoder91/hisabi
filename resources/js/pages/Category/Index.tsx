@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, Link } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -35,6 +36,7 @@ interface GroupedCategories {
 }
 
 export default function Index({ auth }: { auth: any }) {
+    const { t } = useTranslation();
     const [categories, setCategories] = useState<Category[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -118,20 +120,20 @@ export default function Index({ auth }: { auth: any }) {
 
     const header = (
         <div className="flex items-center justify-between w-full">
-            <h2>Categories</h2>
+            <h2>{t('category.title')}</h2>
             <div className="flex items-center gap-2">
                 <DatePickerWithRange
                     onDateChange={handleDateChange}
                     initialDate={dateRange}
                 />
-                <Button onClick={() => setShowCreate(true)}>Create Category</Button>
+                <Button onClick={() => setShowCreate(true)}>{t('category.createCategory')}</Button>
             </div>
         </div>
     )
 
     return (
         <Authenticated auth={auth} header={header}>
-            <Head title="Categories" />
+            <Head title={t('category.title')} />
 
             <Create showCreate={showCreate}
                 onCreate={onCreate}
@@ -153,32 +155,32 @@ export default function Index({ auth }: { auth: any }) {
                             <div className="flex justify-between items-center mb-2">
                                 <Input
                                     name="search"
-                                    placeholder='Search..'
-                                    className='bg-white max-w-56'
+                                    placeholder={t('common.search')}
+                                    className='max-w-56'
                                     onChange={performSearch}
                                 />
                                 <TabsList>
                                     <TabsTrigger value="all">
-                                        All ({filteredCategories.length})
+                                        {t('category.all')} ({filteredCategories.length})
                                     </TabsTrigger>
                                     {groupedCategories.INCOME.length > 0 && (
                                         <TabsTrigger value="INCOME">
-                                            Income ({groupedCategories.INCOME.length})
+                                            {t('category.income')} ({groupedCategories.INCOME.length})
                                         </TabsTrigger>
                                     )}
                                     {groupedCategories.EXPENSES.length > 0 && (
                                         <TabsTrigger value="EXPENSES">
-                                            Expenses ({groupedCategories.EXPENSES.length})
+                                            {t('category.expenses')} ({groupedCategories.EXPENSES.length})
                                         </TabsTrigger>
                                     )}
                                     {groupedCategories.SAVINGS.length > 0 && (
                                         <TabsTrigger value="SAVINGS">
-                                            Savings ({groupedCategories.SAVINGS.length})
+                                            {t('category.savings')} ({groupedCategories.SAVINGS.length})
                                         </TabsTrigger>
                                     )}
                                     {groupedCategories.INVESTMENT.length > 0 && (
                                         <TabsTrigger value="INVESTMENT">
-                                            Investment ({groupedCategories.INVESTMENT.length})
+                                            {t('category.investment')} ({groupedCategories.INVESTMENT.length})
                                         </TabsTrigger>
                                     )}
                                 </TabsList>
@@ -210,7 +212,7 @@ export default function Index({ auth }: { auth: any }) {
                                                                 href={`/transactions?category=${category.id}`}
                                                                 className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
                                                             >
-                                                                {category.transactionsCount} {category.transactionsCount === 1 ? 'transaction' : 'transactions'}
+                                                                {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                                             </Link>
                                                         </div>
                                                     </div>
@@ -248,7 +250,7 @@ export default function Index({ auth }: { auth: any }) {
                                                                     href={`/transactions?category=${category.id}`}
                                                                     className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
                                                                 >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? 'transaction' : 'transactions'}
+                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                                                 </Link>
                                                             </div>
                                                         </div>
@@ -287,7 +289,7 @@ export default function Index({ auth }: { auth: any }) {
                                                                     href={`/transactions?category=${category.id}`}
                                                                     className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
                                                                 >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? 'transaction' : 'transactions'}
+                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                                                 </Link>
                                                             </div>
                                                         </div>
@@ -326,7 +328,7 @@ export default function Index({ auth }: { auth: any }) {
                                                                     href={`/transactions?category=${category.id}`}
                                                                     className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
                                                                 >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? 'transaction' : 'transactions'}
+                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                                                 </Link>
                                                             </div>
                                                         </div>
@@ -365,7 +367,7 @@ export default function Index({ auth }: { auth: any }) {
                                                                     href={`/transactions?category=${category.id}`}
                                                                     className='block text-muted-foreground hover:text-foreground text-xs hover:underline transition-colors'
                                                                 >
-                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? 'transaction' : 'transactions'}
+                                                                    {category.transactionsCount} {category.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                                                 </Link>
                                                             </div>
                                                         </div>

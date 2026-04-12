@@ -1,4 +1,5 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
   Receipt,
   StorefrontIcon,
@@ -20,30 +21,6 @@ import {
 import ApplicationLogo from "@/components/Global/ApplicationLogo"
 import { UserNav } from "@/components/user-nav"
 
-// Navigation items
-const items = [
-  {
-    title: "Dashboard",
-    url: "dashboard",
-    icon: ChartDonutIcon,
-  },
-  {
-    title: "Transactions",
-    url: "transactions",
-    icon: Receipt,
-  },
-  {
-    title: "Brands",
-    url: "brands",
-    icon: StorefrontIcon,
-  },
-  {
-    title: "Categories",
-    url: "categories",
-    icon: CirclesThreeIcon,
-  },
-]
-
 interface AppSidebarProps {
   auth?: {
     user: {
@@ -54,8 +31,34 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ auth }: AppSidebarProps) {
+  const { t } = useTranslation();
+  const { direction } = usePage<any>().props as any;
+
+  const items = [
+    {
+      title: t('navigation.dashboard'),
+      url: "dashboard",
+      icon: ChartDonutIcon,
+    },
+    {
+      title: t('navigation.transactions'),
+      url: "transactions",
+      icon: Receipt,
+    },
+    {
+      title: t('navigation.brands'),
+      url: "brands",
+      icon: StorefrontIcon,
+    },
+    {
+      title: t('navigation.categories'),
+      url: "categories",
+      icon: CirclesThreeIcon,
+    },
+  ];
+
   return (
-    <Sidebar collapsible="offcanvas" variant="inset">
+    <Sidebar collapsible="offcanvas" variant="inset" side={direction === 'rtl' ? 'right' : 'left'}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -72,7 +75,7 @@ export function AppSidebar({ auth }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={route().current(item.url)}>
                     <Link href={route(item.url)}>
                       <item.icon />

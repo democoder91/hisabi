@@ -9,7 +9,10 @@ class TotalExpensesMetric extends Metric
 {
     public function calculate(): array
     {
-        $query = Transaction::query()->expenses();
+        // Include both categorized expenses AND uncategorized transactions (no brand = treated as expense)
+        $query = Transaction::query()->where(function ($q) {
+            $q->expenses()->orWhereNull('brand_id');
+        });
 
         if ($this->hasDateRange()) {
             $query->whereBetween('created_at', [$this->getStartDate(), $this->getEndDate()]);
@@ -19,7 +22,9 @@ class TotalExpensesMetric extends Metric
         $previousRange = $this->getPreviousRange();
         if ($previousRange) {
             $previous = Transaction::query()
-                ->expenses()
+                ->where(function ($q) {
+                    $q->expenses()->orWhereNull('brand_id');
+                })
                 ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
                 ->sum('amount');
         }

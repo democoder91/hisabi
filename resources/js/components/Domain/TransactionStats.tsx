@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { getTransactionStats } from '@/Api';
 import { formatNumber, getAppCurrency } from '@/Utils';
@@ -9,6 +10,7 @@ interface TransactionStatsProps {
 }
 
 function TransactionStats({ dateRange }: TransactionStatsProps) {
+    const { t } = useTranslation();
     const [stats, setStats] = useState({ totalIncome: 0, totalExpenses: 0, totalTransactions: 0 });
     const [loading, setLoading] = useState(false);
 
@@ -34,7 +36,7 @@ function TransactionStats({ dateRange }: TransactionStatsProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="py-0">
                 <CardContent className="px-6 py-4">
-                    <div className="text-sm text-muted-foreground mb-2">Total transactions</div>
+                    <div className="text-sm text-muted-foreground mb-2">{t('transaction.totalTransactions')}</div>
                     {loading ? (
                         <div className="h-6 w-20 bg-muted animate-pulse rounded"></div>
                     ) : (
@@ -44,7 +46,7 @@ function TransactionStats({ dateRange }: TransactionStatsProps) {
             </Card>
             <Card className="py-0">
                 <CardContent className="px-6 py-4">
-                    <div className="text-sm text-muted-foreground mb-2">Income</div>
+                    <div className="text-sm text-muted-foreground mb-2">{t('dashboard.totalIncome')}</div>
                     {loading ? (
                         <div className="h-6 w-24 bg-muted animate-pulse rounded"></div>
                     ) : (
@@ -54,7 +56,7 @@ function TransactionStats({ dateRange }: TransactionStatsProps) {
             </Card>
             <Card className="py-0">
                 <CardContent className="px-6 py-4">
-                    <div className="text-sm text-muted-foreground mb-2">Expenses</div>
+                    <div className="text-sm text-muted-foreground mb-2">{t('dashboard.totalExpenses')}</div>
                     {loading ? (
                         <div className="h-6 w-24 bg-muted animate-pulse rounded"></div>
                     ) : (

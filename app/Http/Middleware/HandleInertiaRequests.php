@@ -33,10 +33,14 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request)
     {
+        $locale = $request->user()?->locale ?? 'en';
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user(),
             ],
+            'locale' => $locale,
+            'direction' => $locale === 'ar' ? 'rtl' : 'ltr',
         ]);
     }
 }

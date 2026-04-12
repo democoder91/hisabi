@@ -29,6 +29,7 @@ class UpdateUserProfileRequest extends FormRequest
                     ->numbers(),
             ],
             'default_currency' => 'sometimes|nullable|string|size:3',
+            'locale' => 'sometimes|string|in:en,ar',
         ];
     }
 }

@@ -9,10 +9,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Category;
 use Database\Factories\BrandFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Spatie\Translatable\HasTranslations;
 
 class Brand extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
+
+    public array $translatable = ['name'];
 
     protected $guarded = [];
 

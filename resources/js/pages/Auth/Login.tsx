@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import Guest from '@/Layouts/Guest';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export default function Login() {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: ''
@@ -24,25 +26,24 @@ export default function Login() {
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('login'));
     };
 
     return (
         <Guest>
-            <Head title="Log in" />
+            <Head title={t('auth.login')} />
 
             <Card>
                 <CardHeader className="text-center">
-                    <CardTitle className="text-xl">Welcome back</CardTitle>
-                    <CardDescription className="text-sm">Login with your email</CardDescription>
+                    <CardTitle className="text-xl">{t('auth.welcomeBack')}</CardTitle>
+                    <CardDescription className="text-sm">{t('auth.loginWithEmail')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={submit}>
                         <div className="grid gap-6">
                             <div className="grid gap-6">
                                 <div className="grid gap-3">
-                                    <Label htmlFor="email">Email</Label>
+                                    <Label htmlFor="email">{t('auth.email')}</Label>
                                     <Input
                                         id="email"
                                         type="email"
@@ -54,11 +55,11 @@ export default function Login() {
                                     {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
                                 </div>
                                 <div className="grid gap-3">
-                                        <Label htmlFor="password">Password</Label>
+                                    <Label htmlFor="password">{t('auth.password')}</Label>
                                     <Input id="password" type="password" required onChange={onHandleChange} name="password" />
                                 </div>
                                 <Button type="submit" disabled={processing} className="w-full">
-                                    Login
+                                    {t('auth.login')}
                                 </Button>
                             </div>
                         </div>

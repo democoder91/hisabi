@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
@@ -17,6 +18,7 @@ import { getAllCategories } from '@/Api/categories';
 import { getAllBrands } from '@/Api/brands';
 
 export default function Dashboard({ auth, hasData }: any) {
+    const { t } = useTranslation();
     const [allCategories, setAllCategories] = useState<any[]>([]);
     const [allBrands, setAllBrands] = useState<any[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -43,7 +45,7 @@ export default function Dashboard({ auth, hasData }: any) {
 
     const header = (
         <div className="flex items-center justify-between w-full">
-            <h2>Dashboard</h2>
+            <h2>{t('dashboard.title')}</h2>
             <div className="flex items-center gap-2">
                 <DatePickerWithRange
                     onDateChange={handleDateChange}
@@ -84,7 +86,7 @@ export default function Dashboard({ auth, hasData }: any) {
 
                     <Budgets key={`budgets-${refreshKey}`} />
 
-                    {!hasData && <NoContent body="No enough data to show reports" />}
+                    {!hasData && <NoContent body={t('dashboard.noData')} />}
 
                     {hasData && (
                         <div className="grid grid-cols-1 gap-4">
@@ -92,7 +94,7 @@ export default function Dashboard({ auth, hasData }: any) {
                             <div className="w-full">
                                 <TrendMetric
                                     key={`netWorthTrend-${refreshKey}`}
-                                    name="Net Worth Over Time"
+                                    name={t('dashboard.netWorthOverTime')}
                                     metric="netWorthTrend"
                                     dateRange={dateRange}
                                 />
@@ -102,20 +104,20 @@ export default function Dashboard({ auth, hasData }: any) {
                             >
                                 <ValueMetric
                                     key={`totalCash-${refreshKey}`}
-                                    name="Total Cash"
+                                    name={t('dashboard.totalCash')}
                                     metric="totalCash"
-                                    helpText="The available cash = income - (expenses + savings + investments)"
+                                    helpText={t('dashboard.totalCashHelp')}
                                     dateRange={dateRange}
                                 />
                                 <ValueMetric
                                     key={`totalSavings-${refreshKey}`}
-                                    name="Total Savings"
+                                    name={t('dashboard.totalSavings')}
                                     metric="totalSavings"
                                     dateRange={dateRange}
                                 />
                                 <ValueMetric
                                     key={`totalInvestment-${refreshKey}`}
-                                    name="Total Investment"
+                                    name={t('dashboard.totalInvestment')}
                                     metric="totalInvestment"
                                     dateRange={dateRange}
                                 />
@@ -124,45 +126,45 @@ export default function Dashboard({ auth, hasData }: any) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <ValueMetric
                                     key={`totalIncome-${refreshKey}`}
-                                    name="Total Income"
+                                    name={t('dashboard.totalIncome')}
                                     metric="totalIncome"
                                     dateRange={dateRange}
                                 />
                                 <ValueMetric
                                     key={`totalExpenses-${refreshKey}`}
-                                    name="Total Expenses"
+                                    name={t('dashboard.totalExpenses')}
                                     metric="totalExpenses"
                                     dateRange={dateRange}
                                 />
 
                                 <TrendMetric
                                     key={`totalIncomeTrend-${refreshKey}`}
-                                    name="Income Over Time"
+                                    name={t('dashboard.incomeOverTime')}
                                     metric="totalIncomeTrend"
                                     dateRange={dateRange}
                                 />
                                 <TrendMetric
                                     key={`totalExpensesTrend-${refreshKey}`}
-                                    name="Spending Over Time"
+                                    name={t('dashboard.spendingOverTime')}
                                     metric="totalExpensesTrend"
                                     dateRange={dateRange}
                                 />
                             </div>
 
 
-                            <SectionDivider title="Categories Analytics" />
+                            <SectionDivider title={t('dashboard.categoriesAnalytics')} />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <PartitionMetric
                                     key={`incomePerCategory-${refreshKey}`}
-                                    name="Income Sources"
+                                    name={t('dashboard.incomeSources')}
                                     metric="incomePerCategory"
                                     show_currency={true}
                                     dateRange={dateRange}
                                 />
                                 <PartitionMetric
                                     key={`expensesPerCategory-${refreshKey}`}
-                                    name="Spending by Category"
+                                    name={t('dashboard.spendingByCategory')}
                                     metric="expensesPerCategory"
                                     show_currency={true}
                                     dateRange={dateRange}
@@ -170,14 +172,14 @@ export default function Dashboard({ auth, hasData }: any) {
 
                                 <TrendMetric
                                     key={`totalPerCategoryTrend-${refreshKey}`}
-                                    name="Overall Trend by Category"
+                                    name={t('dashboard.overallTrendByCategory')}
                                     metric="totalPerCategoryTrend"
                                     relation={categoryRelation}
                                     dateRange={dateRange}
                                 />
                                 <TrendMetric
                                     key={`totalPerCategoryDailyTrend-${refreshKey}`}
-                                    name="Daily Trend by Category"
+                                    name={t('dashboard.dailyTrendByCategory')}
                                     metric="totalPerCategoryDailyTrend"
                                     relation={categoryRelation}
                                     dateRange={dateRange}
@@ -185,12 +187,12 @@ export default function Dashboard({ auth, hasData }: any) {
                                 />
                             </div>
 
-                            <SectionDivider title="Brands Analytics" />
+                            <SectionDivider title={t('dashboard.brandsAnalytics')} />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <PartitionMetric
                                     key={`totalPerBrand-${refreshKey}`}
-                                    name="Spending by Brand"
+                                    name={t('dashboard.spendingByBrand')}
                                     metric="totalPerBrand"
                                     relation={categoryRelationForBrands}
                                     show_currency={true}
@@ -198,19 +200,19 @@ export default function Dashboard({ auth, hasData }: any) {
                                 />
                                 <TrendMetric
                                     key={`totalPerBrandTrend-${refreshKey}`}
-                                    name="Overall Trend by Brand"
+                                    name={t('dashboard.overallTrendByBrand')}
                                     metric="totalPerBrandTrend"
                                     relation={brandRelation}
                                     dateRange={dateRange}
                                 />
                             </div>
 
-                            <SectionDivider title="Finance Visualization" />
+                            <SectionDivider title={t('dashboard.financeVisualization')} />
 
                             <div className="w-full">
                                 <CirclePackMetric
                                     key={`financeVisualizationCirclePackMetric-${refreshKey}`}
-                                    name="Finance Visualization"
+                                    name={t('dashboard.financeVisualization')}
                                     metric="financeVisualizationCirclePackMetric"
                                     dateRange={dateRange}
                                 />

@@ -10,10 +10,13 @@ use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Spatie\Translatable\HasTranslations;
 
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
+
+    public array $translatable = ['name'];
 
     const INCOME = "INCOME";
     const EXPENSES = "EXPENSES";

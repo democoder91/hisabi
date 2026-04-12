@@ -1,0 +1,191 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "brands": "Brands",
+    "categories": "Categories"
+  },
+  "common": {
+    "create": "Create",
+    "update": "Update",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search..",
+    "name": "Name",
+    "loading": "Loading...",
+    "comingSoon": "Coming soon...",
+    "holdToDelete": "Hold to Delete",
+    "transaction": "transaction",
+    "transactions": "transactions"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "loginWithEmail": "Login with your email",
+    "email": "Email",
+    "password": "Password",
+    "login": "Login"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "noData": "No enough data to show reports",
+    "netWorthOverTime": "Net Worth Over Time",
+    "totalCash": "Total Cash",
+    "totalCashHelp": "The available cash = income - (expenses + savings + investments)",
+    "totalSavings": "Total Savings",
+    "totalInvestment": "Total Investment",
+    "totalIncome": "Total Income",
+    "totalExpenses": "Total Expenses",
+    "incomeOverTime": "Income Over Time",
+    "spendingOverTime": "Spending Over Time",
+    "categoriesAnalytics": "Categories Analytics",
+    "incomeSources": "Income Sources",
+    "spendingByCategory": "Spending by Category",
+    "overallTrendByCategory": "Overall Trend by Category",
+    "dailyTrendByCategory": "Daily Trend by Category",
+    "brandsAnalytics": "Brands Analytics",
+    "spendingByBrand": "Spending by Brand",
+    "overallTrendByBrand": "Overall Trend by Brand",
+    "financeVisualization": "Finance Visualization"
+  },
+  "brand": {
+    "title": "Brands",
+    "createBrand": "Create Brand",
+    "name": "Name",
+    "namePlaceholder_en": "English name",
+    "namePlaceholder_ar": "الاسم بالعربية",
+    "category": "Category",
+    "uncategorized": "Uncategorized",
+    "searchBrands": "Search brands..",
+    "createTitle": "Create Brand",
+    "editTitle": "Edit Brand",
+    "lang_en": "EN",
+    "lang_ar": "AR"
+  },
+  "category": {
+    "title": "Categories",
+    "createCategory": "Create Category",
+    "name": "Name",
+    "namePlaceholder_en": "English name",
+    "namePlaceholder_ar": "الاسم بالعربية",
+    "type": "Type",
+    "expenses": "Expenses",
+    "income": "Income",
+    "savings": "Savings",
+    "investment": "Investment",
+    "all": "All",
+    "searchCategories": "Search categories..",
+    "createTitle": "Create Category",
+    "editTitle": "Edit Category",
+    "lang_en": "EN",
+    "lang_ar": "AR"
+  },
+  "transaction": {
+    "title": "Transactions",
+    "recordTransaction": "Record transaction",
+    "totalTransactions": "Total transactions",
+    "filters": "Filters",
+    "search": "Search transactions..",
+    "brand": "Brand",
+    "category": "Category",
+    "date": "Date",
+    "amount": "Amount",
+    "note": "Note",
+    "clearFilters": "Clear Filters"
+  },
+  "ai": {
+    "title": "Hisabi AI",
+    "titleBeta": "Hisabi AI (BETA)"
+  },
+  "smsParser": {
+    "title": "SMS Parser"
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "general": "General",
+      "transactions": "Transactions",
+      "more": "More"
+    },
+    "nav": {
+      "account": "Account",
+      "preferences": "Preferences",
+      "apiKey": "API Key",
+      "import": "Import",
+      "export": "Export",
+      "tags": "Tags",
+      "smsParserRules": "SMS Parser Rules",
+      "productUpdates": "Product Updates",
+      "feedback": "Feedback"
+    },
+    "account": {
+      "profileInformation": "Profile Information",
+      "profileDescription": "Update your name and email address",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "saveProfile": "Save Profile",
+      "saving": "Saving...",
+      "profileUpdated": "Profile updated successfully",
+      "profileError": "Failed to update profile",
+      "changePassword": "Change Password",
+      "changePasswordDescription": "Update your password",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password (min. 8 characters)",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "changePasswordButton": "Change Password",
+      "changingPassword": "Changing...",
+      "passwordChanged": "Password changed successfully",
+      "passwordError": "Failed to change password",
+      "passwordsDoNotMatch": "New passwords do not match",
+      "currentPasswordRequired": "Current password is required"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Manage your application preferences",
+      "language": "Language",
+      "languageDescription": "Choose your preferred language"
+    },
+    "placeholder": {
+      "apiKey": {
+        "title": "API Key",
+        "description": "Manage your API keys"
+      },
+      "import": {
+        "title": "Import",
+        "description": "Import your data"
+      },
+      "export": {
+        "title": "Export",
+        "description": "Export your data"
+      },
+      "tags": {
+        "title": "Tags",
+        "description": "Manage transaction tags"
+      },
+      "smsParserRules": {
+        "title": "SMS Parser Rules",
+        "description": "Configure SMS parsing rules"
+      },
+      "productUpdates": {
+        "title": "Product Updates",
+        "description": "Stay updated with the latest features"
+      },
+      "feedback": {
+        "title": "Feedback",
+        "description": "Share your feedback with us"
+      }
+    }
+  },
+  "userNav": {
+    "settings": "Settings",
+    "logout": "Log out",
+    "language": "Language",
+    "english": "English",
+    "arabic": "العربية"
+  }
+}

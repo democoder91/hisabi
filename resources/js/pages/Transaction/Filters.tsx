@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ interface FilterProps {
 }
 
 export default function TransactionFilters({ brands, categories, onApply, activeFilters }: FilterProps) {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
 
     const handleBrandChange = (brand: any) => {
@@ -78,9 +80,9 @@ export default function TransactionFilters({ brands, categories, onApply, active
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-2 relative bg-white">
+                <Button variant="outline" className="gap-2 relative">
                     <FunnelIcon className="h-4 w-4" />
-                    Filters
+                    {t('transaction.filters')}
                     {filterCount > 0 && (
                         <Badge variant="default" className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-xs">
                             {filterCount}
@@ -92,7 +94,7 @@ export default function TransactionFilters({ brands, categories, onApply, active
                 <div className="grid gap-4">
                     {/* Brand Filter */}
                     <Combobox
-                        label="Brand"
+                        label={t('transaction.brand')}
                         items={brands}
                         initialSelectedItem={getSelectedBrand()}
                         onChange={handleBrandChange}
@@ -100,7 +102,7 @@ export default function TransactionFilters({ brands, categories, onApply, active
 
                     {/* Category Filter */}
                     <Combobox
-                        label="Category"
+                        label={t('transaction.category')}
                         items={categories}
                         initialSelectedItem={getSelectedCategory()}
                         onChange={handleCategoryChange}

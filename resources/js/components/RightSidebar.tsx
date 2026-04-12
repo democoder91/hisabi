@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SparkleIcon, ChatCircleTextIcon, X } from '@phosphor-icons/react';
 import {
   SidebarMenu,
@@ -9,6 +10,7 @@ import HisabiAIChat from './Global/HisabiAIChat';
 import SmsParser from './Global/SmsParser';
 
 export default function RightSidebar() {
+  const { t } = useTranslation();
   const [activePanel, setActivePanel] = useState<'ai' | 'sms' | null>(null);
   const [mobileFabOpen, setMobileFabOpen] = useState(false);
 
@@ -45,7 +47,7 @@ export default function RightSidebar() {
                   className="font-medium whitespace-nowrap"
                   style={{ writingMode: 'vertical-lr', transform: 'rotate(0deg)' }}
                 >
-                  Hisabi AI (BETA)
+                  {t('ai.titleBeta')}
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -62,7 +64,7 @@ export default function RightSidebar() {
                   className="font-medium whitespace-nowrap"
                   style={{ writingMode: 'vertical-lr', transform: 'rotate(0deg)' }}
                 >
-                  SMS Parser
+                  {t('smsParser.title')}
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -98,14 +100,14 @@ export default function RightSidebar() {
               className="flex items-center gap-2 rounded-full bg-background border shadow-lg px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
             >
               <SparkleIcon size={18} />
-              Hisabi AI
+              {t('ai.title')}
             </button>
             <button
               onClick={() => { setMobileFabOpen(false); togglePanel('sms'); }}
               className="flex items-center gap-2 rounded-full bg-background border shadow-lg px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
             >
               <ChatCircleTextIcon size={18} />
-              SMS Parser
+              {t('smsParser.title')}
             </button>
           </div>
         )}

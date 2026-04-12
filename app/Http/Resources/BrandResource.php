@@ -11,11 +11,13 @@ class BrandResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->getTranslation('name', app()->getLocale(), false) ?: $this->getTranslation('name', 'en', false),
+            'name_translations' => $this->getTranslations('name'),
             'category' => $this->whenLoaded('category', function () {
                 return [
                     'id' => $this->category->id,
-                    'name' => $this->category->name,
+                    'name' => $this->category->getTranslation('name', app()->getLocale(), false) ?: $this->category->getTranslation('name', 'en', false),
+                    'name_translations' => $this->category->getTranslations('name'),
                     'color' => $this->category->color,
                     'icon' => $this->category->icon,
                 ];

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, router } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -24,6 +25,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 
 
 export default function Index({ auth }: { auth: any }) {
+    const { t } = useTranslation();
     const urlParams = new URLSearchParams(window.location.search);
     const initialSearch = urlParams.get('search') || '';
 
@@ -178,7 +180,7 @@ export default function Index({ auth }: { auth: any }) {
 
     const header = (
         <div className="flex items-center justify-between w-full">
-            <h2>Transactions</h2>
+            <h2>{t('transaction.title')}</h2>
             <div className="flex items-center gap-2">
                 <DatePickerWithRange
                     onDateChange={handleDateChange}
@@ -194,7 +196,7 @@ export default function Index({ auth }: { auth: any }) {
 
     return (
         <Authenticated auth={auth} header={header}>
-            <Head title="Transactions" />
+            <Head title={t('transaction.title')} />
 
             <Edit
                 transaction={editItem}
@@ -212,8 +214,8 @@ export default function Index({ auth }: { auth: any }) {
                     <div className="flex justify-between gap-2">
                         <Input
                             name="search"
-                            placeholder='Search..'
-                            className='bg-white max-w-56'
+                            placeholder={t('common.search')}
+                            className='max-w-56'
                             defaultValue={searchQuery}
                             onChange={performSearch}
                         />
@@ -270,7 +272,7 @@ export default function Index({ auth }: { auth: any }) {
                             const isIncomeTransaction = categoryType === "INCOME";
 
                             return (
-                                <Card key={transaction.id} className={`py-0 ${isUncategorized ? 'bg-red-50 border-red-100' : ''}`} id={'item-' + transaction.id}>
+                                <Card key={transaction.id} className={`py-0 ${isUncategorized ? 'bg-red-50 dark:bg-red-950 border-red-100 dark:border-red-900' : ''}`} id={'item-' + transaction.id}>
                                     <CardContent className='flex justify-between items-center px-4 py-3'>
                                         <div className='flex gap-2 items-center'>
                                             {CategoryIcon && hasCategory ? (
@@ -283,7 +285,7 @@ export default function Index({ auth }: { auth: any }) {
                                                 </Avatar>
                                             )}
                                             <div>
-                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{hasBrand ? transaction.brand.name : 'No Brand'} </button>
+                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{hasBrand ? transaction.brand.name : t('common.noBrand')} </button>
                                                 <div className='flex gap-1 text-muted-foreground items-center'>
                                                     <ArrowElbowDownRightIcon size={10} weight="bold" />
                                                     <p className=' text-xs'>{hasCategory ? <span>{transaction.brand.category.name} -</span> : ''} {transaction.created_at}</p>

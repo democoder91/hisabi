@@ -1,4 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, Link } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -26,6 +27,7 @@ export default function Index({auth}) {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMorePages, setHasMorePages] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [editItem, setEditItem] = useState(null);
     const [showCreate, setShowCreate] = useState(false);
@@ -108,20 +110,20 @@ export default function Index({auth}) {
 
     const header = (
         <div className="flex items-center justify-between w-full">
-            <h2>Brands</h2>
+            <h2>{t('brand.title')}</h2>
             <div className="flex items-center gap-2">
                 <DatePickerWithRange
                     onDateChange={handleDateChange}
                     initialDate={dateRange}
                 />
-                <Button onClick={() => setShowCreate(true)}>Create Brand</Button>
+                <Button onClick={() => setShowCreate(true)}>{t('brand.createBrand')}</Button>
             </div>
         </div>
     )
 
     return (
         <Authenticated auth={auth} header={header}>
-            <Head title="Brands" />
+            <Head title={t('brand.title')} />
 
             <Create showCreate={showCreate}
                 categories={allCategories}
@@ -145,8 +147,8 @@ export default function Index({auth}) {
                     {(brands.length > 0 || searchQuery) && (<div className='mb-4'>
                         <Input
                             name="search"
-                            placeholder='Search..'
-                            className='bg-white max-w-56'
+                            placeholder={t('common.search')}
+                            className='max-w-56'
                             onChange={performSearch}
                         />
                     </div>)}
@@ -186,7 +188,7 @@ export default function Index({auth}) {
                                                 href={`/transactions?brand=${brand.id}`}
                                                 className='text-muted-foreground hover:text-foreground text-sm min-w-26 text-right hover:underline transition-colors'
                                             >
-                                                {brand.transactionsCount} {brand.transactionsCount === 1 ? 'transaction' : 'transactions'}
+                                                {brand.transactionsCount} {brand.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                             </Link>
                                         </div>
                                     </CardContent>

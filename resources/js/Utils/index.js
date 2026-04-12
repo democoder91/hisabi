@@ -13,6 +13,12 @@ export const formatNumber = (number, format = '(0[.]000a)') => {
         return num.format()
     }
 
+    // Don't abbreviate numbers below 1000
+    if (Math.abs(number) < 1000 && format.includes('a')) {
+        const plainFormat = format.replace('a', '')
+        return num.format(plainFormat)
+    }
+
     return num.format(format)
 }
 

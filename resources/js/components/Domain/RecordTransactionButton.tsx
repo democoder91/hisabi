@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import CreateTransaction from '@/components/Domain/CreateTransaction';
 
@@ -9,6 +10,7 @@ interface RecordTransactionButtonProps {
 }
 
 export default function RecordTransactionButton({ brands, onSuccess, className }: RecordTransactionButtonProps) {
+    const { t } = useTranslation();
     const [showCreate, setShowCreate] = useState(false);
 
     const handleCreate = (transaction: any) => {
@@ -21,7 +23,7 @@ export default function RecordTransactionButton({ brands, onSuccess, className }
     return (
         <>
             <Button onClick={() => setShowCreate(true)} className={className}>
-                Record transaction
+                {t('transaction.recordTransaction')}
             </Button>
 
             <CreateTransaction

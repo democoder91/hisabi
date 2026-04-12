@@ -1,7 +1,11 @@
 import { getCsrfToken } from './common.js';
 
-export const updateUserProfile = async ({ name, email, currentPassword, password }) => {
-    const body = { name, email };
+export const updateUserProfile = async ({ name, email, currentPassword, password, locale } = {}) => {
+    const body = {};
+
+    if (name !== undefined) body.name = name;
+    if (email !== undefined) body.email = email;
+    if (locale !== undefined) body.locale = locale;
 
     // Only include password fields if changing password
     if (password) {

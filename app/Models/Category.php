@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Spatie\Translatable\HasTranslations;
 
 class Category extends Model implements Searchable
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
+
+    public array $translatable = ['name'];
 
     const INCOME = "INCOME";
     const EXPENSES = "EXPENSES";

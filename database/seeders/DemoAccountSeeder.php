@@ -36,15 +36,15 @@ class DemoAccountSeeder extends Seeder
     private function createIncome(): Category
     {
         $category = Category::create([
-            'name' => 'Income',
+            'name' => ['en' => 'Income', 'ar' => 'دخل'],
             'type' => Category::INCOME,
             'color' => 'green',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Monthly Salary'],
-            ['name' => 'Bonus'],
-            ['name' => 'Freelance Income'],
+            ['name' => ['en' => 'Monthly Salary', 'ar' => 'الراتب الشهري']],
+            ['name' => ['en' => 'Bonus', 'ar' => 'مكافأة']],
+            ['name' => ['en' => 'Freelance Income', 'ar' => 'دخل مستقل']],
         ]);
 
         return $category;
@@ -53,16 +53,16 @@ class DemoAccountSeeder extends Seeder
     private function createHousing(): Category
     {
         $category = Category::create([
-            'name' => 'Housing',
+            'name' => ['en' => 'Housing', 'ar' => 'سكن'],
             'type' => Category::EXPENSES,
             'color' => 'blue',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Apartment Rent'],
-            ['name' => 'DEWA'],
-            ['name' => 'Empower Chiller'],
-            ['name' => 'Property Management'],
+            ['name' => ['en' => 'Apartment Rent', 'ar' => 'إيجار الشقة']],
+            ['name' => ['en' => 'DEWA', 'ar' => 'ديوا']],
+            ['name' => ['en' => 'Empower Chiller', 'ar' => 'إمباور للتبريد']],
+            ['name' => ['en' => 'Property Management', 'ar' => 'إدارة العقارات']],
         ]);
 
         return $category;
@@ -71,19 +71,19 @@ class DemoAccountSeeder extends Seeder
     private function createGroceries(): Category
     {
         $category = Category::create([
-            'name' => 'Groceries',
+            'name' => ['en' => 'Groceries', 'ar' => 'بقالة'],
             'type' => Category::EXPENSES,
             'color' => 'emerald',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Carrefour'],
-            ['name' => 'Lulu Hypermarket'],
-            ['name' => 'Spinneys'],
-            ['name' => 'Union Coop'],
-            ['name' => 'West Zone'],
-            ['name' => 'Choithrams'],
-            ['name' => 'Waitrose'],
+            ['name' => ['en' => 'Carrefour', 'ar' => 'كارفور']],
+            ['name' => ['en' => 'Lulu Hypermarket', 'ar' => 'هايبر ماركت لولو']],
+            ['name' => ['en' => 'Spinneys', 'ar' => 'سبينيس']],
+            ['name' => ['en' => 'Union Coop', 'ar' => 'جمعية الاتحاد']],
+            ['name' => ['en' => 'West Zone', 'ar' => 'ويست زون']],
+            ['name' => ['en' => 'Choithrams', 'ar' => 'تشوثرام']],
+            ['name' => ['en' => 'Waitrose', 'ar' => 'ويتروز']],
         ]);
 
         return $category;
@@ -92,31 +92,31 @@ class DemoAccountSeeder extends Seeder
     private function createDining(): Category
     {
         $category = Category::create([
-            'name' => 'Dining & Restaurants',
+            'name' => ['en' => 'Dining & Restaurants', 'ar' => 'المطاعم والمأكولات'],
             'type' => Category::EXPENSES,
             'color' => 'orange',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Starbucks'],
-            ['name' => 'Costa Coffee'],
-            ['name' => 'McDonald\'s'],
-            ['name' => 'KFC'],
-            ['name' => 'Burger King'],
-            ['name' => 'Subway'],
-            ['name' => 'Tim Hortons'],
-            ['name' => 'Shake Shack'],
-            ['name' => 'Five Guys'],
-            ['name' => 'Texas Roadhouse'],
-            ['name' => 'Chili\'s'],
-            ['name' => 'Applebee\'s'],
-            ['name' => 'Paul Bakery'],
-            ['name' => 'Cafe Bateel'],
-            ['name' => 'Operation Falafel'],
-            ['name' => 'Al Mallah'],
-            ['name' => 'Zomato'],
-            ['name' => 'Talabat'],
-            ['name' => 'Deliveroo'],
+            ['name' => ['en' => 'Starbucks', 'ar' => 'ستاربكس']],
+            ['name' => ['en' => 'Costa Coffee', 'ar' => 'كوستا كافيه']],
+            ['name' => ['en' => 'McDonald\', 'ar' => 'McDonald\']s'],
+            ['name' => ['en' => 'KFC', 'ar' => 'كنتاكي']],
+            ['name' => ['en' => 'Burger King', 'ar' => 'برغر كينج']],
+            ['name' => ['en' => 'Subway', 'ar' => 'صب واي']],
+            ['name' => ['en' => 'Tim Hortons', 'ar' => 'تيم هورتنز']],
+            ['name' => ['en' => 'Shake Shack', 'ar' => 'شيك شاك']],
+            ['name' => ['en' => 'Five Guys', 'ar' => 'فايف غايز']],
+            ['name' => ['en' => 'Texas Roadhouse', 'ar' => 'تكساس رود هاوس']],
+            ['name' => ['en' => 'Chili\', 'ar' => 'Chili\']s'],
+            ['name' => ['en' => 'Applebee\', 'ar' => 'Applebee\']s'],
+            ['name' => ['en' => 'Paul Bakery', 'ar' => 'مخبز بول']],
+            ['name' => ['en' => 'Cafe Bateel', 'ar' => 'كافيه بتيل']],
+            ['name' => ['en' => 'Operation Falafel', 'ar' => 'عملية الفلافل']],
+            ['name' => ['en' => 'Al Mallah', 'ar' => 'الملاح']],
+            ['name' => ['en' => 'Zomato', 'ar' => 'زوماتو']],
+            ['name' => ['en' => 'Talabat', 'ar' => 'طلبات']],
+            ['name' => ['en' => 'Deliveroo', 'ar' => 'ديليفرو']],
         ]);
 
         return $category;
@@ -125,22 +125,22 @@ class DemoAccountSeeder extends Seeder
     private function createTransportation(): Category
     {
         $category = Category::create([
-            'name' => 'Transportation',
+            'name' => ['en' => 'Transportation', 'ar' => 'مواصلات'],
             'type' => Category::EXPENSES,
             'color' => 'purple',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'ENOC'],
-            ['name' => 'ADNOC'],
-            ['name' => 'EPPCO'],
-            ['name' => 'Salik'],
-            ['name' => 'RTA'],
-            ['name' => 'Uber'],
-            ['name' => 'Careem'],
-            ['name' => 'Dubai Metro'],
-            ['name' => 'Car Insurance'],
-            ['name' => 'Car Service'],
+            ['name' => ['en' => 'ENOC', 'ar' => 'إينوك']],
+            ['name' => ['en' => 'ADNOC', 'ar' => 'أدنوك']],
+            ['name' => ['en' => 'EPPCO', 'ar' => 'إيبكو']],
+            ['name' => ['en' => 'Salik', 'ar' => 'سالك']],
+            ['name' => ['en' => 'RTA', 'ar' => 'هيئة الطرق والمواصلات']],
+            ['name' => ['en' => 'Uber', 'ar' => 'أوبر']],
+            ['name' => ['en' => 'Careem', 'ar' => 'كريم']],
+            ['name' => ['en' => 'Dubai Metro', 'ar' => 'مترو دبي']],
+            ['name' => ['en' => 'Car Insurance', 'ar' => 'تأمين السيارة']],
+            ['name' => ['en' => 'Car Service', 'ar' => 'صيانة السيارة']],
         ]);
 
         return $category;
@@ -149,15 +149,15 @@ class DemoAccountSeeder extends Seeder
     private function createUtilities(): Category
     {
         $category = Category::create([
-            'name' => 'Utilities & Telecom',
+            'name' => ['en' => 'Utilities & Telecom', 'ar' => 'الخدمات والاتصالات'],
             'type' => Category::EXPENSES,
             'color' => 'cyan',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Etisalat'],
-            ['name' => 'Du'],
-            ['name' => 'Virgin Mobile'],
+            ['name' => ['en' => 'Etisalat', 'ar' => 'اتصالات']],
+            ['name' => ['en' => 'Du', 'ar' => 'دو']],
+            ['name' => ['en' => 'Virgin Mobile', 'ar' => 'فيرجن موبايل']],
         ]);
 
         return $category;
@@ -166,26 +166,26 @@ class DemoAccountSeeder extends Seeder
     private function createShopping(): Category
     {
         $category = Category::create([
-            'name' => 'Shopping',
+            'name' => ['en' => 'Shopping', 'ar' => 'تسوق'],
             'type' => Category::EXPENSES,
             'color' => 'pink',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Dubai Mall'],
-            ['name' => 'Mall of the Emirates'],
-            ['name' => 'IKEA'],
-            ['name' => 'Home Centre'],
-            ['name' => 'Centrepoint'],
-            ['name' => 'H&M'],
-            ['name' => 'Zara'],
-            ['name' => 'Namshi'],
-            ['name' => 'Noon'],
-            ['name' => 'Amazon.ae'],
-            ['name' => 'Sharaf DG'],
-            ['name' => 'Jumbo Electronics'],
-            ['name' => 'Virgin Megastore'],
-            ['name' => 'Ace Hardware'],
+            ['name' => ['en' => 'Dubai Mall', 'ar' => 'دبي مول']],
+            ['name' => ['en' => 'Mall of the Emirates', 'ar' => 'مول الإمارات']],
+            ['name' => ['en' => 'IKEA', 'ar' => 'إيكيا']],
+            ['name' => ['en' => 'Home Centre', 'ar' => 'هوم سنتر']],
+            ['name' => ['en' => 'Centrepoint', 'ar' => 'سنتر بوينت']],
+            ['name' => ['en' => 'H&M', 'ar' => 'اتش آند إم']],
+            ['name' => ['en' => 'Zara', 'ar' => 'زارا']],
+            ['name' => ['en' => 'Namshi', 'ar' => 'نمشي']],
+            ['name' => ['en' => 'Noon', 'ar' => 'نون']],
+            ['name' => ['en' => 'Amazon.ae', 'ar' => 'أمازون الإمارات']],
+            ['name' => ['en' => 'Sharaf DG', 'ar' => 'شرف دي جي']],
+            ['name' => ['en' => 'Jumbo Electronics', 'ar' => 'جمبو للإلكترونيات']],
+            ['name' => ['en' => 'Virgin Megastore', 'ar' => 'فيرجن ميغاستور']],
+            ['name' => ['en' => 'Ace Hardware', 'ar' => 'آس هاردوير']],
         ]);
 
         return $category;
@@ -194,22 +194,22 @@ class DemoAccountSeeder extends Seeder
     private function createEntertainment(): Category
     {
         $category = Category::create([
-            'name' => 'Entertainment',
+            'name' => ['en' => 'Entertainment', 'ar' => 'ترفيه'],
             'type' => Category::EXPENSES,
             'color' => 'red',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'VOX Cinemas'],
-            ['name' => 'Reel Cinemas'],
-            ['name' => 'Netflix'],
-            ['name' => 'OSN'],
-            ['name' => 'Spotify'],
-            ['name' => 'Dubai Parks & Resorts'],
-            ['name' => 'IMG Worlds'],
-            ['name' => 'Ski Dubai'],
-            ['name' => 'Aquaventure'],
-            ['name' => 'La Perle'],
+            ['name' => ['en' => 'VOX Cinemas', 'ar' => 'سينمات فوكس']],
+            ['name' => ['en' => 'Reel Cinemas', 'ar' => 'ريل سينما']],
+            ['name' => ['en' => 'Netflix', 'ar' => 'نتفليكس']],
+            ['name' => ['en' => 'OSN', 'ar' => 'أو إس إن']],
+            ['name' => ['en' => 'Spotify', 'ar' => 'سبوتيفاي']],
+            ['name' => ['en' => 'Dubai Parks & Resorts', 'ar' => 'دبي باركس آند ريزورتس']],
+            ['name' => ['en' => 'IMG Worlds', 'ar' => 'آي إم جي وورلدز']],
+            ['name' => ['en' => 'Ski Dubai', 'ar' => 'سكي دبي']],
+            ['name' => ['en' => 'Aquaventure', 'ar' => 'أكوافنتشر']],
+            ['name' => ['en' => 'La Perle', 'ar' => 'لا بيرل']],
         ]);
 
         return $category;
@@ -218,19 +218,19 @@ class DemoAccountSeeder extends Seeder
     private function createHealthcare(): Category
     {
         $category = Category::create([
-            'name' => 'Healthcare',
+            'name' => ['en' => 'Healthcare', 'ar' => 'رعاية صحية'],
             'type' => Category::EXPENSES,
             'color' => 'rose',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Aster Clinic'],
-            ['name' => 'Mediclinic'],
-            ['name' => 'NMC Healthcare'],
-            ['name' => 'Life Pharmacy'],
-            ['name' => 'Aster Pharmacy'],
-            ['name' => 'Boots Pharmacy'],
-            ['name' => 'Health Insurance'],
+            ['name' => ['en' => 'Aster Clinic', 'ar' => 'عيادة آستر']],
+            ['name' => ['en' => 'Mediclinic', 'ar' => 'ميديكلينيك']],
+            ['name' => ['en' => 'NMC Healthcare', 'ar' => 'رعاية NMC']],
+            ['name' => ['en' => 'Life Pharmacy', 'ar' => 'صيدلية لايف']],
+            ['name' => ['en' => 'Aster Pharmacy', 'ar' => 'صيدلية آستر']],
+            ['name' => ['en' => 'Boots Pharmacy', 'ar' => 'صيدلية بوتس']],
+            ['name' => ['en' => 'Health Insurance', 'ar' => 'تأمين صحي']],
         ]);
 
         return $category;
@@ -239,17 +239,17 @@ class DemoAccountSeeder extends Seeder
     private function createPersonalCare(): Category
     {
         $category = Category::create([
-            'name' => 'Personal Care',
+            'name' => ['en' => 'Personal Care', 'ar' => 'عناية شخصية'],
             'type' => Category::EXPENSES,
             'color' => 'violet',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Fitness First'],
-            ['name' => 'GymNation'],
-            ['name' => 'Gents Salon'],
-            ['name' => 'Ladies Salon'],
-            ['name' => 'Spa'],
+            ['name' => ['en' => 'Fitness First', 'ar' => 'فيتنس فيرست']],
+            ['name' => ['en' => 'GymNation', 'ar' => 'جيم نيشن']],
+            ['name' => ['en' => 'Gents Salon', 'ar' => 'صالون رجال']],
+            ['name' => ['en' => 'Ladies Salon', 'ar' => 'صالون سيدات']],
+            ['name' => ['en' => 'Spa', 'ar' => 'سبا']],
         ]);
 
         return $category;
@@ -258,16 +258,16 @@ class DemoAccountSeeder extends Seeder
     private function createSavings(): Category
     {
         $category = Category::create([
-            'name' => 'Savings',
+            'name' => ['en' => 'Savings', 'ar' => 'مدخرات'],
             'type' => Category::SAVINGS,
             'color' => 'teal',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Emergency Fund'],
-            ['name' => 'Vacation Fund'],
-            ['name' => 'Home Down Payment'],
-            ['name' => 'Car Fund'],
+            ['name' => ['en' => 'Emergency Fund', 'ar' => 'صندوق الطوارئ']],
+            ['name' => ['en' => 'Vacation Fund', 'ar' => 'صندوق الإجازة']],
+            ['name' => ['en' => 'Home Down Payment', 'ar' => 'دفعة أولى للمنزل']],
+            ['name' => ['en' => 'Car Fund', 'ar' => 'صندوق السيارة']],
         ]);
 
         return $category;
@@ -276,18 +276,18 @@ class DemoAccountSeeder extends Seeder
     private function createInvestment(): Category
     {
         $category = Category::create([
-            'name' => 'Investments',
+            'name' => ['en' => 'Investments', 'ar' => 'استثمارات'],
             'type' => Category::INVESTMENT,
             'color' => 'indigo',
         ]);
 
         $category->brands()->createMany([
-            ['name' => 'Stocks - DFM'],
-            ['name' => 'Stocks - NASDAQ'],
-            ['name' => 'Cryptocurrency'],
-            ['name' => 'Mutual Funds'],
-            ['name' => 'Gold Investment'],
-            ['name' => 'Real Estate Investment'],
+            ['name' => ['en' => 'Stocks - DFM', 'ar' => 'أسهم - سوق دبي']],
+            ['name' => ['en' => 'Stocks - NASDAQ', 'ar' => 'أسهم - ناسداك']],
+            ['name' => ['en' => 'Cryptocurrency', 'ar' => 'عملات رقمية']],
+            ['name' => ['en' => 'Mutual Funds', 'ar' => 'صناديق استثمار']],
+            ['name' => ['en' => 'Gold Investment', 'ar' => 'استثمار في الذهب']],
+            ['name' => ['en' => 'Real Estate Investment', 'ar' => 'استثمار عقاري']],
         ]);
 
         return $category;

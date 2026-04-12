@@ -2,6 +2,7 @@
 
 namespace App\Domains\Metrics\Metrics;
 
+use App\Domains\Category\Models\Category;
 use App\Domains\Metrics\Metric;
 use Illuminate\Support\Facades\DB;
 
@@ -9,6 +10,8 @@ class CirclePackMetric extends Metric
 {
     public function calculate(): array
     {
+        $labelExpression = $this->localizedJsonValueExpression('categories.name');
+
         $colors = [
             'red' => '#ef4444',
             'blue' => '#3b82f6',
@@ -20,10 +23,13 @@ class CirclePackMetric extends Metric
             'gray' => '#94A4B8'
         ];
 
-        $transactions = DB::table('transactions')
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->select('categories.name as category_name', 'categories.type', 'categories.color', DB::raw('sum(amount) as value'))
-            ->groupBy(['categories.name', 'categories.type', 'categories.color']);
+        $transactions = Category::query()
+            ->join('transactions', 'transactions.category_id', '=', 'categories.id')
+            ->selectRaw($this->localizedJsonSelect('categories.name', 'category_name') . ', categories.type, categories.color, SUM(transactions.amount) as value')
+            ->groupBy('categories.id')
+            ->groupBy(DB::raw($labelExpression))
+            ->groupBy('categories.type')
+            ->groupBy('categories.color');
 
         if ($this->hasDateRange()) {
             $transactions->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);

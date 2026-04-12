@@ -3,7 +3,6 @@
 namespace App\BusinessLogic;
 
 use Carbon\Carbon;
-use App\Domains\Brand\Models\Brand;
 use App\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Contracts\ReportManager as ReportManagerContract;
@@ -26,58 +25,40 @@ class ReportManager implements ReportManagerContract
         $this->startDatePrevMonthModel = Carbon::parse($startDate)->subMonthNoOverflow()->startOfMonth();
         $this->endDatePrevMonthModel = Carbon::parse($endDate)->subMonthNoOverflow()->endOfMonth();
 
-        $newBrands = Brand::whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->pluck('name');
+        $newCategoryIds = Category::whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->pluck('id');
 
         $this->addSection('Overview', $this->getOverviewData());
 
-        foreach(Category::all() as $category)
-        {
-            $brandsData = [];
+        foreach (Category::all()->groupBy('type') as $type => $categories) {
+            $categoriesData = [];
 
-            foreach($category->brands as $brand) {
-                $totalCurrentMonth = $brand->transactions()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
-                $totalLastMonth = $brand->transactions()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
+            foreach ($categories as $category) {
+                $totalCurrentMonth = $category->transactions()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
+                $totalLastMonth = $category->transactions()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
                 $change = ! $totalLastMonth ? '-' : number_format(($totalCurrentMonth / $totalLastMonth - 1) * 100, 2);
 
-                if($totalCurrentMonth == 0 && $totalLastMonth == 0) {
+                if ($totalCurrentMonth == 0 && $totalLastMonth == 0) {
                     continue;
                 }
 
-                $brandsData[] = [
-                    'name' => $brand->name,
+                $categoriesData[] = [
+                    'name' => $category->name,
                     'total_current_month' => $totalCurrentMonth,
                     'total_previous_month' => $totalLastMonth,
                     'change' => $change,
-                    'change_color' => $this->getChangeColor($change, $category->type),
-                    'is_new' => $newBrands->contains($brand->name)
+                    'change_color' => $this->getChangeColor($change, $type),
+                    'is_new' => $newCategoryIds->contains($category->id),
                 ];
             }
 
-            $brandsData = $this->calculateAndAddAllBrandsData($brandsData, $category);
+            if ($categoriesData === []) {
+                continue;
+            }
 
-            // issue with rendering big row using Dompdf library,
-            // the workaround is to split the list of brands to
-            // multiple sections that each one can fit in page.
-            $this->splitBrandListIntoPages($brandsData, $category);
+            $this->addSection($type, $this->calculateAndAddAllBrandsData($categoriesData, $type));
         }
 
         return $this->data;
-    }
-
-    protected function splitBrandListIntoPages($brandsData, $category)
-    {
-        if(count($brandsData) == 1) {
-            return;
-        }
-
-        if(count(array_chunk($brandsData, 25)) > 1) {
-            foreach(array_chunk($brandsData, 25) as $index => $chunk) {
-                $this->addSection($category->name . "-" . $index + 1, $chunk);
-            }
-            return;
-        }
-
-        $this->addSection($category->name, $brandsData);
     }
 
     protected function addSection($sectionName, $data)
@@ -98,7 +79,7 @@ class ReportManager implements ReportManagerContract
         return $change >= 0 ? 'red' : 'green';
     }
 
-    protected function calculateAndAddAllBrandsData($brandsData, $category)
+    protected function calculateAndAddAllBrandsData($brandsData, $type)
     {
         $allCurrentMonth = array_reduce($brandsData, function ($carry, $item) {
             $carry += $item['total_current_month'];
@@ -119,7 +100,7 @@ class ReportManager implements ReportManagerContract
             'total_current_month' => $allCurrentMonth,
             'total_previous_month' => $allLastMonth,
             'change' => $change,
-            'change_color' => $this->getChangeColor($change, $category->type)
+            'change_color' => $this->getChangeColor($change, $type)
         ]], $brandsData);
     }
 

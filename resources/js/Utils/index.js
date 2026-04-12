@@ -78,6 +78,14 @@ export const getTransactionTypeForCategoryType = (categoryType) => {
         : TRANSACTION_TYPES.DEBIT
 }
 
+export const isCategoryCompatibleWithTransactionType = (category, transactionType) => {
+    if (!category?.type || !transactionType) {
+        return true
+    }
+
+    return getTransactionTypeForCategoryType(category.type) === transactionType
+}
+
 export const isBrandCompatibleWithTransactionType = (brand, transactionType) => {
     if (!brand?.category?.type || !transactionType) {
         return true

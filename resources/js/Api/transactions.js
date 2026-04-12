@@ -11,9 +11,6 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
         params.append('filter[search]', searchQuery);
     }
 
-    if (filters.brandId) {
-        params.append('filter[brand_id]', filters.brandId);
-    }
     if (filters.categoryId) {
         params.append('filter[category_id]', filters.categoryId);
     }
@@ -57,13 +54,12 @@ export const getTransactionFormOptions = async () => {
 
     return {
         data: {
-            brands: data.brands,
             categories: data.categories,
         },
     };
 };
 
-export const createTransaction = async ({amount, accountId, brandId, createdAt, note, transactionType}) => {
+export const createTransaction = async ({amount, accountId, categoryId, createdAt, note, transactionType}) => {
     const response = await fetch('/api/v1/transactions', {
         method: 'POST',
         headers: {
@@ -75,7 +71,7 @@ export const createTransaction = async ({amount, accountId, brandId, createdAt, 
         body: JSON.stringify({
             amount,
             account_id: accountId,
-            brand_id: brandId || null,
+            category_id: categoryId,
             transaction_type: transactionType || null,
             created_at: createdAt,
             note
@@ -93,7 +89,7 @@ export const createTransaction = async ({amount, accountId, brandId, createdAt, 
     };
 }
 
-export const updateTransaction = async ({id, amount, accountId, brandId, createdAt, note, transactionType}) => {
+export const updateTransaction = async ({id, amount, accountId, categoryId, createdAt, note, transactionType}) => {
     const response = await fetch(`/api/v1/transactions/${id}`, {
         method: 'PUT',
         headers: {
@@ -105,7 +101,7 @@ export const updateTransaction = async ({id, amount, accountId, brandId, created
         body: JSON.stringify({
             amount,
             account_id: accountId,
-            brand_id: brandId || null,
+            category_id: categoryId,
             transaction_type: transactionType || null,
             created_at: createdAt,
             note

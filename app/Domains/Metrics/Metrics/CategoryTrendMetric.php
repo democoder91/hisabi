@@ -21,7 +21,7 @@ class CategoryTrendMetric extends Metric
         $dateFormat = $this->getDateFormat('%Y-%m');
 
         $query = Transaction::query()
-            ->whereHas('brand.category', fn($q) => $q->where('id', $this->categoryId))
+            ->where('transactions.category_id', $this->categoryId)
             ->select(DB::raw("{$dateFormat} as label, SUM(transactions.amount) as value"))
             ->groupBy(DB::raw("label"))
             ->orderBy('label');

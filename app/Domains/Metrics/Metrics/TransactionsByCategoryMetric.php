@@ -13,8 +13,7 @@ class TransactionsByCategoryMetric extends Metric
         $labelExpression = $this->localizedJsonValueExpression('categories.name');
 
         $query = Transaction::query()
-            ->join('brands', 'brands.id', '=', 'transactions.brand_id')
-            ->join('categories', 'categories.id', '=', 'brands.category_id')
+            ->join('categories', 'categories.id', '=', 'transactions.category_id')
             ->selectRaw($this->localizedJsonSelect('categories.name') . ', count(transactions.id) as value')
             ->groupBy('categories.id')
             ->groupBy(DB::raw($labelExpression))

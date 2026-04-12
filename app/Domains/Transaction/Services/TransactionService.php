@@ -3,7 +3,7 @@
 namespace App\Domains\Transaction\Services;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,19 +20,14 @@ class TransactionService
                     $query->where(function($q) use ($value) {
                         $q->where('amount', 'LIKE', "%$value%")
                             ->orWhere('note', 'LIKE', "%$value%")
-                            ->orWhereHas('brand', function($builder) use($value) {
+                            ->orWhereHas('category', function($builder) use($value) {
                                 $builder->where('name', 'LIKE', "%$value%");
                             });
                     });
                 }),
-                AllowedFilter::exact('brand_id'),
+                AllowedFilter::exact('category_id'),
                 AllowedFilter::exact('account_id'),
                 AllowedFilter::exact('transaction_type'),
-                AllowedFilter::callback('category_id', function ($query, $value) {
-                    $query->whereHas('brand', function($builder) use($value) {
-                        $builder->where('category_id', $value);
-                    });
-                }),
                 AllowedFilter::callback('date_from', function ($query, $value) {
                     $query->whereDate('created_at', '>=', $value);
                 }),
@@ -40,10 +35,10 @@ class TransactionService
                     $query->whereDate('created_at', '<=', $value);
                 }),
             ])
-                ->allowedIncludes(['brand.category', 'account'])
+                ->allowedIncludes(['category', 'account'])
             ->allowedSorts(['id', 'amount', 'created_at'])
             ->defaultSort('-id')
-                ->with(['brand.category', 'account'])
+                ->with(['category', 'account'])
             ->paginate($perPage);
     }
 
@@ -68,18 +63,18 @@ class TransactionService
 
     private function prepareData(array $data, ?Transaction $transaction = null): array
     {
-        $brand = null;
+        $category = null;
 
-        if (! empty($data['brand_id'])) {
-            $brand = Brand::withoutGlobalScopes()->with('category')->find($data['brand_id']);
+        if (! empty($data['category_id'])) {
+            $category = Category::withoutGlobalScopes()->find($data['category_id']);
         }
 
         if (! empty($data['account_id'])) {
             Account::query()->findOrFail($data['account_id']);
         }
 
-        $data['transaction_type'] = $brand?->category?->type
-            ? Transaction::transactionTypeForCategoryType($brand->category->type)
+        $data['transaction_type'] = $category?->type
+            ? Transaction::transactionTypeForCategoryType($category->type)
             : strtoupper($data['transaction_type'] ?? $transaction?->transaction_type ?? Transaction::TYPE_DEBIT);
 
         return $data;

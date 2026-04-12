@@ -138,7 +138,7 @@ export default function Audit({ auth, account }) {
                                                                 {audit.subject?.transaction_type ?? 'N/A'} · {formatAuditValue('amount', audit.subject?.amount)}
                                                             </p>
                                                             <p className="text-muted-foreground">
-                                                                {audit.subject?.brand_name ?? t('common.noBrand')} · {audit.subject?.category_name ?? t('account.emptyValue')}
+                                                                {audit.subject?.category_name ?? t('account.emptyValue')}
                                                             </p>
                                                             <p className="text-muted-foreground">
                                                                 {audit.subject?.note || t('account.emptyValue')}

@@ -18,7 +18,7 @@ class TransactionsStdDevMetric extends Metric
     public function calculate(): array
     {
         $query = Transaction::query()
-            ->whereHas('brand.category', fn($q) => $q->where('id', $this->categoryId));
+            ->where('transactions.category_id', $this->categoryId);
 
         if ($this->hasDateRange()) {
             $query->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);

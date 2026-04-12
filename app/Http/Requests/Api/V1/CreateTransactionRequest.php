@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,15 +24,15 @@ class CreateTransactionRequest extends FormRequest
                 'integer',
                 Rule::exists('accounts', 'id'),
             ],
-            'brand_id' => [
-                'nullable',
+            'category_id' => [
+                'required',
                 'integer',
-                Rule::exists('brands', 'id'),
+                Rule::exists('categories', 'id'),
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    $this->validateBrandBelongsToAccountOwner($value, $fail);
+                    $this->validateCategoryBelongsToAccountOwner($value, $fail);
                 },
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    $this->validateBrandMatchesTransactionType($value, $fail);
+                    $this->validateCategoryMatchesTransactionType($value, $fail);
                 },
             ],
             'created_at' => 'required|date',
@@ -51,9 +51,9 @@ class CreateTransactionRequest extends FormRequest
         }
     }
 
-    private function validateBrandBelongsToAccountOwner(mixed $brandId, \Closure $fail): void
+    private function validateCategoryBelongsToAccountOwner(mixed $categoryId, \Closure $fail): void
     {
-        if (! $brandId) {
+        if (! $categoryId) {
             return;
         }
 
@@ -63,29 +63,29 @@ class CreateTransactionRequest extends FormRequest
             return;
         }
 
-        $brand = Brand::withoutGlobalScopes()->find($brandId);
+        $category = Category::withoutGlobalScopes()->find($categoryId);
 
-        if (! $brand || (int) $brand->user_id !== (int) $account->user_id) {
-            $fail('The selected brand is invalid for the chosen account.');
+        if (! $category || (int) $category->user_id !== (int) $account->user_id) {
+            $fail('The selected category is invalid for the chosen account.');
         }
     }
 
-    private function validateBrandMatchesTransactionType(mixed $brandId, \Closure $fail): void
+    private function validateCategoryMatchesTransactionType(mixed $categoryId, \Closure $fail): void
     {
-        if (! $brandId || ! $this->filled('transaction_type')) {
+        if (! $categoryId || ! $this->filled('transaction_type')) {
             return;
         }
 
-        $brand = Brand::withoutGlobalScopes()->with('category')->find($brandId);
+        $category = Category::withoutGlobalScopes()->find($categoryId);
 
-        if (! $brand?->category?->type) {
+        if (! $category?->type) {
             return;
         }
 
-        $expectedType = Transaction::transactionTypeForCategoryType($brand->category->type);
+        $expectedType = Transaction::transactionTypeForCategoryType($category->type);
 
         if ($this->input('transaction_type') !== $expectedType) {
-            $fail("The selected brand requires transaction_type {$expectedType}.");
+            $fail("The selected category requires transaction_type {$expectedType}.");
         }
     }
 }

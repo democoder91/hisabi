@@ -10,17 +10,18 @@ import ValueMetric from '@/components/Domain/ValueMetric';
 import TrendMetric from '@/components/Domain/TrendMetric';
 import PartitionMetric from '@/components/Domain/PartitionMetric';
 import CirclePackMetric from '@/components/Domain/CirclePackMetric';
+import CategoryStats from '@/components/Domain/CategoryStats';
 import SectionDivider from '@/components/Global/SectionDivider';
 import Budgets from '@/components/Domain/Budgets';
 import RecordTransactionButton from '@/components/Domain/RecordTransactionButton';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { getAllCategories } from '@/Api/categories';
-import { getAllBrands } from '@/Api/brands';
+import { getAllAccounts } from '@/Api/accounts';
 
 export default function Dashboard({ auth, hasData }: any) {
     const { t } = useTranslation();
     const [allCategories, setAllCategories] = useState<any[]>([]);
-    const [allBrands, setAllBrands] = useState<any[]>([]);
+    const [allAccounts, setAllAccounts] = useState<any[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange>({
         from: startOfMonth(new Date()),
@@ -30,10 +31,10 @@ export default function Dashboard({ auth, hasData }: any) {
     useEffect(() => {
         Promise.all([
             getAllCategories(),
-            getAllBrands()
-        ]).then(([{ data: categories }, { data: brands }]) => {
+            getAllAccounts()
+        ]).then(([{ data: categories }, { data: accounts }]) => {
             setAllCategories(categories.allCategories);
-            setAllBrands(brands.allBrands);
+            setAllAccounts(accounts.allAccounts);
         }).catch(console.error);
     }, []);
 
@@ -52,7 +53,8 @@ export default function Dashboard({ auth, hasData }: any) {
                     initialDate={dateRange}
                 />
                 <RecordTransactionButton
-                    brands={allBrands}
+                    accounts={allAccounts}
+                    categories={allCategories}
                     onSuccess={() => setRefreshKey(prev => prev + 1)}
                 />
             </div>
@@ -64,18 +66,6 @@ export default function Dashboard({ auth, hasData }: any) {
         display_using: 'name',
         foreign_key: 'id'
     }), [allCategories]);
-
-    const categoryRelationForBrands = useMemo(() => ({
-        data: allCategories,
-        display_using: 'name',
-        foreign_key: 'category_id'
-    }), [allCategories]);
-
-    const brandRelation = useMemo(() => ({
-        data: allBrands,
-        display_using: 'name',
-        foreign_key: 'id'
-    }), [allBrands]);
 
     return (
         <Authenticated auth={auth} header={header}>
@@ -155,6 +145,9 @@ export default function Dashboard({ auth, hasData }: any) {
                             <SectionDivider title={t('dashboard.categoriesAnalytics')} />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <CategoryStats dateRange={dateRange} />
+                                </div>
                                 <PartitionMetric
                                     key={`incomePerCategory-${refreshKey}`}
                                     name={t('dashboard.incomeSources')}
@@ -184,26 +177,6 @@ export default function Dashboard({ auth, hasData }: any) {
                                     relation={categoryRelation}
                                     dateRange={dateRange}
                                     defaultToCurrentYear={false}
-                                />
-                            </div>
-
-                            <SectionDivider title={t('dashboard.brandsAnalytics')} />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <PartitionMetric
-                                    key={`totalPerBrand-${refreshKey}`}
-                                    name={t('dashboard.spendingByBrand')}
-                                    metric="totalPerBrand"
-                                    relation={categoryRelationForBrands}
-                                    show_currency={true}
-                                    dateRange={dateRange}
-                                />
-                                <TrendMetric
-                                    key={`totalPerBrandTrend-${refreshKey}`}
-                                    name={t('dashboard.overallTrendByBrand')}
-                                    metric="totalPerBrandTrend"
-                                    relation={brandRelation}
-                                    dateRange={dateRange}
                                 />
                             </div>
 

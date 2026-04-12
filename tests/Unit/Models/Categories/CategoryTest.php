@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Models\Categories;
 
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Transaction\Models\Transaction;
 use App\Models\Category;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,9 +33,9 @@ class CategoryTest extends TestCase
 
     public function test_it_has_name()
     {
-        $sut = Category::factory()->create(['name' => 'categoryTest']);
+        $sut = Category::factory()->create(['name' => ['en' => 'categoryTest']]);
 
-        $this->assertEquals("categoryTest", $sut->name);
+        $this->assertEquals('categoryTest', $sut->getTranslation('name', 'en'));
     }
 
     public function test_it_has_type()
@@ -52,13 +52,13 @@ class CategoryTest extends TestCase
         $this->assertEquals('gray', $sut->color);
     }
 
-    public function test_category_can_have_brands()
+    public function test_category_can_have_transactions()
     {
         $sut = Category::factory()
-            ->has(Brand::factory()->count(3))
+            ->has(Transaction::factory()->count(3), 'transactions')
             ->create();
 
-        $this->assertCount(3, $sut->brands);
+        $this->assertCount(3, $sut->transactions);
     }
 
     public function test_is_does_search_about_amount_brand_or_note()

@@ -32,21 +32,18 @@ class TransactionResource extends JsonResource
                     'canEditTransactions' => $this->account->canBeEditedBy(request()->user()),
                 ];
             }),
-            'brand' => $this->whenLoaded('brand', function () {
-                if (!$this->brand) {
+            'category' => $this->whenLoaded('category', function () {
+                if (! $this->category) {
                     return null;
                 }
 
                 return [
-                    'id' => $this->brand->id,
-                    'name' => $this->brand->name,
-                    'category' => $this->brand->category ? [
-                        'id' => $this->brand->category->id,
-                        'name' => $this->brand->category->name,
-                        'type' => $this->brand->category->type,
-                        'color' => $this->brand->category->color,
-                        'icon' => $this->brand->category->icon,
-                    ] : null,
+                    'id' => $this->category->id,
+                    'name' => $this->category->getTranslation('name', app()->getLocale(), false) ?: $this->category->getTranslation('name', 'en', false),
+                    'name_translations' => $this->category->getTranslations('name'),
+                    'type' => $this->category->type,
+                    'color' => $this->category->color,
+                    'icon' => $this->category->icon,
                 ];
             }),
         ];

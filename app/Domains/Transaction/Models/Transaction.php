@@ -3,7 +3,7 @@
 namespace App\Domains\Transaction\Models;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Scopes\OwnedAccountScope;
 use Database\Factories\TransactionFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Category;
 use Carbon\Carbon;
 
 class Transaction extends Model
@@ -83,9 +82,9 @@ class Transaction extends Model
         return $this->belongsTo(Account::class);
     }
 
-    public function brand()
+    public function category()
     {
-        return $this->belongsTo(Brand::class)->withoutGlobalScopes();
+        return $this->belongsTo(Category::class)->withoutGlobalScopes();
     }
 
     public function audits(): HasMany
@@ -112,38 +111,28 @@ class Transaction extends Model
 
     public function scopeExpenses($query)
     {
-        return $query->where(function (Builder $builder) {
-            $builder->whereHas('brand.category', function ($query) {
-                return $query->where('type', Category::EXPENSES);
-            })->orWhere(function (Builder $uncategorizedQuery) {
-                $uncategorizedQuery->whereNull('brand_id')
-                    ->where('transaction_type', self::TYPE_DEBIT);
-            });
+        return $query->whereHas('category', function ($query) {
+            return $query->where('type', Category::EXPENSES);
         });
     }
 
     public function scopeIncome($query)
     {
-        return $query->where(function (Builder $builder) {
-            $builder->whereHas('brand.category', function ($query) {
-                return $query->where('type', Category::INCOME);
-            })->orWhere(function (Builder $uncategorizedQuery) {
-                $uncategorizedQuery->whereNull('brand_id')
-                    ->where('transaction_type', self::TYPE_CREDIT);
-            });
+        return $query->whereHas('category', function ($query) {
+            return $query->where('type', Category::INCOME);
         });
     }
 
     public function scopeSavings($query)
     {
-        return $query->whereHas('brand.category', function ($query) {
+        return $query->whereHas('category', function ($query) {
             return $query->where('type', Category::SAVINGS);
         });
     }
 
     public function scopeInvestment($query)
     {
-        return $query->whereHas('brand.category', function ($query) {
+        return $query->whereHas('category', function ($query) {
             return $query->where('type', Category::INVESTMENT);
         });
     }
@@ -177,20 +166,21 @@ class Transaction extends Model
         $amountFromSms = $sms->meta['data']['amount'] ?? null;
         $transactionDatetimeFromSMS = $sms->meta['data']['datetime'] ?? null;
 
-        if(! $brandFromSms || ! $amountFromSms) {
+        if (! $amountFromSms) {
             return;
         }
 
-        $brand = Brand::findOrCreateNew($brandFromSms);
+        $category = Category::findOrCreateFallbackForUser($user->id, Category::EXPENSES);
 
         $amount = (float) filter_var($amountFromSms, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
         $transactionDatetime = $transactionDatetimeFromSMS ? Carbon::parse($transactionDatetimeFromSMS) : now();
 
         return static::create([
             'account_id' => $user->getOrCreateDefaultAccount()->id,
+            'category_id' => $category->id,
             'amount' => $amount,
-            'brand_id' => $brand->id,
-            'transaction_type' => static::transactionTypeForCategoryType($brand->category?->type ?? Category::EXPENSES),
+            'transaction_type' => static::transactionTypeForCategoryType($category->type),
+            'note' => $brandFromSms,
             'created_at' => $transactionDatetime
         ]);
     }

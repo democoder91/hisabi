@@ -15,7 +15,7 @@ readonly class UpdateTransactionCommandResponse
     public function toResponse(): JsonResponse
     {
         return response()->json([
-            'transaction' => new TransactionResource($this->transaction->load(['brand.category', 'account'])),
+            'transaction' => new TransactionResource($this->transaction->load(['category', 'account'])),
         ]);
     }
 }

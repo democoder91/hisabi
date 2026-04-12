@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Models\Transactions;
 
+use App\Domains\Category\Models\Category;
 use Tests\TestCase;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,12 +25,12 @@ class TransactionTest extends TestCase
         $this->assertEquals('some note', $sut->note);
     }
 
-    public function test_it_belongs_to_brand()
+    public function test_it_belongs_to_category()
     {
         $sut = Transaction::factory()
-                    ->forBrand(['name' => 'testName'])
+                    ->for(Category::factory()->state(['name' => ['en' => 'testName']]), 'category')
                     ->create();
 
-        $this->assertEquals('testName', $sut->brand->name);
+        $this->assertEquals('testName', $sut->category->getTranslation('name', 'en'));
     }
 }

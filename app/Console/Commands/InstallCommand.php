@@ -50,7 +50,7 @@ class InstallCommand extends Command
             return;
         }
 
-        if ($this->confirm('Do you wish to generate the default brands and categories?', true)) {
+        if ($this->confirm('Do you wish to generate the default categories?', true)) {
             $this->call('db:seed');
         }
 

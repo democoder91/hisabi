@@ -14,8 +14,7 @@ class CategoryStatsMetric extends Metric
         $labelExpression = $this->localizedJsonValueExpression('categories.name');
 
         $query = Transaction::query()
-            ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->join('categories', 'brands.category_id', '=', 'categories.id');
+            ->join('categories', 'transactions.category_id', '=', 'categories.id');
 
         if ($this->hasDateRange()) {
             $query->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);

@@ -16,20 +16,14 @@ import {
 } from '@/components/ui/select';
 
 interface FilterProps {
-    brands: any[];
     categories: any[];
     onApply: (filters: any) => void;
     activeFilters: any;
 }
 
-export default function TransactionFilters({ brands, categories, onApply, activeFilters }: FilterProps) {
+export default function TransactionFilters({ categories, onApply, activeFilters }: FilterProps) {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
-
-    const handleBrandChange = (brand: any) => {
-        const updatedFilters = { ...activeFilters, brandId: brand ? brand.id : '' };
-        onApply(updatedFilters);
-    };
 
     const handleCategoryChange = (category: any) => {
         const updatedFilters = { ...activeFilters, categoryId: category ? category.id : '' };
@@ -47,7 +41,6 @@ export default function TransactionFilters({ brands, categories, onApply, active
 
     const getActiveFilterCount = () => {
         let count = 0;
-        if (activeFilters.brandId) count++;
         if (activeFilters.categoryId) count++;
         if (activeFilters.transactionType) count++;
         if (activeFilters.dateFrom && activeFilters.dateTo) count++;
@@ -84,11 +77,6 @@ export default function TransactionFilters({ brands, categories, onApply, active
         return undefined;
     };
 
-    const getSelectedBrand = () => {
-        if (!activeFilters.brandId) return undefined;
-        return brands.find((b: any) => b.id == activeFilters.brandId);
-    };
-
     const getSelectedCategory = () => {
         if (!activeFilters.categoryId) return undefined;
         return categories.find((c: any) => c.id == activeFilters.categoryId);
@@ -111,15 +99,6 @@ export default function TransactionFilters({ brands, categories, onApply, active
             </PopoverTrigger>
             <PopoverContent className="w-80" align="end">
                 <div className="grid gap-4">
-                    {/* Brand Filter */}
-                    <Combobox
-                        label={t('transaction.brand')}
-                        items={brands}
-                        initialSelectedItem={getSelectedBrand()}
-                        onChange={handleBrandChange}
-                    />
-
-                    {/* Category Filter */}
                     <Combobox
                         label={t('transaction.category')}
                         items={categories}

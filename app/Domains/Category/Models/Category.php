@@ -3,15 +3,13 @@
 namespace App\Domains\Category\Models;
 
 use App\Models\Concerns\BelongsToUser;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Spatie\Translatable\HasTranslations;
+use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
@@ -31,20 +29,30 @@ class Category extends Model
         return CategoryFactory::new();
     }
 
-    protected static function booted(): void
+    public function transactions(): HasMany
     {
-        static::deleted(function ($category) {
-            $category->brands->each->delete();
-        });
+        return $this->hasMany(Transaction::class);
     }
 
-    public function brands(): HasMany
+    public static function findOrCreateFallbackForUser(int $userId, string $type): self
     {
-        return $this->hasMany(Brand::class);
-    }
+        $name = match ($type) {
+            self::INCOME => ['en' => 'Uncategorized Income', 'ar' => null],
+            self::SAVINGS => ['en' => 'Uncategorized Savings', 'ar' => null],
+            self::INVESTMENT => ['en' => 'Uncategorized Investment', 'ar' => null],
+            default => ['en' => 'Uncategorized Expenses', 'ar' => null],
+        };
 
-    public function transactions(): HasManyThrough
-    {
-        return $this->hasManyThrough(Transaction::class, Brand::class);
+        return static::query()->firstOrCreate(
+            [
+                'user_id' => $userId,
+                'type' => $type,
+                'name' => $name,
+            ],
+            [
+                'color' => 'gray',
+                'icon' => 'shapes',
+            ],
+        );
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Models\TransactionAudit;
 use Illuminate\Support\Carbon;
@@ -36,7 +36,7 @@ class TransactionObserver
         $transaction->storeAuditSnapshot($this->snapshotFromAttributes($transaction, [
             'id' => $transaction->id,
             'account_id' => $transaction->getOriginal('account_id') ?? $transaction->account_id,
-            'brand_id' => $transaction->getOriginal('brand_id') ?? $transaction->brand_id,
+            'category_id' => $transaction->getOriginal('category_id') ?? $transaction->category_id,
             'amount' => $transaction->getOriginal('amount') ?? $transaction->amount,
             'transaction_type' => $transaction->getOriginal('transaction_type') ?? $transaction->transaction_type,
             'currency' => $transaction->getOriginal('currency') ?? $transaction->currency,
@@ -110,13 +110,13 @@ class TransactionObserver
 
     private function snapshotFromModel(Transaction $transaction): array
     {
-        $transaction->loadMissing(['account', 'brand.category']);
+        $transaction->loadMissing(['account', 'category']);
 
         return $this->buildSnapshot(
             attributes: [
                 'id' => $transaction->id,
                 'account_id' => $transaction->account_id,
-                'brand_id' => $transaction->brand_id,
+                'category_id' => $transaction->category_id,
                 'amount' => $transaction->amount,
                 'transaction_type' => $transaction->transaction_type,
                 'currency' => $transaction->currency,
@@ -124,31 +124,30 @@ class TransactionObserver
                 'created_at' => $transaction->created_at,
             ],
             account: $transaction->account,
-            brand: $transaction->brand,
+            category: $transaction->category,
         );
     }
 
     private function snapshotFromAttributes(Transaction $transaction, array $attributes): array
     {
         $accountId = $attributes['account_id'] ?? null;
-        $brandId = $attributes['brand_id'] ?? null;
+        $categoryId = $attributes['category_id'] ?? null;
 
         return $this->buildSnapshot(
             attributes: $attributes,
             account: $accountId ? Account::query()->find($accountId) : null,
-            brand: $brandId ? Brand::withoutGlobalScopes()->with('category')->find($brandId) : null,
+            category: $categoryId ? Category::withoutGlobalScopes()->find($categoryId) : null,
         );
     }
 
-    private function buildSnapshot(array $attributes, ?Account $account, ?Brand $brand): array
+    private function buildSnapshot(array $attributes, ?Account $account, ?Category $category): array
     {
         return [
             'id' => isset($attributes['id']) ? (int) $attributes['id'] : null,
             'account_id' => isset($attributes['account_id']) ? (int) $attributes['account_id'] : null,
             'account_name' => $account?->getLocalizedName(),
-            'brand_id' => isset($attributes['brand_id']) && $attributes['brand_id'] !== null ? (int) $attributes['brand_id'] : null,
-            'brand_name' => $brand?->name,
-            'category_name' => $brand?->category?->name,
+            'category_id' => isset($attributes['category_id']) && $attributes['category_id'] !== null ? (int) $attributes['category_id'] : null,
+            'category_name' => $category?->getTranslation('name', app()->getLocale(), false) ?: $category?->getTranslation('name', 'en', false),
             'amount' => isset($attributes['amount']) ? (float) $attributes['amount'] : null,
             'transaction_type' => $attributes['transaction_type'] ?? null,
             'currency' => $attributes['currency'] ?? null,

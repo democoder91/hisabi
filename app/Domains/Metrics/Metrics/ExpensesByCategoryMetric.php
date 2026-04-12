@@ -14,8 +14,7 @@ class ExpensesByCategoryMetric extends Metric
 
         $query = Category::query()
             ->where('type', Category::EXPENSES)
-            ->join('brands', 'brands.category_id', '=', 'categories.id')
-            ->join('transactions', 'transactions.brand_id', '=', 'brands.id')
+            ->join('transactions', 'transactions.category_id', '=', 'categories.id')
             ->selectRaw($this->localizedJsonSelect('categories.name') . ', SUM(transactions.amount) as value')
             ->groupBy('categories.id')
             ->groupBy(DB::raw($labelExpression))

@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountAuditController;
 use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingsController;
@@ -24,7 +23,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/accounts/{account}/audit', [AccountAuditController::class, 'show'])->name('accounts.audit');
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions');
     Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets');
-    Route::get('/brands', [BrandController::class, 'index'])->name('brands');
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::get('/report', function (Request $request) {
@@ -53,11 +51,6 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/accounts/{id}/shares/{shareUserId}', [\App\Http\Controllers\Api\V1\AccountController::class, 'updateShare']);
         Route::delete('/accounts/{id}/shares/{shareUserId}', [\App\Http\Controllers\Api\V1\AccountController::class, 'revokeShare']);
         Route::get('/accounts/{account}/audits', [\App\Http\Controllers\Api\V1\AccountAuditController::class, 'index']);
-        Route::get('/brands', [\App\Http\Controllers\Api\V1\BrandController::class, 'index']);
-        Route::get('/brands/all', [\App\Http\Controllers\Api\V1\BrandController::class, 'all']);
-        Route::post('/brands', [\App\Http\Controllers\Api\V1\BrandController::class, 'store']);
-        Route::put('/brands/{id}', [\App\Http\Controllers\Api\V1\BrandController::class, 'update']);
-        Route::delete('/brands/{id}', [\App\Http\Controllers\Api\V1\BrandController::class, 'destroy']);
         Route::get('/sms', [\App\Http\Controllers\Api\V1\SmsController::class, 'index']);
         Route::post('/sms', [\App\Http\Controllers\Api\V1\SmsController::class, 'store']);
         Route::put('/sms/{id}', [\App\Http\Controllers\Api\V1\SmsController::class, 'update']);
@@ -86,19 +79,14 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/total-expenses-trend', [MetricsController::class, 'totalExpensesTrend']);
             Route::get('/category-trend', [MetricsController::class, 'categoryTrend']);
             Route::get('/category-daily-trend', [MetricsController::class, 'categoryDailyTrend']);
-            Route::get('/brand-trend', [MetricsController::class, 'brandTrend']);
-            Route::get('/brand-change-rate', [MetricsController::class, 'brandChangeRate']);
             Route::get('/expenses-by-category', [MetricsController::class, 'expensesByCategory']);
             Route::get('/income-by-category', [MetricsController::class, 'incomeByCategory']);
-            Route::get('/spending-by-brand', [MetricsController::class, 'spendingByBrand']);
             Route::get('/transactions-count', [MetricsController::class, 'transactionsCount']);
             Route::get('/transactions-by-category', [MetricsController::class, 'transactionsByCategory']);
-            Route::get('/transactions-by-brand', [MetricsController::class, 'transactionsByBrand']);
             Route::get('/highest-transaction', [MetricsController::class, 'highestTransaction']);
             Route::get('/lowest-transaction', [MetricsController::class, 'lowestTransaction']);
             Route::get('/average-transaction', [MetricsController::class, 'averageTransaction']);
             Route::get('/transactions-std-dev', [MetricsController::class, 'transactionsStdDev']);
-            Route::get('/brand-stats', [MetricsController::class, 'brandStats']);
             Route::get('/category-stats', [MetricsController::class, 'categoryStats']);
             Route::get('/circle-pack', [MetricsController::class, 'circlePack']);
         });

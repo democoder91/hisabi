@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   BankIcon,
   Receipt,
-  StorefrontIcon,
   CirclesThreeIcon,
   ChartDonutIcon,
   ChartLineIcon,
@@ -56,11 +55,6 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       title: t('navigation.budgets'),
       url: "budgets",
       icon: ChartLineIcon,
-    },
-    {
-      title: t('navigation.brands'),
-      url: "brands",
-      icon: StorefrontIcon,
     },
     {
       title: t('navigation.categories'),

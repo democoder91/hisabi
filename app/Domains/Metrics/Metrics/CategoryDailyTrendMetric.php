@@ -25,7 +25,7 @@ class CategoryDailyTrendMetric extends Metric
 
         $dateFormat = $this->getDateFormat('%Y-%m-%d');
 
-        $transactions = Transaction::whereHas('brand.category', fn($q) => $q->where('id', $this->categoryId))
+        $transactions = Transaction::where('transactions.category_id', $this->categoryId)
             ->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()])
             ->select(DB::raw("{$dateFormat} as label, SUM(transactions.amount) as value"))
             ->groupBy(DB::raw("label"))

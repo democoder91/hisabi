@@ -2,9 +2,8 @@
 
 namespace App\Ai\Tools;
 
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Services\TransactionService;
-use App\Models\Category;
 use Carbon\Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
@@ -35,20 +34,13 @@ class CreateTransactionTool implements Tool
         $note = $request['note'] ?? null;
         $date = $request['date'] ?? now()->toDateTimeString();
 
-        $brand = null;
-        if ($brandName) {
-            $brand = Brand::findOrCreateNew($brandName);
+        $category = Category::findOrCreateFallbackForUser($user->id, $categoryType);
 
-            if (! $brand->category_id) {
-                $category = Category::firstOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'type' => $categoryType,
-                        'name' => ['en' => ucfirst(strtolower($categoryType))],
-                    ],
-                );
-                $brand->update(['category_id' => $category->id]);
-            }
+        $resolvedNote = $note;
+        if ($brandName) {
+            $resolvedNote = $note
+                ? $note . ' | Merchant: ' . $brandName
+                : 'Merchant: ' . $brandName;
         }
 
         $transactionService = app(TransactionService::class);
@@ -56,18 +48,20 @@ class CreateTransactionTool implements Tool
         $transaction = $transactionService->create([
             'account_id' => $user->getOrCreateDefaultAccount()->id,
             'amount' => $amount,
-            'brand_id' => $brand?->id,
+            'category_id' => $category->id,
             'transaction_type' => $categoryType === Category::INCOME ? 'CREDIT' : 'DEBIT',
             'currency' => $currency,
-            'note' => $note,
+            'note' => $resolvedNote,
             'created_at' => Carbon::parse($date),
         ]);
 
-        $categoryName = $brand?->category?->name ?? $categoryType;
-        $brandLabel = $brand ? " at {$brand->name}" : '';
+        $categoryName = $category->getTranslation('name', app()->getLocale(), false)
+            ?: $category->getTranslation('name', 'en', false)
+            ?: $categoryType;
+        $brandLabel = $brandName ? " for {$brandName}" : '';
 
         return "Transaction created successfully: {$currency} {$amount}{$brandLabel} ({$categoryName}) on {$transaction->created_at->format('Y-m-d')}" .
-            ($note ? " - Note: {$note}" : '');
+            ($resolvedNote ? " - Note: {$resolvedNote}" : '');
     }
 
     public function schema(JsonSchema $schema): array

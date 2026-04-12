@@ -14,19 +14,14 @@ use App\Domains\Metrics\Metrics\TotalIncomeTrendMetric;
 use App\Domains\Metrics\Metrics\TotalExpensesTrendMetric;
 use App\Domains\Metrics\Metrics\CategoryTrendMetric;
 use App\Domains\Metrics\Metrics\CategoryDailyTrendMetric;
-use App\Domains\Metrics\Metrics\BrandTrendMetric;
-use App\Domains\Metrics\Metrics\BrandChangeRateMetric;
 use App\Domains\Metrics\Metrics\ExpensesByCategoryMetric;
 use App\Domains\Metrics\Metrics\IncomeByCategoryMetric;
-use App\Domains\Metrics\Metrics\SpendingByBrandMetric;
 use App\Domains\Metrics\Metrics\TransactionsCountMetric;
 use App\Domains\Metrics\Metrics\TransactionsByCategoryMetric;
-use App\Domains\Metrics\Metrics\TransactionsByBrandMetric;
 use App\Domains\Metrics\Metrics\HighestTransactionMetric;
 use App\Domains\Metrics\Metrics\LowestTransactionMetric;
 use App\Domains\Metrics\Metrics\AverageTransactionMetric;
 use App\Domains\Metrics\Metrics\TransactionsStdDevMetric;
-use App\Domains\Metrics\Metrics\BrandStatsMetric;
 use App\Domains\Metrics\Metrics\CategoryStatsMetric;
 use App\Domains\Metrics\Metrics\CirclePackMetric;
 use Illuminate\Http\JsonResponse;
@@ -108,26 +103,6 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function brandTrend(Request $request): JsonResponse
-    {
-        $metric = new BrandTrendMetric(
-            $request->query('from'),
-            $request->query('to'),
-            (int) $request->query('id')
-        );
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
-    public function brandChangeRate(Request $request): JsonResponse
-    {
-        $metric = new BrandChangeRateMetric(
-            $request->query('from'),
-            $request->query('to'),
-            (int) $request->query('id')
-        );
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
     public function expensesByCategory(Request $request): JsonResponse
     {
         $metric = new ExpensesByCategoryMetric($request->query('from'), $request->query('to'));
@@ -140,16 +115,6 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function spendingByBrand(Request $request): JsonResponse
-    {
-        $metric = new SpendingByBrandMetric(
-            $request->query('from'),
-            $request->query('to'),
-            (int) $request->query('category_id')
-        );
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
     public function transactionsCount(Request $request): JsonResponse
     {
         $metric = new TransactionsCountMetric($request->query('from'), $request->query('to'));
@@ -159,16 +124,6 @@ class MetricsController extends Controller
     public function transactionsByCategory(Request $request): JsonResponse
     {
         $metric = new TransactionsByCategoryMetric($request->query('from'), $request->query('to'));
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
-    public function transactionsByBrand(Request $request): JsonResponse
-    {
-        $metric = new TransactionsByBrandMetric(
-            $request->query('from'),
-            $request->query('to'),
-            (int) $request->query('id')
-        );
         return response()->json(['data' => $metric->calculate()]);
     }
 
@@ -197,12 +152,6 @@ class MetricsController extends Controller
             $request->query('to'),
             (int) $request->query('id')
         );
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
-    public function brandStats(Request $request): JsonResponse
-    {
-        $metric = new BrandStatsMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 

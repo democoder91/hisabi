@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Category\Models\Category as DomainCategory;
 use Laravel\Sanctum\HasApiTokens;
@@ -64,11 +63,6 @@ class User extends Authenticatable
         return $this->belongsToMany(Account::class)
             ->withPivot('permission_level')
             ->withTimestamps();
-    }
-
-    public function brands(): HasMany
-    {
-        return $this->hasMany(Brand::class);
     }
 
     public function categories(): HasMany

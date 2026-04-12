@@ -118,10 +118,8 @@ class Budget extends Model
         [$startAt, $endAt] = $this->getCurrentWindowStartAndEndDates();
 
         return $this->categories()
-            ->join('brands', 'categories.id', '=', 'brands.category_id')
-            ->join('transactions', 'brands.id', '=', 'transactions.brand_id')
+            ->join('transactions', 'categories.id', '=', 'transactions.category_id')
             ->where('categories.user_id', $this->user_id)
-            ->where('brands.user_id', $this->user_id)
             ->whereBetween('transactions.created_at', [$startAt, $endAt])
             ->sum('transactions.amount');
     }

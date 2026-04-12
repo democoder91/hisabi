@@ -11,10 +11,9 @@ class TransactionsCountMetric extends Metric
     public function calculate(): array
     {
         $query = Transaction::query()
-            ->leftJoin('brands', 'brands.id', '=', 'transactions.brand_id')
-            ->leftJoin('categories', 'categories.id', '=', 'brands.category_id')
-            ->select(DB::raw("COALESCE(categories.type, 'UNCATEGORIZED') as label"), DB::raw("count(transactions.id) as value"))
-            ->groupBy(DB::raw("COALESCE(categories.type, 'UNCATEGORIZED')"))
+            ->join('categories', 'categories.id', '=', 'transactions.category_id')
+            ->select(DB::raw('categories.type as label'), DB::raw('count(transactions.id) as value'))
+            ->groupBy(DB::raw('categories.type'))
             ->orderBy('value', 'DESC');
 
         if ($this->hasDateRange()) {

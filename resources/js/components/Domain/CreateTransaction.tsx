@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
     getAppCurrency,
     getTransactionTypeForCategoryType,
-    isBrandCompatibleWithTransactionType,
+    isCategoryCompatibleWithTransactionType,
     TRANSACTION_TYPES,
 } from '@/Utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,11 +18,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function Create({ accounts, brands, showCreate, onClose, onCreate }) {
+export default function Create({ accounts, categories, showCreate, onClose, onCreate }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(0);
     const [account, setAccount] = useState(null);
-    const [brand, setBrand] = useState(null);
+    const [category, setCategory] = useState(null);
     const [createdAt, setCreatedAt] = useState('');
     const [note, setNote] = useState('');
     const [transactionType, setTransactionType] = useState(TRANSACTION_TYPES.DEBIT);
@@ -33,13 +33,13 @@ export default function Create({ accounts, brands, showCreate, onClose, onCreate
         return accounts.filter((item) => item.canEditTransactions);
     }, [accounts]);
 
-    const filteredBrands = useMemo(() => {
-        return brands.filter((item) => isBrandCompatibleWithTransactionType(item, transactionType));
-    }, [brands, transactionType]);
+    const filteredCategories = useMemo(() => {
+        return categories.filter((item) => isCategoryCompatibleWithTransactionType(item, transactionType));
+    }, [categories, transactionType]);
 
     useEffect(() => {
-        setIsReady(amount != 0 && createdAt != '' && account !== null ? true : false);
-    }, [amount, createdAt, account]);
+        setIsReady(amount != 0 && createdAt != '' && account !== null && category !== null ? true : false);
+    }, [amount, createdAt, account, category]);
 
     useEffect(() => {
         if (!account && editableAccounts.length > 0) {
@@ -54,16 +54,16 @@ export default function Create({ accounts, brands, showCreate, onClose, onCreate
     }, [editableAccounts, account]);
 
     useEffect(() => {
-        if (brand && !isBrandCompatibleWithTransactionType(brand, transactionType)) {
-            setBrand(null);
+        if (category && !isCategoryCompatibleWithTransactionType(category, transactionType)) {
+            setCategory(null);
         }
-    }, [brand, transactionType]);
+    }, [category, transactionType]);
 
-    const handleBrandChange = (item) => {
-        setBrand(item);
+    const handleCategoryChange = (item) => {
+        setCategory(item);
 
-        if (item?.category?.type) {
-            setTransactionType(getTransactionTypeForCategoryType(item.category.type));
+        if (item?.type) {
+            setTransactionType(getTransactionTypeForCategoryType(item.type));
         }
     };
 
@@ -75,7 +75,7 @@ export default function Create({ accounts, brands, showCreate, onClose, onCreate
         createTransaction({
             amount,
             accountId: account?.id,
-            brandId: brand?.id,
+            categoryId: category?.id,
             createdAt,
             note,
             transactionType,
@@ -83,7 +83,7 @@ export default function Create({ accounts, brands, showCreate, onClose, onCreate
             .then(({ data }) => {
                 onCreate(data.transaction);
                 // Reset form
-                setBrand(null);
+                setCategory(null);
                 setAccount(editableAccounts[0] ?? null);
                 setAmount(0);
                 setCreatedAt('');
@@ -149,12 +149,12 @@ export default function Create({ accounts, brands, showCreate, onClose, onCreate
 
                     <div>
                         <Combobox
-                            label={t('transaction.brand')}
-                            items={filteredBrands}
-                            initialSelectedItem={brand}
-                            onChange={handleBrandChange}
-                            displayInputValue={(item) => item ? `${item.name} (${item.category?.name ?? 'N/A'})` : ''}
-                            displayOptionValue={(item) => item ? `${item.name} (${item.category?.name ?? 'N/A'})` : ''}
+                            label={t('transaction.category')}
+                            items={filteredCategories}
+                            initialSelectedItem={category}
+                            onChange={handleCategoryChange}
+                            displayInputValue={(item) => item ? item.name : ''}
+                            displayOptionValue={(item) => item ? item.name : ''}
                         />
                     </div>
 

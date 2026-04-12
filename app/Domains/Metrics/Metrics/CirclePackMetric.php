@@ -21,37 +21,25 @@ class CirclePackMetric extends Metric
         ];
 
         $transactions = DB::table('transactions')
-            ->join('brands', 'transactions.brand_id', '=', 'brands.id')
-            ->select('brands.name as brand_name', 'brands.category_id', DB::raw('sum(amount) as value'))
-            ->groupBy(['brand_name', 'brands.category_id']);
+            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+            ->select('categories.name as category_name', 'categories.type', 'categories.color', DB::raw('sum(amount) as value'))
+            ->groupBy(['categories.name', 'categories.type', 'categories.color']);
 
         if ($this->hasDateRange()) {
             $transactions->whereBetween('transactions.created_at', [$this->getStartDate(), $this->getEndDate()]);
         }
 
-        $categories = DB::table('categories')
-            ->joinSub($transactions, 'children', function ($join) {
-                $join->on('categories.id', '=', 'children.category_id');
-            });
-
         $rootLevel = ["children" => []];
-        foreach ($categories->get()->groupBy(['type', 'name']) as $key => $value) {
-            $innerChildren = [];
-            foreach ($value as $innerKey => $innerValue) {
-                $innerChildren[] = [
-                    "label" => $innerKey,
-                    "children" => $innerValue->map(function ($item) use ($colors) {
-                        return [
-                            "label" => $item->brand_name,
-                            "value" => $item->value,
-                            "color" => $colors[$item->color] ?? 'white'
-                        ];
-                    })->toArray()
-                ];
-            }
+        foreach ($transactions->get()->groupBy('type') as $key => $value) {
             $rootLevel["children"][] = [
                 "label" => $key,
-                "children" => $innerChildren
+                "children" => $value->map(function ($item) use ($colors) {
+                    return [
+                        "label" => $item->category_name,
+                        "value" => $item->value,
+                        "color" => $colors[$item->color] ?? 'white'
+                    ];
+                })->toArray()
             ];
         }
 

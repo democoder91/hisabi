@@ -10,7 +10,7 @@ import Combobox from "@/components/Global/Combobox";
 import {
     getAppCurrency,
     getTransactionTypeForCategoryType,
-    isBrandCompatibleWithTransactionType,
+    isCategoryCompatibleWithTransactionType,
     TRANSACTION_TYPES,
 } from '@/Utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,18 +20,18 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function Edit({ transaction, accounts, brands, onUpdate, onDelete, onClose }) {
+export default function Edit({ transaction, accounts, categories, onUpdate, onDelete, onClose }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(0);
     const [account, setAccount] = useState(null);
     const [createdAt, setCreatedAt] = useState('');
-    const [brand, setBrand] = useState(null);
+    const [category, setCategory] = useState(null);
     const [note, setNote] = useState('');
     const [transactionType, setTransactionType] = useState(TRANSACTION_TYPES.DEBIT);
 
-    const filteredBrands = useMemo(() => {
-        return brands.filter((item) => isBrandCompatibleWithTransactionType(item, transactionType));
-    }, [brands, transactionType]);
+    const filteredCategories = useMemo(() => {
+        return categories.filter((item) => isCategoryCompatibleWithTransactionType(item, transactionType));
+    }, [categories, transactionType]);
 
     const editableAccounts = useMemo(() => {
         return accounts.filter((item) => item.canEditTransactions);
@@ -44,26 +44,26 @@ export default function Edit({ transaction, accounts, brands, onUpdate, onDelete
 
         setAmount(transaction.amount);
         setAccount(transaction.account);
-        setBrand(transaction.brand);
+        setCategory(transaction.category);
         setCreatedAt(transaction.created_at);
         setNote(transaction.note ?? '');
         setTransactionType(
             transaction.transaction_type
-            ?? getTransactionTypeForCategoryType(transaction.brand?.category?.type)
+            ?? getTransactionTypeForCategoryType(transaction.category?.type)
         );
     }, [transaction]);
 
     useEffect(() => {
-        if (brand && !isBrandCompatibleWithTransactionType(brand, transactionType)) {
-            setBrand(null);
+        if (category && !isCategoryCompatibleWithTransactionType(category, transactionType)) {
+            setCategory(null);
         }
-    }, [brand, transactionType]);
+    }, [category, transactionType]);
 
-    const handleBrandChange = (item) => {
-        setBrand(item);
+    const handleCategoryChange = (item) => {
+        setCategory(item);
 
-        if (item?.category?.type) {
-            setTransactionType(getTransactionTypeForCategoryType(item.category.type));
+        if (item?.type) {
+            setTransactionType(getTransactionTypeForCategoryType(item.type));
         }
     };
 
@@ -75,7 +75,7 @@ export default function Edit({ transaction, accounts, brands, onUpdate, onDelete
             id: transactionId,
             amount,
             accountId: account?.id,
-            brandId: brand?.id,
+            categoryId: category?.id,
             createdAt,
             note,
             transactionType,
@@ -162,12 +162,12 @@ export default function Edit({ transaction, accounts, brands, onUpdate, onDelete
 
                         <div>
                             <Combobox
-                                label={t('transaction.brand')}
-                                items={filteredBrands}
-                                initialSelectedItem={brand}
-                                onChange={(item) => canEdit && handleBrandChange(item)}
-                                displayInputValue={(item) => item ? `${item.name} (${item.category?.name ?? 'N/A'})` : ''}
-                                displayOptionValue={(item) => item ? `${item.name} (${item.category?.name ?? 'N/A'})` : ''}
+                                label={t('transaction.category')}
+                                items={filteredCategories}
+                                initialSelectedItem={category}
+                                onChange={(item) => canEdit && handleCategoryChange(item)}
+                                displayInputValue={(item) => item ? item.name : ''}
+                                displayOptionValue={(item) => item ? item.name : ''}
                             />
                         </div>
 

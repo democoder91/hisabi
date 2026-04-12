@@ -30,7 +30,6 @@ export default function Index({ auth }: { auth: any }) {
 
     // Initialize filters from URL
     const initialFilters = {
-        brandId: urlParams.get('brand') || '',
         categoryId: urlParams.get('category') || '',
         transactionType: urlParams.get('type') || '',
         dateFrom: urlParams.get('dateFrom') || '',
@@ -39,7 +38,6 @@ export default function Index({ auth }: { auth: any }) {
 
     const [transactions, setTransactions] = useState<any[]>([]);
     const [allAccounts, setAllAccounts] = useState<any[]>([]);
-    const [allBrands, setAllBrands] = useState<any[]>([]);
     const [allCategories, setAllCategories] = useState<any[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMorePages, setHasMorePages] = useState(true);
@@ -61,7 +59,6 @@ export default function Index({ auth }: { auth: any }) {
 
         getTransactionFormOptions()
             .then(({ data }) => {
-                setAllBrands(data.brands)
                 setAllCategories(data.categories)
             })
             .catch(console.error);
@@ -129,12 +126,6 @@ export default function Index({ auth }: { auth: any }) {
         const url = new URL(window.location.href);
 
         // Update URL params for filters
-        if (newFilters.brandId) {
-            url.searchParams.set('brand', newFilters.brandId);
-        } else {
-            url.searchParams.delete('brand');
-        }
-
         if (newFilters.categoryId) {
             url.searchParams.set('category', newFilters.categoryId);
         } else {
@@ -165,9 +156,6 @@ export default function Index({ auth }: { auth: any }) {
         const updatedFilters = { ...filters };
 
         switch (filterKey) {
-            case 'brand':
-                updatedFilters.brandId = '';
-                break;
             case 'category':
                 updatedFilters.categoryId = '';
                 break;
@@ -199,7 +187,7 @@ export default function Index({ auth }: { auth: any }) {
                 />
                 <RecordTransactionButton
                     accounts={allAccounts}
-                    brands={allBrands}
+                    categories={allCategories}
                     onSuccess={onCreate}
                 />
             </div>
@@ -213,7 +201,7 @@ export default function Index({ auth }: { auth: any }) {
             <Edit
                 transaction={editItem}
                 accounts={allAccounts}
-                brands={allBrands}
+                categories={allCategories}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 onClose={() => setEditItem(null)}
@@ -234,16 +222,6 @@ export default function Index({ auth }: { auth: any }) {
                         />
                         <div className="flex gap-2">
                             {/* Active filter badges */}
-                            {filters.brandId && (
-                                <Badge
-                                    variant="secondary"
-                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
-                                    onClick={() => clearFilter('brand')}
-                                >
-                                    {allBrands.find((b: any) => b.id == filters.brandId)?.name}
-                                    <X size={14} weight="bold" />
-                                </Badge>
-                            )}
                             {filters.categoryId && (
                                 <Badge
                                     variant="secondary"
@@ -275,7 +253,6 @@ export default function Index({ auth }: { auth: any }) {
                                 </Badge>
                             )}
                             <Filters
-                                brands={allBrands}
                                 categories={allCategories}
                                 onApply={handleFiltersApply}
                                 activeFilters={filters}
@@ -285,37 +262,34 @@ export default function Index({ auth }: { auth: any }) {
 
                     <div className="grid gap-2">
                         {transactions.length > 0 && transactions.map((transaction) => {
-                            const hasBrand = transaction.brand !== null;
-                            const CategoryIcon = transaction.brand?.category?.icon
-                                ? getCategoryIcon(transaction.brand.category.icon)
+                            const hasCategory = transaction.category !== null;
+                            const CategoryIcon = transaction.category?.icon
+                                ? getCategoryIcon(transaction.category.icon)
                                 : null;
-                            const hasCategory = hasBrand && transaction.brand.category !== null;
-                            const isUncategorized = !hasCategory;
                             const isIncomeTransaction = isCreditTransaction(transaction);
                             const transactionTypeLabel = transaction.transaction_type
                                 ? t(`transaction.${transaction.transaction_type.toLowerCase()}`)
                                 : null;
 
                             return (
-                                <Card key={transaction.id} className={`py-0 ${isUncategorized ? 'bg-amber-50 dark:bg-amber-950 border-amber-100 dark:border-amber-900' : ''}`} id={'item-' + transaction.id}>
+                                <Card key={transaction.id} className="py-0" id={'item-' + transaction.id}>
                                     <CardContent className='flex justify-between items-center px-4 py-3'>
                                         <div className='flex gap-2 items-center'>
                                             {CategoryIcon && hasCategory ? (
-                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${transaction.brand.category.color}`}>
+                                                <div className={`size-10 rounded-full flex items-center justify-center badge badge-${transaction.category.color}`}>
                                                     <CategoryIcon size={24} weight="regular" className="text-current" />
                                                 </div>
                                             ) : (
                                                 <Avatar className='size-10'>
-                                                    <AvatarFallback>{hasBrand ? transaction.brand.name.charAt(0) : '?'}</AvatarFallback>
+                                                    <AvatarFallback>{hasCategory ? transaction.category.name.charAt(0) : '?'}</AvatarFallback>
                                                 </Avatar>
                                             )}
                                             <div>
-                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{hasBrand ? transaction.brand.name : t('common.noBrand')} </button>
+                                                <button onClick={() => setEditItem(transaction)} className='font-medium hover:underline'>{transaction.category?.name ?? '-'}</button>
                                                 <div className='flex gap-1 text-muted-foreground items-center'>
                                                     <ArrowElbowDownRightIcon size={10} weight="bold" />
                                                     <p className=' text-xs'>
                                                         {transaction.account ? <span>{transaction.account.name} - </span> : ''}
-                                                        {hasCategory ? <span>{transaction.brand.category.name} - </span> : ''}
                                                         {transaction.created_at}
                                                     </p>
                                                 </div>

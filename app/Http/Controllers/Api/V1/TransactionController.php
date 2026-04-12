@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Http\Controllers\Controller;
@@ -17,7 +16,6 @@ use App\Http\Commands\Transaction\DeleteTransactionCommand\DeleteTransactionComm
 use App\Http\Commands\Transaction\DeleteTransactionCommand\DeleteTransactionCommandHandler;
 use App\Http\Requests\Api\V1\CreateTransactionRequest;
 use App\Http\Requests\Api\V1\UpdateTransactionRequest;
-use App\Http\Resources\BrandResource;
 use App\Http\Resources\CategoryResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -102,12 +100,6 @@ class TransactionController extends Controller
             ->distinct()
             ->pluck('user_id');
 
-        $brands = Brand::withoutGlobalScopes()
-            ->whereIn('user_id', $ownerIds)
-            ->with('category')
-            ->orderByDesc('id')
-            ->get();
-
         $categories = Category::withoutGlobalScopes()
             ->whereIn('user_id', $ownerIds)
             ->withCount('transactions')
@@ -115,7 +107,6 @@ class TransactionController extends Controller
             ->get();
 
         return response()->json([
-            'brands' => BrandResource::collection($brands),
             'categories' => CategoryResource::collection($categories),
         ]);
     }

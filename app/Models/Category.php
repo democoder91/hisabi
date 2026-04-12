@@ -4,14 +4,12 @@ namespace App\Models;
 
 use App\Contracts\Searchable;
 use App\Models\Concerns\BelongsToUser;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Spatie\Translatable\HasTranslations;
+use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model implements Searchable
 {
@@ -26,30 +24,9 @@ class Category extends Model implements Searchable
 
     protected $guarded = [];
 
-    /**
-     * @return void
-     */
-    protected static function booted(): void
+    public function transactions(): HasMany
     {
-        static::deleted(function ($category) {
-            $category->brands->each->delete();
-        });
-    }
-
-    /**
-     * @return HasMany
-     */
-    public function brands(): HasMany
-    {
-        return $this->hasMany(Brand::class);
-    }
-
-    /**
-     * @return HasManyThrough
-     */
-    public function transactions(): HasManyThrough
-    {
-        return $this->hasManyThrough(Transaction::class, Brand::class);
+        return $this->hasMany(Transaction::class);
     }
 
     /**

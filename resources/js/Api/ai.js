@@ -16,7 +16,12 @@ export const chat = async (messages, conversationId = null) => {
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const payload = await response.json().catch(() => ({}));
+        const error = new Error(`HTTP error! status: ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+
+        throw error;
     }
 
     return await response.json();

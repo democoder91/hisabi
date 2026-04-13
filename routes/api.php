@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
+use App\Http\Controllers\PaymobWebhookController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\Settings\CurrencySettingsController;
 use App\Http\Controllers\Api\V1\SmsController;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/sms-test', [SmsController::class, 'store']);
+Route::post('/paymob/webhook', [PaymobWebhookController::class, 'handle']);
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {

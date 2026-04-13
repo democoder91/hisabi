@@ -17,6 +17,9 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
+    public const INITIAL_AVAILABLE_CREDITS = 10;
+    public const TRIAL_PERIOD_DAYS = 30;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -28,6 +31,9 @@ class User extends Authenticatable
         'password',
         'default_currency',
         'locale',
+        'available_credits',
+        'trial_ends_at',
+        'is_super',
     ];
 
     /**
@@ -47,7 +53,18 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'available_credits' => 'integer',
+        'trial_ends_at' => 'datetime',
+        'is_super' => 'boolean',
     ];
+
+    public static function registrationAccessDefaults(): array
+    {
+        return [
+            'available_credits' => self::INITIAL_AVAILABLE_CREDITS,
+            'trial_ends_at' => now()->addDays(self::TRIAL_PERIOD_DAYS),
+        ];
+    }
 
     public function budgets(): HasMany
     {
@@ -75,6 +92,41 @@ class User extends Authenticatable
     public function exchangeRates(): HasMany
     {
         return $this->hasMany(ExchangeRate::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function paymentTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->isSuperUser()) {
+            return true;
+        }
+
+        return $this->subscriptions()->active()->exists();
+    }
+
+    public function hasActiveAccess(): bool
+    {
+        if ($this->isSuperUser()) {
+            return true;
+        }
+
+        $hasActiveTrial = $this->trial_ends_at && $this->trial_ends_at->isFuture();
+
+        return $this->hasActiveSubscription() || $hasActiveTrial;
+    }
+
+    public function isSuperUser(): bool
+    {
+        return $this->is_super === true;
     }
 
     public function getOrCreateDefaultAccount(): Account

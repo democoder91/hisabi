@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, usePage } from '@inertiajs/react';
 import { chat } from '@/Api/ai';
 import { XIcon } from '@heroicons/react/solid';
 import { Message, MessageContent } from '@/components/ui/shadcn-io/ai/message';
@@ -10,6 +11,7 @@ import { Loader } from '@/components/ui/shadcn-io/ai/loader';
 import AIChartRenderer from './AIChartRenderer';
 import AIFinancialWidget from './AIFinancialWidget';
 import VoiceRecorder from './VoiceRecorder';
+import { Button } from '@/components/ui/button';
 
 interface HisabiAIChatProps {
   onClose: () => void;
@@ -25,10 +27,14 @@ interface ChatMessage {
 }
 
 export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
+  const { auth } = usePage<{ auth?: { user?: { available_credits?: number; is_super?: boolean } } }>().props;
+  const isSuperUser = auth?.user?.is_super === true;
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [availableCredits, setAvailableCredits] = useState(auth?.user?.available_credits ?? 0);
+  const [needsCredits, setNeedsCredits] = useState(!isSuperUser && (auth?.user?.available_credits ?? 0) < 1);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(event.target.value);
@@ -46,6 +52,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
 
     setChatHistory([...chatHistory, newMessage]);
     setMessage('');
+    setNeedsCredits(false);
   };
 
   useEffect(() => {
@@ -66,6 +73,10 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
 
       const aiResponse = await chat(messages, conversationId);
 
+      if (!isSuperUser && typeof aiResponse.available_credits === 'number') {
+        setAvailableCredits(aiResponse.available_credits);
+      }
+
       if (aiResponse.conversation_id) {
         setConversationId(aiResponse.conversation_id);
       }
@@ -81,16 +92,34 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
 
       setChatHistory([...newChat, assistantMessage]);
     } catch (error) {
-      console.error('AI Chat Error:', error);
-      const errorMessage: ChatMessage = {
-        id: newChat.length + 1,
-        role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again.',
-        charts: [],
-        components: [],
-        suggestions: []
-      };
-      setChatHistory([...newChat, errorMessage]);
+      if (!isSuperUser && error?.status === 402) {
+        const remainingCredits = error?.payload?.available_credits ?? 0;
+
+        setAvailableCredits(remainingCredits);
+        setNeedsCredits(true);
+        setChatHistory([
+          ...newChat,
+          {
+            id: newChat.length + 1,
+            role: 'assistant',
+            content: error?.payload?.message || 'You are out of credits. Open billing to buy more and continue.',
+            charts: [],
+            components: [],
+            suggestions: [],
+          },
+        ]);
+      } else {
+        console.error('AI Chat Error:', error);
+        const errorMessage: ChatMessage = {
+          id: newChat.length + 1,
+          role: 'assistant',
+          content: 'I apologize, but I encountered an error. Please try again.',
+          charts: [],
+          components: [],
+          suggestions: []
+        };
+        setChatHistory([...newChat, errorMessage]);
+      }
     } finally {
       setLoading(false);
     }
@@ -115,6 +144,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
         <div className='flex justify-between items-center'>
           <div>
             <h2 className='text-lg font-semibold'>NexoAi</h2>
+            <p className='text-xs text-muted-foreground'>{isSuperUser ? 'Unlimited AI access' : `${availableCredits} credits remaining`}</p>
           </div>
           <button
             onClick={onClose}
@@ -174,6 +204,16 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
 
       {/* Input Area */}
       <div className="p-4 space-y-3">
+        {!isSuperUser && (needsCredits || availableCredits < 1) && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-medium">You need more credits to continue chatting.</p>
+            <p className="mt-1 text-xs opacity-80">Buy a top-up or start a subscription from the billing page.</p>
+            <Button asChild variant="outline" className="mt-3 w-full">
+              <Link href={route('billing.index')}>Open billing</Link>
+            </Button>
+          </div>
+        )}
+
         <Suggestions>
           {currentSuggestions.slice(0, 3).map((suggestion, index) => (
             <Suggestion
@@ -188,16 +228,16 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
           <PromptInputTextarea
             value={message}
             onChange={handleChange}
-            disabled={loading}
+            disabled={loading || (!isSuperUser && availableCredits < 1)}
             placeholder="Ask about your finances..."
           />
           <PromptInputToolbar>
             <VoiceRecorder
               onTranscript={(text) => setMessage(text)}
-              disabled={loading}
+              disabled={loading || (!isSuperUser && availableCredits < 1)}
             />
             <PromptInputSubmit
-              disabled={loading || message.trim() === ''}
+              disabled={loading || message.trim() === '' || (!isSuperUser && availableCredits < 1)}
               status={loading ? 'streaming' : 'idle'}
             />
           </PromptInputToolbar>

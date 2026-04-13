@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class AuthControllerTest extends TestCase
@@ -12,6 +13,8 @@ class AuthControllerTest extends TestCase
 
     public function test_it_registers_a_user_and_returns_a_token(): void
     {
+        Carbon::setTestNow('2026-04-13 10:00:00');
+
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'API User',
             'email' => 'api@example.com',
@@ -29,10 +32,14 @@ class AuthControllerTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'api@example.com',
+            'available_credits' => 10,
+            'trial_ends_at' => '2026-05-13 10:00:00',
         ]);
         $this->assertDatabaseHas('personal_access_tokens', [
             'name' => 'iphone',
         ]);
+
+        Carbon::setTestNow();
     }
 
     public function test_it_logs_a_user_in_and_returns_a_token(): void

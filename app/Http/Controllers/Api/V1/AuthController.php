@@ -23,6 +23,7 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
             'password' => Hash::make($validated['password']),
+            ...User::registrationAccessDefaults(),
         ]);
 
         event(new Registered($user));

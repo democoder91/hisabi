@@ -17,7 +17,9 @@ class AIControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create([
+            'available_credits' => 5,
+        ]);
     }
 
     public function test_it_requires_authentication(): void
@@ -71,11 +73,13 @@ class AIControllerTest extends TestCase
                 'charts',
                 'components',
                 'suggestions',
+                'available_credits',
             ]);
 
         $this->assertEquals('assistant', $response->json('role'));
         $this->assertEquals('Here is your spending summary.', $response->json('content'));
         $this->assertNotNull($response->json('conversation_id'));
+        $this->assertSame(4, $response->json('available_credits'));
 
         $this->assertDatabaseCount('agent_conversations', 1);
         $this->assertDatabaseCount('agent_conversation_messages', 2);
@@ -105,7 +109,7 @@ class AIControllerTest extends TestCase
             ]);
 
         HisabiAgent::assertPrompted(
-            fn ($prompt) => str_contains($prompt->prompt, 'What are my top expenses?')
+            fn($prompt) => str_contains($prompt->prompt, 'What are my top expenses?')
         );
     }
 
@@ -194,5 +198,68 @@ class AIControllerTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['conversation_id']);
+    }
+
+    public function test_it_deducts_one_credit_for_each_prompt(): void
+    {
+        HisabiAgent::fake(['Credit deduction works.']);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Summarize my spending'],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('available_credits', 4);
+
+        $this->assertSame(4, $this->user->fresh()->available_credits);
+    }
+
+    public function test_it_returns_payment_required_when_user_has_no_credits(): void
+    {
+        $this->user->forceFill([
+            'available_credits' => 0,
+        ])->save();
+
+        HisabiAgent::fake(['This should not be used.']);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Can you help me?'],
+                ],
+            ]);
+
+        $response->assertStatus(402)
+            ->assertJsonPath('available_credits', 0)
+            ->assertJsonPath('message', 'No available credits remaining.');
+
+        HisabiAgent::assertNeverPrompted();
+    }
+
+    public function test_super_users_can_chat_without_credit_tracking(): void
+    {
+        /** @var User $superUser */
+        $superUser = User::factory()->create([
+            'available_credits' => 0,
+            'is_super' => true,
+        ]);
+
+        HisabiAgent::fake(['Super user access works.']);
+
+        $response = $this->actingAs($superUser)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Give me a quick summary'],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('content', 'Super user access works.')
+            ->assertJsonPath('available_credits', 0);
+
+        $this->assertSame(0, $superUser->fresh()->available_credits);
     }
 }

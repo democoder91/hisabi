@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import {
   BankIcon,
+  CreditCardIcon,
   Receipt,
   CirclesThreeIcon,
   ChartDonutIcon,
@@ -27,6 +28,7 @@ interface AppSidebarProps {
     user: {
       name: string;
       email: string;
+      is_super?: boolean;
     };
   };
 }
@@ -61,7 +63,20 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       url: "categories",
       icon: CirclesThreeIcon,
     },
+    {
+      title: t('navigation.billing'),
+      url: "billing.index",
+      icon: CreditCardIcon,
+    },
   ];
+
+  if (auth?.user?.is_super) {
+    items.push({
+      title: t('navigation.billingAdmin'),
+      url: 'billing.manage',
+      icon: CreditCardIcon,
+    });
+  }
 
   return (
     <Sidebar collapsible="offcanvas" variant="inset" side={direction === 'rtl' ? 'right' : 'left'}>

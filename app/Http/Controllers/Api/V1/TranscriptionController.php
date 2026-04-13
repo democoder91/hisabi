@@ -12,6 +12,7 @@ class TranscriptionController extends Controller
     public function token(): JsonResponse
     {
         $apiKey = config('ai.providers.eleven.key');
+        $baseUrl = rtrim((string) config('ai.providers.eleven.url', 'https://api.elevenlabs.io/v1'), '/');
 
         if (empty($apiKey)) {
             return response()->json(['error' => 'Speech-to-text is not configured.'], 503);
@@ -19,7 +20,7 @@ class TranscriptionController extends Controller
 
         $response = Http::withHeaders([
             'xi-api-key' => $apiKey,
-        ])->post('https://api.elevenlabs.io/v1/single-use-token/realtime_scribe');
+        ])->post($baseUrl . '/single-use-token/realtime_scribe');
 
         if (!$response->successful()) {
             return response()->json(['error' => 'Failed to generate transcription token.'], 502);
@@ -32,8 +33,8 @@ class TranscriptionController extends Controller
 
     public function transcribe(TranscribeAudioRequest $request): JsonResponse
     {
-        $apiKey = config('ai.providers.openai.key');
-        $baseUrl = rtrim((string) config('ai.providers.openai.url', 'https://api.openai.com/v1'), '/');
+        $apiKey = config('ai.providers.eleven.key');
+        $baseUrl = rtrim((string) config('ai.providers.eleven.url', 'https://api.elevenlabs.io/v1'), '/');
 
         if (empty($apiKey)) {
             return response()->json(['error' => 'Transcription is not configured.'], 503);
@@ -41,7 +42,9 @@ class TranscriptionController extends Controller
 
         $audio = $request->file('audio');
 
-        $response = Http::withToken($apiKey)->send('POST', $baseUrl . '/audio/transcriptions', [
+        $response = Http::withHeaders([
+            'xi-api-key' => $apiKey,
+        ])->send('POST', $baseUrl . '/speech-to-text', [
             'multipart' => [
                 [
                     'name' => 'file',
@@ -49,12 +52,8 @@ class TranscriptionController extends Controller
                     'filename' => $audio->getClientOriginalName(),
                 ],
                 [
-                    'name' => 'model',
-                    'contents' => 'whisper-1',
-                ],
-                [
-                    'name' => 'response_format',
-                    'contents' => 'verbose_json',
+                    'name' => 'model_id',
+                    'contents' => 'scribe_v2',
                 ],
             ],
         ]);
@@ -64,9 +63,9 @@ class TranscriptionController extends Controller
         }
 
         return response()->json([
-            'text' => $response->json('text'),
-            'language' => $response->json('language'),
-            'duration' => $response->json('duration'),
+            'text' => $response->json('text') ?? $response->json('transcription'),
+            'language' => $response->json('language_code') ?? $response->json('language'),
+            'duration' => $response->json('audio_duration_secs') ?? $response->json('duration'),
         ]);
     }
 }

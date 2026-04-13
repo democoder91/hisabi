@@ -3,9 +3,13 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Ai\Agents\HisabiAgent;
+use App\Http\Commands\AI\ChatCommand\ChatCommand;
+use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Laravel\Ai\Exceptions\RateLimitedException;
+use Mockery;
 use Tests\TestCase;
 
 class AIControllerTest extends TestCase
@@ -261,5 +265,87 @@ class AIControllerTest extends TestCase
             ->assertJsonPath('available_credits', 0);
 
         $this->assertSame(0, $superUser->fresh()->available_credits);
+    }
+
+    public function test_it_rolls_back_changes_and_preserves_credits_when_provider_is_rate_limited(): void
+    {
+        $conversationId = (string) str()->uuid();
+
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(ChatCommand::class))
+            ->andReturnUsing(function () use ($conversationId) {
+                DB::table('agent_conversations')->insert([
+                    'id' => $conversationId,
+                    'user_id' => $this->user->id,
+                    'title' => 'Should be rolled back',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                throw RateLimitedException::forProvider('zai');
+            });
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Create a few things for me'],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('role', 'assistant')
+            ->assertJsonPath('conversation_id', null)
+            ->assertJsonPath('content', 'The AI provider is temporarily rate limited. No changes were saved. Please try again in a moment.')
+            ->assertJsonPath('available_credits', 5);
+
+        $this->assertSame(5, $this->user->fresh()->available_credits);
+        $this->assertDatabaseMissing('agent_conversations', [
+            'id' => $conversationId,
+        ]);
+    }
+
+    public function test_it_rolls_back_changes_and_returns_a_generic_error_message_for_unexpected_failures(): void
+    {
+        $conversationId = (string) str()->uuid();
+
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(ChatCommand::class))
+            ->andReturnUsing(function () use ($conversationId) {
+                DB::table('agent_conversations')->insert([
+                    'id' => $conversationId,
+                    'user_id' => $this->user->id,
+                    'title' => 'Should be rolled back',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                throw new \RuntimeException('Boom');
+            });
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Do something risky'],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('role', 'assistant')
+            ->assertJsonPath('conversation_id', null)
+            ->assertJsonPath('content', 'I apologize, but I encountered an error processing your request. No changes were saved. Please try again in a moment.')
+            ->assertJsonPath('available_credits', 5);
+
+        $this->assertSame(5, $this->user->fresh()->available_credits);
+        $this->assertDatabaseMissing('agent_conversations', [
+            'id' => $conversationId,
+        ]);
     }
 }

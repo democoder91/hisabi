@@ -7,7 +7,8 @@
         "brands": "Brands",
         "categories": "Categories",
         "billing": "Billing",
-        "billingAdmin": "Billing Admin"
+        "billingAdmin": "Billing Admin",
+        "aiToolLogs": "AI Tool Logs"
     },
     "common": {
         "create": "Create",
@@ -131,6 +132,32 @@
         "spendingByBrand": "Spending by Brand",
         "overallTrendByBrand": "Overall Trend by Brand",
         "financeVisualization": "Finance Visualization"
+    },
+    "aiToolLogs": {
+        "title": "AI Tool Logs",
+        "description": "Inspect tool calls and tool results captured from AI conversations across all users.",
+        "summary": "Showing {{count}} assistant messages with recorded tool activity.",
+        "userFilter": "User name or email",
+        "toolFilter": "Tool name",
+        "conversationFilter": "Conversation ID",
+        "applyFilters": "Apply filters",
+        "clearFilters": "Clear",
+        "user": "User",
+        "conversation": "Conversation",
+        "tools": "Tools",
+        "assistantReply": "Assistant reply",
+        "toolCalls": "Tool calls",
+        "toolResults": "Tool results",
+        "timestamp": "Timestamp",
+        "noLogs": "No tool activity found.",
+        "previous": "Previous",
+        "next": "Next",
+        "pageSummary": "Page {{page}} of {{lastPage}}",
+        "systemUser": "System",
+        "untitledConversation": "Untitled conversation",
+        "noAssistantReply": "No assistant reply stored.",
+        "noToolCalls": "No tool calls stored.",
+        "noToolResults": "No tool results stored."
     },
     "brand": {
         "title": "Brands",

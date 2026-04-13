@@ -5,6 +5,7 @@ use App\Contracts\ReportManager;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountAuditController;
+use App\Http\Controllers\AiToolUsageController;
 use App\Http\Controllers\BillingManagementController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
@@ -42,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('super')->group(function () {
         Route::get('/billing/manage', [BillingManagementController::class, 'index'])->name('billing.manage');
         Route::put('/billing/manage', [BillingManagementController::class, 'update'])->name('billing.manage.update');
+        Route::get('/ai/tool-usage', [AiToolUsageController::class, 'index'])->name('ai.tool-usage');
     });
 
     Route::middleware('active.access')->group(function () {

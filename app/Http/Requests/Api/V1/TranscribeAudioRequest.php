@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\File;
 
 class TranscribeAudioRequest extends FormRequest
 {
@@ -14,7 +15,10 @@ class TranscribeAudioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'audio' => ['required', 'file', 'max:25600', 'mimetypes:audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav,audio/webm,audio/aac,audio/ogg'],
+            'audio' => [
+                'required',
+                File::types(['mp3', 'mp4', 'm4a', 'wav', 'webm', 'aac', 'ogg'])->max(25 * 1024),
+            ],
         ];
     }
 }

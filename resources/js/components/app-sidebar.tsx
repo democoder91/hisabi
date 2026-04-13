@@ -76,6 +76,12 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       url: 'billing.manage',
       icon: CreditCardIcon,
     });
+
+    items.push({
+      title: t('navigation.aiToolLogs'),
+      url: 'ai.tool-usage',
+      icon: ChartLineIcon,
+    });
   }
 
   return (

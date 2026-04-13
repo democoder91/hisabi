@@ -4,6 +4,7 @@ namespace App\Domains\Budget\Services;
 
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Budget\Models\BudgetCategory;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -29,7 +30,7 @@ class BudgetService
             'user_id' => Auth::id(),
             'name' => $data['name'],
             'amount' => $data['amount'],
-            'currency' => $data['currency'],
+            'currency' => $this->resolveCurrency($data['currency'] ?? null),
             'start_at' => $data['start_at'],
             'end_at' => $data['reoccurrence'] === Budget::CUSTOM ? $data['end_at'] : ($data['end_at'] ?? null),
             'saving' => $data['saving'] ?? false,
@@ -47,7 +48,7 @@ class BudgetService
         $budget->update([
             'name' => $data['name'],
             'amount' => $data['amount'],
-            'currency' => $data['currency'],
+            'currency' => $this->resolveCurrency($data['currency'] ?? $budget->currency),
             'start_at' => $data['start_at'],
             'end_at' => $data['reoccurrence'] === Budget::CUSTOM ? $data['end_at'] : ($data['end_at'] ?? null),
             'saving' => $data['saving'] ?? false,
@@ -71,7 +72,7 @@ class BudgetService
     private function syncCategories(Budget $budget, array $categoryIds): void
     {
         $categoryIds = collect($categoryIds)
-            ->map(fn ($categoryId) => (int) $categoryId)
+            ->map(fn($categoryId) => (int) $categoryId)
             ->unique()
             ->values();
 
@@ -105,5 +106,20 @@ class BudgetService
                 'category_id' => $categoryId,
             ]);
         }
+    }
+
+    private function resolveCurrency(?string $currency): string
+    {
+        if (is_string($currency) && $currency !== '') {
+            return strtoupper($currency);
+        }
+
+        $user = Auth::user();
+
+        if ($user instanceof User && $user->default_currency) {
+            return strtoupper($user->default_currency);
+        }
+
+        return strtoupper((string) config('hisabi.currency', 'EGP'));
     }
 }

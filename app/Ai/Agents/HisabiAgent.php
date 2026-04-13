@@ -27,7 +27,7 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider('zai')]
-#[Model('glm-5.1')]
+#[Model('glm-4.7')]
 #[MaxSteps(5)]
 class HisabiAgent implements Agent, Conversational, HasTools
 {

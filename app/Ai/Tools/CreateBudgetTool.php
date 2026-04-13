@@ -4,6 +4,7 @@ namespace App\Ai\Tools;
 
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Budget\Services\BudgetService;
+use App\Enums\Currency;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Ai\Tools\Request;
@@ -20,15 +21,16 @@ class CreateBudgetTool extends FinancialTool
     {
         $user = $this->authenticatedUser();
         $input = $request->all();
-        $this->uppercaseIfPresent($input, ['reoccurrence']);
+        $this->uppercaseIfPresent($input, ['reoccurrence', 'currency']);
 
         $validated = $this->validateInput($input, [
             'name_en' => ['required', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'gt:0'],
+            'currency' => ['nullable', Rule::enum(Currency::class)],
             'start_at' => ['required', 'date'],
             'end_at' => [
-                Rule::requiredIf(fn () => ($input['reoccurrence'] ?? null) === Budget::CUSTOM),
+                Rule::requiredIf(fn() => ($input['reoccurrence'] ?? null) === Budget::CUSTOM),
                 'nullable',
                 'date',
                 'after_or_equal:start_at',
@@ -54,6 +56,7 @@ class CreateBudgetTool extends FinancialTool
                 'ar' => $validated['name_ar'] ?? null,
             ],
             'amount' => (float) $validated['amount'],
+            'currency' => $validated['currency'] ?? $this->defaultCurrency(),
             'start_at' => $validated['start_at'],
             'end_at' => $validated['end_at'] ?? null,
             'saving' => (bool) ($validated['saving'] ?? false),
@@ -77,6 +80,10 @@ class CreateBudgetTool extends FinancialTool
             'amount' => $schema->number()
                 ->description('The total budget amount. Must be greater than 0.')
                 ->required(),
+            'currency' => $schema->string()
+                ->description('Optional 3-letter currency code for the budget. Defaults to the user preferred currency.')
+                ->enum(Currency::values())
+                ->nullable(),
             'start_at' => $schema->string()
                 ->description('Budget start date in YYYY-MM-DD format.')
                 ->required(),

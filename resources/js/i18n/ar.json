@@ -7,7 +7,8 @@
         "brands": "العلامات التجارية",
         "categories": "الفئات",
         "billing": "الفوترة",
-        "billingAdmin": "إدارة الفوترة"
+        "billingAdmin": "إدارة الفوترة",
+        "aiToolLogs": "سجل أدوات الذكاء الاصطناعي"
     },
     "common": {
         "create": "إنشاء",
@@ -132,6 +133,32 @@
         "spendingByBrand": "الإنفاق حسب العلامة التجارية",
         "overallTrendByBrand": "الاتجاه العام حسب العلامة التجارية",
         "financeVisualization": "تصور مالي"
+    },
+    "aiToolLogs": {
+        "title": "سجل أدوات الذكاء الاصطناعي",
+        "description": "راجع استدعاءات الأدوات ونتائجها المسجلة من محادثات الذكاء الاصطناعي لكل المستخدمين.",
+        "summary": "يتم عرض {{count}} رسالة مساعد تحتوي على نشاط أدوات مسجل.",
+        "userFilter": "اسم المستخدم أو البريد الإلكتروني",
+        "toolFilter": "اسم الأداة",
+        "conversationFilter": "معرف المحادثة",
+        "applyFilters": "تطبيق الفلاتر",
+        "clearFilters": "مسح",
+        "user": "المستخدم",
+        "conversation": "المحادثة",
+        "tools": "الأدوات",
+        "assistantReply": "رد المساعد",
+        "toolCalls": "استدعاءات الأدوات",
+        "toolResults": "نتائج الأدوات",
+        "timestamp": "الوقت",
+        "noLogs": "لا يوجد نشاط أدوات.",
+        "previous": "السابق",
+        "next": "التالي",
+        "pageSummary": "الصفحة {{page}} من {{lastPage}}",
+        "systemUser": "النظام",
+        "untitledConversation": "محادثة بدون عنوان",
+        "noAssistantReply": "لا يوجد رد مساعد محفوظ.",
+        "noToolCalls": "لا توجد استدعاءات أدوات محفوظة.",
+        "noToolResults": "لا توجد نتائج أدوات محفوظة."
     },
     "brand": {
         "title": "العلامات التجارية",

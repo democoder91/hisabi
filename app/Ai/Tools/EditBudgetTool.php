@@ -4,6 +4,7 @@ namespace App\Ai\Tools;
 
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Budget\Services\BudgetService;
+use App\Enums\Currency;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
@@ -21,11 +22,11 @@ class EditBudgetTool extends FinancialTool
     {
         $user = $this->authenticatedUser();
         $input = $request->all();
-        $this->uppercaseIfPresent($input, ['reoccurrence']);
+        $this->uppercaseIfPresent($input, ['reoccurrence', 'currency']);
 
         $this->ensureAnyProvided(
             $input,
-            ['name_en', 'name_ar', 'amount', 'start_at', 'end_at', 'saving', 'period', 'reoccurrence', 'category_ids'],
+            ['name_en', 'name_ar', 'amount', 'currency', 'start_at', 'end_at', 'saving', 'period', 'reoccurrence', 'category_ids'],
             'Provide at least one field to update on the budget.'
         );
 
@@ -34,6 +35,7 @@ class EditBudgetTool extends FinancialTool
             'name_en' => ['nullable', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'amount' => ['nullable', 'numeric', 'gt:0'],
+            'currency' => ['nullable', Rule::enum(Currency::class)],
             'start_at' => ['nullable', 'date'],
             'end_at' => ['nullable', 'date'],
             'saving' => ['nullable', 'boolean'],
@@ -59,6 +61,7 @@ class EditBudgetTool extends FinancialTool
         $merged = [
             'name' => $translations ?? $budget->getTranslations('name'),
             'amount' => Arr::exists($validated, 'amount') ? (float) $validated['amount'] : (float) $budget->amount,
+            'currency' => Arr::exists($validated, 'currency') ? ($validated['currency'] ?? $this->defaultCurrency()) : $budget->currency,
             'start_at' => Arr::exists($validated, 'start_at') ? $validated['start_at'] : $budget->start_at?->format('Y-m-d'),
             'end_at' => Arr::exists($input, 'end_at') ? ($validated['end_at'] ?? null) : $budget->end_at?->format('Y-m-d'),
             'saving' => Arr::exists($validated, 'saving') ? (bool) $validated['saving'] : (bool) $budget->saving,
@@ -73,6 +76,7 @@ class EditBudgetTool extends FinancialTool
             'name_en' => $merged['name']['en'] ?? null,
             'name_ar' => $merged['name']['ar'] ?? null,
             'amount' => $merged['amount'],
+            'currency' => $merged['currency'],
             'start_at' => $merged['start_at'],
             'end_at' => $merged['end_at'],
             'saving' => $merged['saving'],
@@ -83,9 +87,10 @@ class EditBudgetTool extends FinancialTool
             'name_en' => ['required', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'gt:0'],
+            'currency' => ['required', Rule::enum(Currency::class)],
             'start_at' => ['required', 'date'],
             'end_at' => [
-                Rule::requiredIf(fn () => $merged['reoccurrence'] === Budget::CUSTOM),
+                Rule::requiredIf(fn() => $merged['reoccurrence'] === Budget::CUSTOM),
                 'nullable',
                 'date',
                 'after_or_equal:start_at',
@@ -106,6 +111,7 @@ class EditBudgetTool extends FinancialTool
         $updated = app(BudgetService::class)->update($budget, [
             'name' => $merged['name'],
             'amount' => $merged['amount'],
+            'currency' => $merged['currency'],
             'start_at' => $merged['start_at'],
             'end_at' => $merged['end_at'],
             'saving' => $merged['saving'],
@@ -131,6 +137,10 @@ class EditBudgetTool extends FinancialTool
                 ->nullable(),
             'amount' => $schema->number()
                 ->description('Optional new budget amount.')
+                ->nullable(),
+            'currency' => $schema->string()
+                ->description('Optional replacement 3-letter currency code. Defaults to the existing budget currency when omitted.')
+                ->enum(Currency::values())
                 ->nullable(),
             'start_at' => $schema->string()
                 ->description('Optional new start date in YYYY-MM-DD format.')

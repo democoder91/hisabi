@@ -1,7 +1,7 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 
 export const getAllAccounts = async () => {
-    const response = await fetch('/api/v1/accounts/all', {
+    const response = await apiFetch('/api/v1/accounts/all', {
         method: 'GET',
     });
 
@@ -28,7 +28,7 @@ export const getAccounts = async (page, searchQuery = '') => {
         params.append('filter[search]', searchQuery);
     }
 
-    const response = await fetch(`/api/v1/accounts?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/accounts?${params.toString()}`, {
         method: 'GET',
     });
 
@@ -51,7 +51,7 @@ export const getAccountAudits = async (accountId, page = 1) => {
         perPage: '25',
     });
 
-    const response = await fetch(`/api/v1/accounts/${accountId}/audits?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/accounts/${accountId}/audits?${params.toString()}`, {
         method: 'GET',
     });
 
@@ -71,14 +71,11 @@ export const getAccountAudits = async (accountId, page = 1) => {
 };
 
 export const createAccount = async ({ name, balance, currency }) => {
-    const response = await fetch('/api/v1/accounts', {
+    const response = await apiFetch('/api/v1/accounts', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ name, balance, currency }),
     });
 
@@ -96,14 +93,11 @@ export const createAccount = async ({ name, balance, currency }) => {
 };
 
 export const updateAccount = async ({ id, name, balance, currency }) => {
-    const response = await fetch(`/api/v1/accounts/${id}`, {
+    const response = await apiFetch(`/api/v1/accounts/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ name, balance, currency }),
     });
 
@@ -127,7 +121,7 @@ export const searchAccountShareableUsers = async ({ id, query }) => {
         params.append('search', query);
     }
 
-    const response = await fetch(`/api/v1/accounts/${id}/shareable-users?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/accounts/${id}/shareable-users?${params.toString()}`, {
         method: 'GET',
     });
 
@@ -145,14 +139,11 @@ export const searchAccountShareableUsers = async ({ id, query }) => {
 };
 
 export const inviteAccountShare = async ({ id, email, permissionLevel }) => {
-    const response = await fetch(`/api/v1/accounts/${id}/shares`, {
+    const response = await apiFetch(`/api/v1/accounts/${id}/shares`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
             email,
             permission_level: permissionLevel,
@@ -173,14 +164,11 @@ export const inviteAccountShare = async ({ id, email, permissionLevel }) => {
 };
 
 export const updateAccountSharePermission = async ({ id, shareUserId, permissionLevel }) => {
-    const response = await fetch(`/api/v1/accounts/${id}/shares/${shareUserId}`, {
+    const response = await apiFetch(`/api/v1/accounts/${id}/shares/${shareUserId}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
             permission_level: permissionLevel,
         }),
@@ -200,14 +188,11 @@ export const updateAccountSharePermission = async ({ id, shareUserId, permission
 };
 
 export const revokeAccountShare = async ({ id, shareUserId }) => {
-    const response = await fetch(`/api/v1/accounts/${id}/shares/${shareUserId}`, {
+    const response = await apiFetch(`/api/v1/accounts/${id}/shares/${shareUserId}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
     });
 
     if (!response.ok) {
@@ -224,14 +209,11 @@ export const revokeAccountShare = async ({ id, shareUserId }) => {
 };
 
 export const deleteAccount = async (id) => {
-    const response = await fetch(`/api/v1/accounts/${id}`, {
+    const response = await apiFetch(`/api/v1/accounts/${id}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
     });
 
     if (!response.ok) {

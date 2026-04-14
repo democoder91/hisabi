@@ -1,4 +1,4 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 
 const tryParseJson = (rawBody) => {
     if (typeof rawBody !== 'string') {
@@ -53,14 +53,11 @@ const parseJsonResponse = async (response) => {
 };
 
 export const chat = async (messages, conversationId = null) => {
-    const response = await fetch('/api/v1/ai/chat', {
+    const response = await apiFetch('/api/v1/ai/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
             messages,
             conversation_id: conversationId,
@@ -80,14 +77,11 @@ export const chat = async (messages, conversationId = null) => {
 }
 
 export const getTranscriptionToken = async () => {
-    const response = await fetch('/api/v1/ai/transcribe/token', {
+    const response = await apiFetch('/api/v1/ai/transcribe/token', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
     });
 
     if (!response.ok) {
@@ -101,13 +95,10 @@ export const transcribeAudio = async (audioBlob, filename = 'recording.webm') =>
     const formData = new FormData();
     formData.append('audio', audioBlob, filename);
 
-    const response = await fetch('/api/v1/ai/transcribe', {
+    const response = await apiFetch('/api/v1/ai/transcribe', {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: formData,
     });
 

@@ -4,11 +4,12 @@ import { chat, transcribeAudio } from '../ai'
 
 afterEach(() => {
     jest.restoreAllMocks()
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
     document.head.innerHTML = ''
 })
 
 it('uploads recorded audio as multipart form data', async () => {
-    document.head.innerHTML = '<meta name="csrf-token" content="csrf-token-value">'
+    document.cookie = 'XSRF-TOKEN=cookie-token; path=/'
 
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
@@ -24,14 +25,14 @@ it('uploads recorded audio as multipart form data', async () => {
 
     expect(url).toBe('/api/v1/ai/transcribe')
     expect(options.method).toBe('POST')
-    expect(options.headers['X-CSRF-TOKEN']).toBe('csrf-token-value')
-    expect(options.headers['X-Requested-With']).toBe('XMLHttpRequest')
+    expect(options.headers.get('X-XSRF-TOKEN')).toBe('cookie-token')
+    expect(options.headers.get('X-Requested-With')).toBe('XMLHttpRequest')
     expect(options.body).toBeInstanceOf(FormData)
     expect(options.body.get('audio')).toBeInstanceOf(Blob)
 })
 
 it('parses a successful chat response even when the body contains surrounding noise', async () => {
-    document.head.innerHTML = '<meta name="csrf-token" content="csrf-token-value">'
+    document.cookie = 'XSRF-TOKEN=cookie-token; path=/'
 
     jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,

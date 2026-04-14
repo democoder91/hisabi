@@ -1,7 +1,7 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 
 export const getBudgets = async () => {
-    const response = await fetch('/api/v1/budgets', {
+    const response = await apiFetch('/api/v1/budgets', {
         method: 'GET',
     });
 
@@ -19,14 +19,11 @@ export const getBudgets = async () => {
 };
 
 export const createBudget = async ({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
-    const response = await fetch('/api/v1/budgets', {
+    const response = await apiFetch('/api/v1/budgets', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }),
     });
 
@@ -45,14 +42,11 @@ export const createBudget = async ({ name, amount, currency, start_at, end_at, s
 };
 
 export const updateBudget = async ({ id, name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
-    const response = await fetch(`/api/v1/budgets/${id}`, {
+    const response = await apiFetch(`/api/v1/budgets/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }),
     });
 
@@ -71,14 +65,11 @@ export const updateBudget = async ({ id, name, amount, currency, start_at, end_a
 };
 
 export const deleteBudget = async (id) => {
-    const response = await fetch(`/api/v1/budgets/${id}`, {
+    const response = await apiFetch(`/api/v1/budgets/${id}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
     });
 
     if (!response.ok) {

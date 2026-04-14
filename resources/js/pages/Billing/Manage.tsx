@@ -23,7 +23,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { getCsrfToken } from '@/Api/common';
+import { apiFetch } from '@/Api/common';
 import { cn } from '@/lib/utils';
 
 interface BillingOption {
@@ -97,15 +97,12 @@ function reorderItems<T extends { id: number }>(items: T[], draggedId: number, t
 }
 
 async function reorderBillingProducts(routeName: string, productIds: number[]): Promise<void> {
-    const response = await fetch(route(routeName), {
+    const response = await apiFetch(route(routeName), {
         method: 'PUT',
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ product_ids: productIds }),
     });
 

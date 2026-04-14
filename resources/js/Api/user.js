@@ -1,4 +1,4 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 
 export const updateUserProfile = async ({ name, email, currentPassword, password, locale } = {}) => {
     const body = {};
@@ -13,14 +13,11 @@ export const updateUserProfile = async ({ name, email, currentPassword, password
         body.password = password;
     }
 
-    const response = await fetch('/api/v1/user/profile', {
+    const response = await apiFetch('/api/v1/user/profile', {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify(body)
     });
 

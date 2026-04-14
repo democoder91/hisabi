@@ -1,4 +1,4 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 import { getTotalIncome, getTotalExpenses, getTransactionsCount } from './metrics.js';
 
 export const getTransactions = async (page, searchQuery, filters = {}) => {
@@ -24,7 +24,7 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
         params.append('filter[date_to]', filters.dateTo);
     }
 
-    const response = await fetch(`/api/v1/transactions?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/transactions?${params.toString()}`, {
         method: 'GET',
     });
 
@@ -42,7 +42,7 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
 }
 
 export const getTransactionFormOptions = async () => {
-    const response = await fetch('/api/v1/transactions/form-options', {
+    const response = await apiFetch('/api/v1/transactions/form-options', {
         method: 'GET',
     });
 
@@ -60,14 +60,11 @@ export const getTransactionFormOptions = async () => {
 };
 
 export const createTransaction = async ({amount, accountId, categoryId, createdAt, note, transactionType}) => {
-    const response = await fetch('/api/v1/transactions', {
+    const response = await apiFetch('/api/v1/transactions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
             amount,
             account_id: accountId,
@@ -90,14 +87,11 @@ export const createTransaction = async ({amount, accountId, categoryId, createdA
 }
 
 export const updateTransaction = async ({id, amount, accountId, categoryId, createdAt, note, transactionType}) => {
-    const response = await fetch(`/api/v1/transactions/${id}`, {
+    const response = await apiFetch(`/api/v1/transactions/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
             amount,
             account_id: accountId,
@@ -120,14 +114,12 @@ export const updateTransaction = async ({id, amount, accountId, categoryId, crea
 }
 
 export const deleteTransaction = async (id) => {
-    const response = await fetch(`/api/v1/transactions/${id}`, {
+    const response = await apiFetch(`/api/v1/transactions/${id}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin'
+        
     });
 
     if (!response.ok) {

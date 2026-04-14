@@ -1,4 +1,4 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 
 const getJsonError = async (response) => {
     const errorData = await response.json().catch(() => ({}));
@@ -7,7 +7,7 @@ const getJsonError = async (response) => {
 };
 
 export const getSettings = async () => {
-    const response = await fetch('/api/v1/settings', {
+    const response = await apiFetch('/api/v1/settings', {
         headers: {
             Accept: 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
@@ -23,7 +23,7 @@ export const getSettings = async () => {
 };
 
 export const getCurrencySettings = async () => {
-    const response = await fetch('/api/v1/settings/currencies', {
+    const response = await apiFetch('/api/v1/settings/currencies', {
         headers: {
             Accept: 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
@@ -45,15 +45,12 @@ export const updateSettings = async ({ default_currency } = {}) => {
         body.default_currency = default_currency;
     }
 
-    const response = await fetch('/api/v1/settings', {
+    const response = await apiFetch('/api/v1/settings', {
         method: 'PUT',
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify(body),
     });
 
@@ -71,15 +68,12 @@ export const updateCurrencySettings = async ({ default_currency } = {}) => {
         body.default_currency = default_currency;
     }
 
-    const response = await fetch('/api/v1/settings/currencies', {
+    const response = await apiFetch('/api/v1/settings/currencies', {
         method: 'PUT',
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify(body),
     });
 
@@ -91,15 +85,12 @@ export const updateCurrencySettings = async ({ default_currency } = {}) => {
 };
 
 export const updateCurrencyRates = async ({ rates } = {}) => {
-    const response = await fetch('/api/v1/settings/currencies/rates', {
+    const response = await apiFetch('/api/v1/settings/currencies/rates', {
         method: 'PUT',
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ rates }),
     });
 
@@ -111,14 +102,11 @@ export const updateCurrencyRates = async ({ rates } = {}) => {
 };
 
 export const refreshCurrencyRates = async () => {
-    const response = await fetch('/api/v1/settings/currencies/refresh', {
+    const response = await apiFetch('/api/v1/settings/currencies/refresh', {
         method: 'POST',
         headers: {
             Accept: 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
     });
 
     if (!response.ok) {

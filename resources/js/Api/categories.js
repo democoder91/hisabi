@@ -1,4 +1,4 @@
-import { getCsrfToken } from './common.js';
+import { apiFetch } from './common.js';
 import { getCategoryStats as getCategoryStatsMetric } from './metrics.js';
 
 const normalizeCategory = (category = {}) => {
@@ -16,7 +16,7 @@ const normalizeCategory = (category = {}) => {
 };
 
 export const getAllCategories = async () => {
-    const response = await fetch('/api/v1/categories/all', {
+    const response = await apiFetch('/api/v1/categories/all', {
         method: 'GET',
     });
 
@@ -34,14 +34,11 @@ export const getAllCategories = async () => {
 }
 
 export const createCategory = async ({name, type, color, icon}) => {
-    const response = await fetch('/api/v1/categories', {
+    const response = await apiFetch('/api/v1/categories', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ name, type, color, icon })
     });
 
@@ -59,14 +56,11 @@ export const createCategory = async ({name, type, color, icon}) => {
 }
 
 export const updateCategory = async ({id, name, type, color, icon}) => {
-    const response = await fetch(`/api/v1/categories/${id}`, {
+    const response = await apiFetch(`/api/v1/categories/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({ name, type, color, icon })
     });
 
@@ -84,14 +78,11 @@ export const updateCategory = async ({id, name, type, color, icon}) => {
 }
 
 export const deleteCategory = async (id) => {
-    const response = await fetch(`/api/v1/categories/${id}`, {
+    const response = await apiFetch(`/api/v1/categories/${id}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin',
     });
 
     if (!response.ok) {

@@ -9,6 +9,7 @@ use App\Http\Controllers\AiToolUsageController;
 use App\Http\Controllers\BillingCreditPackageController;
 use App\Http\Controllers\BillingManagementController;
 use App\Http\Controllers\BillingSubscriptionController;
+use App\Http\Controllers\BillingUserManagementController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
@@ -44,6 +45,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware('super')->group(function () {
         Route::get('/billing/manage', [BillingManagementController::class, 'index'])->name('billing.manage');
+        Route::get('/billing/manage/users', [BillingUserManagementController::class, 'index'])->name('billing.manage.users');
+        Route::post('/billing/manage/users/{user}/grants', [BillingUserManagementController::class, 'store'])->name('billing.manage.users.grants.store');
         Route::put('/billing/manage/currency', [BillingManagementController::class, 'updateCurrency'])->name('billing.manage.currency.update');
         Route::post('/billing/manage/credit-packages', [BillingCreditPackageController::class, 'store'])->name('billing.manage.credit-packages.store');
         Route::put('/billing/manage/credit-packages/reorder', [BillingCreditPackageController::class, 'reorder'])->name('billing.manage.credit-packages.reorder');

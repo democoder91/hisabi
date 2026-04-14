@@ -3,19 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaymentTransaction;
-use App\Models\Subscription;
+use App\Services\BillingGrantService;
 use App\Services\PaymobService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PaymobWebhookController extends Controller
 {
     private PaymobService $paymobService;
+    private BillingGrantService $billingGrantService;
 
-    public function __construct(PaymobService $paymobService)
+    public function __construct(PaymobService $paymobService, BillingGrantService $billingGrantService)
     {
         $this->paymobService = $paymobService;
+        $this->billingGrantService = $billingGrantService;
     }
 
     public function handle(Request $request): JsonResponse
@@ -52,46 +53,10 @@ class PaymobWebhookController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($paymentTransaction): void {
-            if ($paymentTransaction->status === 'success') {
-                return;
-            }
-
-            $paymentTransaction->update(['status' => 'success']);
-
-            if ($paymentTransaction->credits_added > 0) {
-                $paymentTransaction->user()->increment('available_credits', $paymentTransaction->credits_added);
-            }
-
-            if ($paymentTransaction->type === 'subscription') {
-                $this->activateSubscription($paymentTransaction);
-            }
-        });
+        $this->billingGrantService->applySuccessfulPaymentTransaction($paymentTransaction);
 
         return response()->json([
             'status' => 'processed',
         ]);
-    }
-
-    private function activateSubscription(PaymentTransaction $paymentTransaction): void
-    {
-        $user = $paymentTransaction->user;
-        $renewsInDays = max(1, (int) ($paymentTransaction->renews_in_days ?? 30));
-
-        Subscription::query()->updateOrCreate(
-            ['user_id' => $paymentTransaction->user_id],
-            [
-                'plan_name' => (string) ($paymentTransaction->product_name ?: 'Subscription'),
-                'status' => 'active',
-                'paymob_order_id' => $paymentTransaction->paymob_order_id,
-                'renews_at' => now()->addDays($renewsInDays),
-            ],
-        );
-
-        if ($user) {
-            $user->forceFill([
-                'trial_ends_at' => null,
-            ])->save();
-        }
     }
 }

@@ -45,7 +45,15 @@ class BillingCatalogService
             'creditPackages' => $this->creditPackages()->map(fn (BillingProduct $product): array => $this->serializePublicProduct($product))->all(),
             'subscriptionPlans' => $this->subscriptionPlans()->map(fn (BillingProduct $product): array => $this->serializePublicProduct($product))->all(),
             'billingCurrency' => $this->billingCurrency(),
+            'checkoutAvailable' => $this->checkoutAvailable(),
         ];
+    }
+
+    public function checkoutAvailable(): bool
+    {
+        return (string) config('paymob.api_key', '') !== ''
+            && (int) config('paymob.integration_id_card', 0) > 0
+            && (string) config('paymob.iframe_id', '') !== '';
     }
 
     public function managementPayload(): array

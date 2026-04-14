@@ -78,6 +78,12 @@ export function AppSidebar({ auth }: AppSidebarProps) {
     });
 
     items.push({
+      title: t('navigation.billingUserAccess'),
+      url: 'billing.manage.users',
+      icon: CreditCardIcon,
+    });
+
+    items.push({
       title: t('navigation.aiToolLogs'),
       url: 'ai.tool-usage',
       icon: ChartLineIcon,

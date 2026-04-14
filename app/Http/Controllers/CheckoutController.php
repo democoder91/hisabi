@@ -49,6 +49,10 @@ class CheckoutController extends Controller
 
     private function startCheckout(User $user, BillingProduct $product): RedirectResponse
     {
+        if (! $this->billingCatalogService->checkoutAvailable()) {
+            return redirect()->route('billing.index');
+        }
+
         $integrationId = (int) config('paymob.integration_id_card');
 
         if ($integrationId < 1) {

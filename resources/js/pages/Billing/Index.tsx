@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ClockCountdownIcon, CreditCardIcon, LightningIcon, SparkleIcon } from '@phosphor-icons/react';
 
 import Authenticated from '@/Layouts/Authenticated';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -27,6 +28,7 @@ interface BillingIndexProps {
     subscriptionPlans: BillingOption[];
     billingCurrency: string;
     hasActiveSubscription: boolean;
+    checkoutAvailable: boolean;
 }
 
 function formatMoney(amount: number, currency: string): string {
@@ -60,6 +62,7 @@ export default function BillingIndex({
     subscriptionPlans,
     billingCurrency,
     hasActiveSubscription,
+    checkoutAvailable,
 }: BillingIndexProps) {
     const { t } = useTranslation();
     const [pendingPurchase, setPendingPurchase] = useState<string | null>(null);
@@ -70,6 +73,10 @@ export default function BillingIndex({
     );
 
     const startCheckout = (routeName: string, slug: string) => {
+        if (!checkoutAvailable) {
+            return;
+        }
+
         const purchaseKey = `${routeName}:${slug}`;
 
         setPendingPurchase(purchaseKey);
@@ -138,6 +145,27 @@ export default function BillingIndex({
                         </CardContent>
                     </Card>
 
+                    {!checkoutAvailable && (
+                        <Card className="border-amber-300/70 bg-amber-50/80">
+                            <CardContent className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="secondary">{t('billing.manualAccessOnly')}</Badge>
+                                        <p className="font-medium text-amber-950">{t('billing.checkoutUnavailableTitle')}</p>
+                                    </div>
+                                    <p className="max-w-3xl text-sm text-amber-900/80">
+                                        {t('billing.checkoutUnavailableDescription')}
+                                    </p>
+                                </div>
+                                {auth?.user?.is_super && (
+                                    <Button asChild variant="outline">
+                                        <Link href={route('billing.manage.users')}>{t('navigation.billingUserAccess')}</Link>
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
                     <section className="space-y-4">
                         <div className="space-y-1">
                             <h2 className="text-xl font-semibold">{t('billing.subscriptionTiers')}</h2>
@@ -175,17 +203,21 @@ export default function BillingIndex({
                                             <ul className="space-y-2 text-sm text-muted-foreground">
                                                 <li>{t('billing.creditsAddedOnPayment', { credits: plan.credits })}</li>
                                                 <li>{t('billing.subscriptionBenefitAccess')}</li>
-                                                <li>{t('billing.subscriptionBenefitHosted')}</li>
+                                                <li>{checkoutAvailable ? t('billing.subscriptionBenefitHosted') : t('billing.manualAccessOnly')}</li>
                                                 <li>{t('billing.subscriptionBenefitPairs')}</li>
                                             </ul>
                                         </CardContent>
                                         <CardFooter>
                                             <Button
                                                 className="w-full"
-                                                disabled={pendingPurchase === purchaseKey}
+                                                disabled={!checkoutAvailable || pendingPurchase === purchaseKey}
                                                 onClick={() => startCheckout('billing.checkout.subscription', plan.slug)}
                                             >
-                                                {pendingPurchase === purchaseKey ? t('billing.redirecting') : t('billing.choosePlan')}
+                                                {!checkoutAvailable
+                                                    ? t('billing.checkoutDisabledButton')
+                                                    : pendingPurchase === purchaseKey
+                                                        ? t('billing.redirecting')
+                                                        : t('billing.choosePlan')}
                                             </Button>
                                         </CardFooter>
                                     </Card>
@@ -229,10 +261,14 @@ export default function BillingIndex({
                                             <Button
                                                 variant="outline"
                                                 className="w-full"
-                                                disabled={pendingPurchase === purchaseKey}
+                                                disabled={!checkoutAvailable || pendingPurchase === purchaseKey}
                                                 onClick={() => startCheckout('billing.checkout.credits', pkg.slug)}
                                             >
-                                                {pendingPurchase === purchaseKey ? t('billing.redirecting') : t('billing.buyCredits')}
+                                                {!checkoutAvailable
+                                                    ? t('billing.checkoutDisabledButton')
+                                                    : pendingPurchase === purchaseKey
+                                                        ? t('billing.redirecting')
+                                                        : t('billing.buyCredits')}
                                             </Button>
                                         </CardFooter>
                                     </Card>

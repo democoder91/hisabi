@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BillingProduct;
+use App\Models\PaymentTransaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -138,4 +139,20 @@ it('uses a credit package created through billing management in checkout', funct
         'credits_added' => 1500,
         'status' => 'pending',
     ]);
+});
+
+it('redirects back to billing when checkout is unavailable', function () {
+    config()->set('paymob.api_key', null);
+    config()->set('paymob.integration_id_card', null);
+    config()->set('paymob.iframe_id', null);
+
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    post(route('billing.checkout.credits', 'starter-100'))
+        ->assertRedirect(route('billing.index'));
+
+    expect(PaymentTransaction::query()->count())->toBe(0);
 });

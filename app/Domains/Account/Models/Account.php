@@ -106,12 +106,12 @@ class Account extends Model
         if ($this->relationLoaded('sharedUsers')) {
             $participantIds = [
                 ...$participantIds,
-                ...$this->sharedUsers->pluck('id')->map(fn (mixed $id) => (int) $id)->all(),
+                ...$this->sharedUsers->pluck('id')->map(fn(mixed $id) => (int) $id)->all(),
             ];
         } else {
             $participantIds = [
                 ...$participantIds,
-                ...$this->sharedUsers()->pluck('users.id')->map(fn (mixed $id) => (int) $id)->all(),
+                ...$this->sharedUsers()->pluck('users.id')->map(fn(mixed $id) => (int) $id)->all(),
             ];
         }
 

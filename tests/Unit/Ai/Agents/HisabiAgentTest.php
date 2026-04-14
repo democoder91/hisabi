@@ -45,7 +45,7 @@ class HisabiAgentTest extends TestCase
             ListTransactionsTool::class,
             ListBudgetsTool::class,
             ListCategoriesTool::class,
-        ], array_map(static fn ($tool) => get_class($tool), $tools));
+        ], array_map(static fn($tool) => get_class($tool), $tools));
     }
 
     public function test_instructions_include_financial_context(): void
@@ -113,7 +113,7 @@ class HisabiAgentTest extends TestCase
 
         $this->assertEquals('Mocked response', $response->text);
 
-        HisabiAgent::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'expenses'));
+        HisabiAgent::assertPrompted(fn($prompt) => str_contains($prompt->prompt, 'expenses'));
     }
 
     public function test_agent_uses_zai_chat_completions_endpoint(): void

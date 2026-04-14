@@ -145,7 +145,7 @@ class AccountService
             ->where('user_id', $shareUserId)
             ->firstOrFail()
             ->update([
-            'permission_level' => $permissionLevel,
+                'permission_level' => $permissionLevel,
             ]);
 
         return $this->reloadResourceAccount($account);

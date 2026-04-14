@@ -55,7 +55,7 @@ class CreateTransactionRequest extends FormRequest
                 },
             ],
             'reverse_account_id' => [
-                Rule::requiredIf(fn () => $this->boolean('create_reverse_transaction')),
+                Rule::requiredIf(fn() => $this->boolean('create_reverse_transaction')),
                 'nullable',
                 'integer',
                 'different:account_id',

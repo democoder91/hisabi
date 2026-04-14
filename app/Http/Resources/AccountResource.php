@@ -30,7 +30,7 @@ class AccountResource extends JsonResource
             'permissionLevel' => $this->isOwnedBy($user) ? 'owner' : $this->permissionLevelFor($user),
             'sharedUsers' => $this->when(
                 $this->relationLoaded('sharedUsers') && $this->isOwnedBy($user),
-                fn () => $this->sharedUsers->map(fn ($sharedUser) => [
+                fn() => $this->sharedUsers->map(fn($sharedUser) => [
                     'id' => $sharedUser->id,
                     'name' => $sharedUser->name,
                     'email' => $sharedUser->email,

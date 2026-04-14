@@ -73,7 +73,8 @@ class EditTransactionTool extends FinancialTool
             && ! Arr::exists($validated, 'category_id')
             && ! Arr::exists($validated, 'category_type')
             && $transaction->category
-            && ! in_array((int) $transaction->category->user_id, $targetAccount->participantUserIds(), true)) {
+            && ! in_array((int) $transaction->category->user_id, $targetAccount->participantUserIds(), true)
+        ) {
             throw new \RuntimeException('When moving a transaction to an account owned by a different user, provide category_id or category_type.');
         }
 

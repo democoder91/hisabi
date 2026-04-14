@@ -62,7 +62,7 @@ class ListTransactionsTool extends FinancialTool
         }
 
         if (! empty($validated['category_type'])) {
-            $query->whereHas('category', fn ($builder) => $builder->where('type', $validated['category_type']));
+            $query->whereHas('category', fn($builder) => $builder->where('type', $validated['category_type']));
         }
 
         if (! empty($validated['transaction_type'])) {
@@ -96,7 +96,7 @@ class ListTransactionsTool extends FinancialTool
             return 'No transactions found for the current filters.';
         }
 
-        return "Transactions:\n" . $transactions->map(fn (Transaction $transaction) => $this->formatTransaction($transaction))->implode("\n");
+        return "Transactions:\n" . $transactions->map(fn(Transaction $transaction) => $this->formatTransaction($transaction))->implode("\n");
     }
 
     public function schema(JsonSchema $schema): array

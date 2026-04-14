@@ -140,7 +140,7 @@ abstract class FinancialTool implements Tool
 
     protected function ownedCategoryIds(array $categoryIds, User $user): array
     {
-        $normalized = array_values(array_unique(array_map(static fn ($id) => (int) $id, $categoryIds)));
+        $normalized = array_values(array_unique(array_map(static fn($id) => (int) $id, $categoryIds)));
 
         $count = Category::query()->whereIn('id', $normalized)->count();
 
@@ -240,10 +240,10 @@ abstract class FinancialTool implements Tool
         $name = $budget->getLocalizedName() ?? 'Unnamed budget';
         $categoryNames = $budget->relationLoaded('categories')
             ? $budget->categories
-                ->map(fn (Category $category) => $category->getTranslation('name', app()->getLocale(), false)
-                    ?: $category->getTranslation('name', 'en', false)
-                    ?: 'Unnamed category')
-                ->join(', ')
+            ->map(fn(Category $category) => $category->getTranslation('name', app()->getLocale(), false)
+                ?: $category->getTranslation('name', 'en', false)
+                ?: 'Unnamed category')
+            ->join(', ')
             : '';
 
         $parts = [

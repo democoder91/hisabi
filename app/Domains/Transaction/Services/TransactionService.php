@@ -20,10 +20,10 @@ class TransactionService
         return QueryBuilder::for($this->accessibleQuery())
             ->allowedFilters([
                 AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where(function($q) use ($value) {
+                    $query->where(function ($q) use ($value) {
                         $q->where('amount', 'LIKE', "%$value%")
                             ->orWhere('note', 'LIKE', "%$value%")
-                            ->orWhereHas('category', function($builder) use($value) {
+                            ->orWhereHas('category', function ($builder) use ($value) {
                                 $builder->where('name', 'LIKE', "%$value%");
                             });
                     });
@@ -38,10 +38,10 @@ class TransactionService
                     $query->whereDate('created_at', '<=', $value);
                 }),
             ])
-                ->allowedIncludes(['category', 'account'])
+            ->allowedIncludes(['category', 'account'])
             ->allowedSorts(['id', 'amount', 'created_at'])
             ->defaultSort('-id')
-                ->with(['category.user:id,name', 'account.user:id,name', 'account.sharedUsers:id,name,email'])
+            ->with(['category.user:id,name', 'account.user:id,name', 'account.sharedUsers:id,name,email'])
             ->paginate($perPage);
     }
 
@@ -137,4 +137,3 @@ class TransactionService
             ->forAccessibleAccounts(auth()->user());
     }
 }
-

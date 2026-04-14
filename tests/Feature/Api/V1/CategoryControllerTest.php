@@ -81,6 +81,24 @@ class CategoryControllerTest extends TestCase
             ->assertJsonPath('category.name_translations.ar', 'السكن');
     }
 
+    public function test_it_returns_localized_category_names_for_the_active_locale(): void
+    {
+        $this->user->forceFill(['locale' => 'ar'])->save();
+
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Housing', 'ar' => 'السكن'],
+            'type' => Category::EXPENSES,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/categories/all');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.id', $category->id)
+            ->assertJsonPath('data.0.name', 'السكن')
+            ->assertJsonPath('data.0.name_translations.en', 'Housing');
+    }
+
     public function test_it_requires_authentication_for_store(): void
     {
         $response = $this->postJson('/api/v1/categories', []);

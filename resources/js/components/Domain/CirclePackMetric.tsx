@@ -3,6 +3,7 @@ import { DateRange } from 'react-day-picker';
 import { metricEndpoints } from '@/Api/metrics';
 import LoadingView from "../Global/LoadingView";
 import { Card } from '@/components/ui/card';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { useInView } from '@/hooks/useInView';
 
 interface CirclePackMetricProps {
@@ -12,6 +13,7 @@ interface CirclePackMetricProps {
 }
 
 export default function CirclePackMetric({ name, metric, dateRange }: CirclePackMetricProps) {
+    const activeLocale = useActiveLocale();
     const [value, setValue] = useState(null);
     const refContainer = useRef<HTMLDivElement>(null);
     const [ref, isInView] = useInView();
@@ -49,7 +51,7 @@ export default function CirclePackMetric({ name, metric, dateRange }: CirclePack
         return () => {
             isCancelled = true;
         };
-    }, [dateRange, metric, isInView])
+    }, [activeLocale, dateRange, metric, isInView])
 
     // Chart initialization effect - only runs on client side
     useEffect(() => {

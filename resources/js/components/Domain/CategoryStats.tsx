@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getCategoryStats } from '@/Api';
 import { formatNumber, getAppCurrency } from '@/Utils';
 import { DateRange } from 'react-day-picker';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 
 interface CategoryStatsProps {
     dateRange: DateRange | undefined;
@@ -25,6 +26,7 @@ interface StatsState {
 }
 
 function CategoryStats({ dateRange }: CategoryStatsProps) {
+    const activeLocale = useActiveLocale();
     const [stats, setStats] = useState<StatsState>({
         mostUsedCategory: null,
         highestSpendingCategory: null,
@@ -48,7 +50,7 @@ function CategoryStats({ dateRange }: CategoryStatsProps) {
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [dateRange]);
+    }, [activeLocale, dateRange]);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

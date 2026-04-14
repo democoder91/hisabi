@@ -3,6 +3,7 @@
 namespace App\Domains\Category\Models;
 
 use App\Models\Concerns\BelongsToUser;
+use App\Models\Concerns\HasLocalizedTranslatableName;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Domains\Transaction\Models\Transaction;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
-    use BelongsToUser, HasFactory, HasTranslations, SoftDeletes;
+    use BelongsToUser, HasFactory, HasLocalizedTranslatableName, HasTranslations, SoftDeletes;
 
     public array $translatable = ['name'];
 

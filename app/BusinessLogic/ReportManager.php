@@ -42,7 +42,7 @@ class ReportManager implements ReportManagerContract
                 }
 
                 $categoriesData[] = [
-                    'name' => $category->name,
+                    'name' => $category->getLocalizedName(),
                     'total_current_month' => $totalCurrentMonth,
                     'total_previous_month' => $totalLastMonth,
                     'change' => $change,

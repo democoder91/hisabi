@@ -6,6 +6,7 @@ import { DateRange } from 'react-day-picker';
 import { metricEndpoints } from '@/Api/metrics';
 import { Card } from '@/components/ui/card';
 import LoadingView from "../Global/LoadingView";
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { colors, formatNumber, getTailwindColor, getAppCurrency } from '../../Utils';
 import { useInView } from '@/hooks/useInView';
 
@@ -20,6 +21,7 @@ interface PartitionMetricProps {
 }
 
 export default function PartitionMetric({ name, metric, relation, show_currency, dateRange }: PartitionMetricProps) {
+    const activeLocale = useActiveLocale();
     const [data, setData] = useState(null);
     const [currency, setCurrency] = useState(getAppCurrency());
     const [chartRef, setChartRef] = useState(null);
@@ -45,7 +47,7 @@ export default function PartitionMetric({ name, metric, relation, show_currency,
                 setSelectedRelationId(data[relation.data_key][0].id)
             })
             .catch(console.error)
-    }, [relation, isInView])
+    }, [activeLocale, relation, isInView])
 
     useEffect(() => {
         if (!isInView || !dateRange?.from || !dateRange?.to) return;
@@ -74,7 +76,7 @@ export default function PartitionMetric({ name, metric, relation, show_currency,
                 setCurrency(response.data.currency ?? getAppCurrency());
             })
             .catch(console.error)
-    }, [selectedRelationId, dateRange, metric, isInView])
+    }, [activeLocale, selectedRelationId, dateRange, metric, isInView])
 
     useEffect(() => {
         if (data == null) { return; }

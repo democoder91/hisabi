@@ -17,9 +17,12 @@ import RecordTransactionButton from '@/components/Domain/RecordTransactionButton
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { getAllCategories } from '@/Api/categories';
 import { getAllAccounts } from '@/Api/accounts';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
+import { withLocalizedNames } from '@/Utils';
 
 export default function Dashboard({ auth, hasData }: any) {
     const { t } = useTranslation();
+    const activeLocale = useActiveLocale();
     const [allCategories, setAllCategories] = useState<any[]>([]);
     const [allAccounts, setAllAccounts] = useState<any[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -38,6 +41,9 @@ export default function Dashboard({ auth, hasData }: any) {
         }).catch(console.error);
     }, []);
 
+    const localizedCategories = useMemo(() => withLocalizedNames(allCategories, activeLocale), [allCategories, activeLocale]);
+    const localizedAccounts = useMemo(() => withLocalizedNames(allAccounts, activeLocale), [allAccounts, activeLocale]);
+
     const handleDateChange = (newDateRange: DateRange | undefined) => {
         if (newDateRange?.from && newDateRange?.to) {
             setDateRange(newDateRange);
@@ -53,8 +59,8 @@ export default function Dashboard({ auth, hasData }: any) {
                     initialDate={dateRange}
                 />
                 <RecordTransactionButton
-                    accounts={allAccounts}
-                    categories={allCategories}
+                    accounts={localizedAccounts}
+                    categories={localizedCategories}
                     onSuccess={() => setRefreshKey(prev => prev + 1)}
                 />
             </div>
@@ -62,10 +68,10 @@ export default function Dashboard({ auth, hasData }: any) {
     );
 
     const categoryRelation = useMemo(() => ({
-        data: allCategories,
+        data: localizedCategories,
         display_using: 'name',
         foreign_key: 'id'
-    }), [allCategories]);
+    }), [localizedCategories]);
 
     return (
         <Authenticated auth={auth} header={header}>

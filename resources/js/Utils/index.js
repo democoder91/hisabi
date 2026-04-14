@@ -1,5 +1,7 @@
 import numbro from 'numbro';
 
+import i18n from '@/i18n';
+
 export const TRANSACTION_TYPES = {
     DEBIT: 'DEBIT',
     CREDIT: 'CREDIT',
@@ -110,16 +112,87 @@ export const getSharedAccountOwnerLabel = (account, formatSharedBy) => {
     return formatSharedBy(account.ownerName)
 }
 
+export const getActiveLocale = () => {
+    const documentLocale = typeof document !== 'undefined'
+        ? document.documentElement?.lang
+        : ''
+
+    return i18n.resolvedLanguage
+        || i18n.language
+        || documentLocale
+        || 'en'
+}
+
+export const getNameTranslations = (item) => {
+    if (!item) {
+        return {}
+    }
+
+    if (item.name_translations && typeof item.name_translations === 'object') {
+        return item.name_translations
+    }
+
+    if (item.name && typeof item.name === 'object') {
+        return item.name
+    }
+
+    if (typeof item.name === 'string' && item.name !== '') {
+        return { en: item.name }
+    }
+
+    return {}
+}
+
+export const getLocalizedName = (item, locale = getActiveLocale()) => {
+    if (!item) {
+        return ''
+    }
+
+    const translations = getNameTranslations(item)
+    const localizedName = translations?.[locale]
+        ?? translations?.en
+        ?? Object.values(translations).find((value) => typeof value === 'string' && value !== '')
+
+    if (localizedName) {
+        return localizedName
+    }
+
+    return typeof item.name === 'string' ? item.name : ''
+}
+
+export const withLocalizedName = (item, locale = getActiveLocale()) => {
+    if (!item) {
+        return item
+    }
+
+    const nameTranslations = getNameTranslations(item)
+
+    return {
+        ...item,
+        name: getLocalizedName(item, locale),
+        name_translations: nameTranslations,
+    }
+}
+
+export const withLocalizedNames = (items = [], locale = getActiveLocale()) => {
+    if (!Array.isArray(items)) {
+        return []
+    }
+
+    return items.map((item) => withLocalizedName(item, locale))
+}
+
 export const getAccountOptionLabel = (account, formatSharedBy) => {
     if (!account) {
         return ''
     }
 
     const sharedOwnerLabel = getSharedAccountOwnerLabel(account, formatSharedBy)
+    const accountName = getLocalizedName(account)
 
     return sharedOwnerLabel
-        ? `${account.name} · ${sharedOwnerLabel}`
-        : account.name
+        ? `${accountName} · ${sharedOwnerLabel}`
+        : accountName
 }
 
 export const getCategoryOptionLabel = (category, categories = []) => {
@@ -127,8 +200,8 @@ export const getCategoryOptionLabel = (category, categories = []) => {
         return ''
     }
 
-    const baseLabel = category.name ?? ''
-    const matchingCategories = categories.filter((item) => item?.name === baseLabel)
+    const baseLabel = getLocalizedName(category)
+    const matchingCategories = categories.filter((item) => getLocalizedName(item) === baseLabel)
 
     if (matchingCategories.length <= 1) {
         return baseLabel

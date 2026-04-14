@@ -3,6 +3,7 @@
 namespace App\Domains\Budget\Models;
 
 use App\Domains\Category\Models\Category;
+use App\Models\Concerns\HasLocalizedTranslatableName;
 use App\Models\Concerns\BelongsToUser;
 use App\Models\User;
 use App\Services\Currency\CurrencyRateService;
@@ -16,7 +17,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Budget extends Model
 {
-    use BelongsToUser, HasFactory, HasTranslations, SoftDeletes;
+    use BelongsToUser, HasFactory, HasLocalizedTranslatableName, HasTranslations, SoftDeletes;
 
     public array $translatable = ['name'];
 
@@ -58,14 +59,6 @@ class Budget extends Model
     public function getIsSavingAttribute(): bool
     {
         return $this->saving;
-    }
-
-    public function getLocalizedName(?string $locale = null): ?string
-    {
-        $locale ??= app()->getLocale();
-
-        return $this->getTranslation('name', $locale, false)
-            ?: $this->getTranslation('name', 'en', false);
     }
 
     public function getTotalSpentPercentageAttribute(): string

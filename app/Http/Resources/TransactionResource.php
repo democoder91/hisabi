@@ -30,7 +30,7 @@ class TransactionResource extends JsonResource
                 return [
                     'id' => $this->account->id,
                     'name' => $this->account->getLocalizedName(),
-                    'name_translations' => $this->account->getTranslations('name'),
+                    'name_translations' => $this->account->getSafeNameTranslations(),
                     'balance' => (float) $this->account->balance,
                     'currency' => $this->account->currency,
                     'isOwner' => $this->account->isOwnedBy(request()->user()),
@@ -50,8 +50,8 @@ class TransactionResource extends JsonResource
 
                 return [
                     'id' => $this->category->id,
-                    'name' => $this->category->getTranslation('name', app()->getLocale(), false) ?: $this->category->getTranslation('name', 'en', false),
-                    'name_translations' => $this->category->getTranslations('name'),
+                    'name' => $this->category->getLocalizedName(),
+                    'name_translations' => $this->category->getSafeNameTranslations(),
                     'ownerUserId' => $this->category->user_id,
                     'ownerName' => $owner ? $owner->name : null,
                     'type' => $this->category->type,

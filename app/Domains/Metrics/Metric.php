@@ -166,8 +166,7 @@ abstract class Metric
             return 'Unknown';
         }
 
-        return $category->getTranslation('name', app()->getLocale(), false)
-            ?: $category->getTranslation('name', 'en', false)
+        return $category->getLocalizedName()
             ?: 'Unknown';
     }
 

@@ -10,11 +10,12 @@ import Authenticated from '@/Layouts/Authenticated';
 import Edit from './Edit';
 import RecordTransactionButton from '@/components/Domain/RecordTransactionButton';
 import Filters from './Filters';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import LoadMore from '@/components/Global/LoadMore';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { getTransactions, getAllAccounts, getTransactionFormOptions } from '@/Api';
-import { animateRowItem, formatNumber, getSharedAccountOwnerLabel, isCreditTransaction } from '@/Utils';
+import { animateRowItem, formatNumber, getSharedAccountOwnerLabel, isCreditTransaction, withLocalizedName, withLocalizedNames } from '@/Utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowElbowDownRightIcon, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 
 export default function Index({ auth }: { auth: any }) {
     const { t } = useTranslation();
+    const activeLocale = useActiveLocale();
     const urlParams = new URLSearchParams(window.location.search);
     const initialSearch = urlParams.get('search') || '';
 
@@ -131,6 +133,14 @@ export default function Index({ auth }: { auth: any }) {
     const performSearch = useMemo(
         () => debounce(performSearchHandler, 300)
         , []);
+
+    const localizedAllAccounts = useMemo(() => withLocalizedNames(allAccounts, activeLocale), [allAccounts, activeLocale]);
+    const localizedAllCategories = useMemo(() => withLocalizedNames(allCategories, activeLocale), [allCategories, activeLocale]);
+    const localizedTransactions = useMemo(() => transactions.map((transaction) => ({
+        ...transaction,
+        account: transaction.account ? withLocalizedName(transaction.account, activeLocale) : transaction.account,
+        category: transaction.category ? withLocalizedName(transaction.category, activeLocale) : transaction.category,
+    })), [transactions, activeLocale]);
 
     const handleFiltersApply = (newFilters: any) => {
         const url = new URL(window.location.href);
@@ -305,8 +315,8 @@ export default function Index({ auth }: { auth: any }) {
                     initialDate={dateRange}
                 />
                 <RecordTransactionButton
-                    accounts={allAccounts}
-                    categories={allCategories}
+                    accounts={localizedAllAccounts}
+                    categories={localizedAllCategories}
                     onSuccess={onCreate}
                 />
             </div>
@@ -319,8 +329,8 @@ export default function Index({ auth }: { auth: any }) {
 
             <Edit
                 transaction={editItem}
-                accounts={allAccounts}
-                categories={allCategories}
+                accounts={localizedAllAccounts}
+                categories={localizedAllCategories}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 onClose={() => setEditItem(null)}
@@ -347,7 +357,7 @@ export default function Index({ auth }: { auth: any }) {
                                     className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
                                     onClick={() => clearFilter('category')}
                                 >
-                                    {allCategories.find((c: any) => c.id == filters.categoryId)?.name}
+                                    {localizedAllCategories.find((c: any) => c.id == filters.categoryId)?.name}
                                     <X size={14} weight="bold" />
                                 </Badge>
                             )}
@@ -372,7 +382,7 @@ export default function Index({ auth }: { auth: any }) {
                                 </Badge>
                             )}
                             <Filters
-                                categories={allCategories}
+                                categories={localizedAllCategories}
                                 onApply={handleFiltersApply}
                                 activeFilters={filters}
                             />
@@ -381,7 +391,7 @@ export default function Index({ auth }: { auth: any }) {
 
                     <DataTable
                         columns={columns}
-                        data={transactions}
+                        data={localizedTransactions}
                         loading={loading}
                         loadingMessage={t('common.loading')}
                         emptyMessage={t('common.noResults')}

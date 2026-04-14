@@ -8,6 +8,7 @@ use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Category;
 use App\Models\Concerns\BelongsToUser;
+use App\Models\Concerns\HasLocalizedTranslatableName;
 use Database\Factories\BrandFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Spatie\Translatable\HasTranslations;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Auth;
 
 class Brand extends Model
 {
-    use BelongsToUser, HasFactory, HasTranslations;
+    use BelongsToUser, HasFactory, HasLocalizedTranslatableName, HasTranslations;
 
     public array $translatable = ['name'];
 
@@ -51,7 +52,9 @@ class Brand extends Model
     public static function findOrCreateNew($name)
     {
         foreach(static::get() as $knownBrand) {
-            if(str_contains(strtolower($name), strtolower($knownBrand->name))) {
+            $knownBrandName = strtolower($knownBrand->getLocalizedName() ?? '');
+
+            if($knownBrandName !== '' && str_contains(strtolower($name), $knownBrandName)) {
                 return $knownBrand;
             }
         }

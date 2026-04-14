@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Contracts\Searchable;
 use App\Models\Concerns\BelongsToUser;
+use App\Models\Concerns\HasLocalizedTranslatableName;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model implements Searchable
 {
-    use BelongsToUser, HasFactory, HasTranslations, SoftDeletes;
+    use BelongsToUser, HasFactory, HasLocalizedTranslatableName, HasTranslations, SoftDeletes;
 
     public array $translatable = ['name'];
 

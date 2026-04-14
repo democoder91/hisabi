@@ -4,6 +4,7 @@ namespace App\Domains\Account\Models;
 
 use App\Domains\Transaction\Models\TransactionAudit;
 use App\Domains\Transaction\Models\Transaction;
+use App\Models\Concerns\HasLocalizedTranslatableName;
 use App\Models\User;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Account extends Model
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, HasLocalizedTranslatableName, HasTranslations, SoftDeletes;
 
     public const DEFAULT_NAME = 'Checking';
     public const PERMISSION_VIEW = 'view';
@@ -133,38 +134,6 @@ class Account extends Model
         $this->forceFill([
             'balance' => round((float) $this->balance + $delta, 2),
         ])->saveQuietly();
-    }
-
-    public function getLocalizedName(?string $locale = null): ?string
-    {
-        $locale ??= app()->getLocale();
-
-        $translations = $this->getSafeNameTranslations();
-
-        return $translations[$locale]
-            ?? $translations['en']
-            ?? null;
-    }
-
-    public function getSafeNameTranslations(): array
-    {
-        $rawName = $this->getAttributes()['name'] ?? null;
-
-        if (is_array($rawName)) {
-            return $rawName;
-        }
-
-        if (is_string($rawName)) {
-            $decoded = json_decode($rawName, true);
-
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                return $decoded;
-            }
-
-            return ['en' => $rawName];
-        }
-
-        return [];
     }
 
     public static function localizedNameSqlExpression(string $locale, bool $fallbackToEnglish = true): string

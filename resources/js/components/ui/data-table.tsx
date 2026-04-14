@@ -26,6 +26,7 @@ interface DataTableProps<TData, TValue> {
     loadingMessage?: React.ReactNode;
     className?: string;
     getRowId?: (row: TData) => string | number;
+    dir?: 'ltr' | 'rtl';
 }
 
 export function DataTable<TData, TValue>({
@@ -36,6 +37,7 @@ export function DataTable<TData, TValue>({
     loadingMessage = 'Loading...',
     className,
     getRowId,
+    dir,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -52,8 +54,8 @@ export function DataTable<TData, TValue>({
     });
 
     return (
-        <div className={cn('overflow-hidden rounded-lg border bg-background', className)}>
-            <Table>
+        <div dir={dir} className={cn('overflow-hidden rounded-lg border bg-background', className)}>
+            <Table dir={dir}>
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>

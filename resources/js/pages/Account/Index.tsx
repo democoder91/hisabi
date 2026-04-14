@@ -10,14 +10,17 @@ import { getAccounts } from '@/Api/accounts';
 import { animateRowItem, formatNumber, getSharedAccountOwnerLabel } from '@/Utils';
 import Create from './Create';
 import Edit from './Edit';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import LoadMore from '@/components/Global/LoadMore';
+import { withLocalizedNames } from '@/Utils';
 
 export default function Index({ auth }) {
     const { t } = useTranslation();
+    const activeLocale = useActiveLocale();
     const [accounts, setAccounts] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMorePages, setHasMorePages] = useState(true);
@@ -60,6 +63,8 @@ export default function Index({ auth }) {
         setCurrentPage(1);
         setSearchQuery(event.target.value ?? '');
     }, 300), []);
+
+    const localizedAccounts = useMemo(() => withLocalizedNames(accounts, activeLocale), [accounts, activeLocale]);
 
     const columns = useMemo<ColumnDef<any>[]>(() => [
         {
@@ -165,7 +170,7 @@ export default function Index({ auth }) {
 
                     <DataTable
                         columns={columns}
-                        data={accounts}
+                        data={localizedAccounts}
                         loading={loading}
                         loadingMessage={t('common.loading')}
                         emptyMessage={t('common.noResults')}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -12,7 +12,9 @@ import Create from './Create';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { getAllCategories } from '@/Api';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { animateRowItem } from '@/Utils';
+import { withLocalizedNames } from '@/Utils';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -38,6 +40,8 @@ interface GroupedCategories {
 
 export default function Index({ auth }: { auth: any }) {
     const { t } = useTranslation();
+    const { direction = 'ltr' } = usePage().props as { direction?: 'ltr' | 'rtl' };
+    const activeLocale = useActiveLocale();
     const [categories, setCategories] = useState<Category[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -50,23 +54,24 @@ export default function Index({ auth }: { auth: any }) {
     useEffect(() => {
         getAllCategories()
             .then(({ data }) => {
-                setCategories(data.allCategories)
+                setCategories(data.allCategories);
             })
             .catch(console.error);
     }, []);
 
     const onCreate = (createdItem: Category) => {
-        setShowCreate(false)
-        setCategories([createdItem, ...categories])
+        setShowCreate(false);
+        setCategories([createdItem, ...categories]);
 
         animateRowItem(createdItem.id);
-    }
+    };
 
     const onUpdate = (updatedItem: Category) => {
-        setCategories(categories.map(category => {
+        setCategories(categories.map((category) => {
             if (category.id === updatedItem.id) {
                 return updatedItem;
             }
+
             return category;
         }));
         animateRowItem(updatedItem.id);
@@ -75,36 +80,43 @@ export default function Index({ auth }: { auth: any }) {
     const onDelete = (deletedItem: Category) => {
         // @ts-ignore
         animateRowItem(deletedItem.id, 'deleted', () => {
-            setCategories(categories.filter(item => item.id != deletedItem.id));
+            setCategories(categories.filter((item) => item.id != deletedItem.id));
         });
     };
 
     const performSearchHandler = (e: any) => {
         setSearchQuery(e.target.value ?? '');
-    }
+    };
 
     const performSearch = useMemo(
-        () => debounce(performSearchHandler, 300)
-        , []);
+        () => debounce(performSearchHandler, 300),
+        []
+    );
 
-    // Filter categories based on search query
+    const localizedCategories = useMemo(
+        () => withLocalizedNames(categories, activeLocale),
+        [categories, activeLocale]
+    );
+
     const filteredCategories = useMemo(() => {
-        if (!searchQuery) return categories;
-        return categories.filter(category =>
+        if (!searchQuery) {
+            return localizedCategories;
+        }
+
+        return localizedCategories.filter((category) =>
             category.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    }, [categories, searchQuery]);
+    }, [localizedCategories, searchQuery]);
 
-    // Group categories by type
     const groupedCategories = useMemo<GroupedCategories>(() => {
         const grouped: GroupedCategories = {
             INCOME: [],
             EXPENSES: [],
             SAVINGS: [],
-            INVESTMENT: []
+            INVESTMENT: [],
         };
 
-        filteredCategories.forEach(category => {
+        filteredCategories.forEach((category) => {
             if (grouped[category.type as keyof GroupedCategories]) {
                 grouped[category.type as keyof GroupedCategories].push(category);
             }
@@ -131,7 +143,7 @@ export default function Index({ auth }: { auth: any }) {
                     <div className="flex items-center gap-3">
                         {CategoryIcon ? (
                             <div className={`badge badge-${category.color} flex size-10 items-center justify-center rounded-full`}>
-                                <CategoryIcon size={20} weight="regular" className="text-current" />
+                                <CategoryIcon className="h-5 w-5" />
                             </div>
                         ) : (
                             <Badge
@@ -158,7 +170,7 @@ export default function Index({ auth }: { auth: any }) {
         },
         {
             id: 'actions',
-            header: () => <div className="text-right">{t('common.actions')}</div>,
+            header: () => <div className="text-end">{t('common.actions')}</div>,
             cell: ({ row }) => (
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" asChild>
@@ -201,7 +213,7 @@ export default function Index({ auth }: { auth: any }) {
     ], [filteredCategories, groupedCategories, t]);
 
     const header = (
-        <div className="flex items-center justify-between w-full">
+        <div className="flex w-full items-center justify-between">
             <h2>{t('category.title')}</h2>
             <div className="flex items-center gap-2">
                 <DatePickerWithRange
@@ -211,15 +223,17 @@ export default function Index({ auth }: { auth: any }) {
                 <Button onClick={() => setShowCreate(true)}>{t('category.createCategory')}</Button>
             </div>
         </div>
-    )
+    );
 
     return (
         <Authenticated auth={auth} header={header}>
             <Head title={t('category.title')} />
 
-            <Create showCreate={showCreate}
+            <Create
+                showCreate={showCreate}
                 onCreate={onCreate}
-                onClose={() => setShowCreate(false)} />
+                onClose={() => setShowCreate(false)}
+            />
 
             <Edit
                 category={editCategory}
@@ -229,16 +243,16 @@ export default function Index({ auth }: { auth: any }) {
             />
 
             <div className="p-4">
-                <div className="max-w-7xl mx-auto grid gap-4">
+                <div className="mx-auto grid max-w-7xl gap-4">
                     <CategoryStats dateRange={dateRange} />
 
                     {categories.length > 0 ? (
                         <Tabs defaultValue="all" className="w-full">
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="mb-2 flex items-center justify-between">
                                 <Input
                                     name="search"
                                     placeholder={t('common.search')}
-                                    className='max-w-56'
+                                    className="max-w-56"
                                     onChange={performSearch}
                                 />
                                 <TabsList className="h-auto flex-wrap justify-start">
@@ -259,6 +273,7 @@ export default function Index({ auth }: { auth: any }) {
                                         <DataTable
                                             columns={columns}
                                             data={tab.items}
+                                            dir={direction}
                                             emptyMessage={t('common.noResults')}
                                             getRowId={(category) => category.id}
                                         />
@@ -269,6 +284,7 @@ export default function Index({ auth }: { auth: any }) {
                         <DataTable
                             columns={columns}
                             data={[]}
+                            dir={direction}
                             emptyMessage={t('common.noResults')}
                             getRowId={(category) => category.id}
                         />

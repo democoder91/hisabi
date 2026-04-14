@@ -9,9 +9,10 @@ import { getAllCategories } from '@/Api/categories';
 import Authenticated from '@/Layouts/Authenticated';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { animateRowItem, formatNumber } from '@/Utils';
+import { animateRowItem, formatNumber, withLocalizedName, withLocalizedNames } from '@/Utils';
 
 import Create from './Create';
 import Edit from './Edit';
@@ -19,6 +20,7 @@ import { BudgetCategory, BudgetRecord } from './types';
 
 export default function Index({ auth }: { auth: any }) {
     const { t } = useTranslation();
+    const activeLocale = useActiveLocale();
     const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
     const [categories, setCategories] = useState<BudgetCategory[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -55,14 +57,21 @@ export default function Index({ auth }: { auth: any }) {
         setSearchQuery(event.target.value ?? '');
     }, 300), []);
 
+    const localizedCategories = useMemo(() => withLocalizedNames(categories, activeLocale), [categories, activeLocale]);
+
+    const localizedBudgets = useMemo(() => budgets.map((budget) => ({
+        ...withLocalizedName(budget, activeLocale),
+        categories: withLocalizedNames(budget.categories ?? [], activeLocale),
+    })), [budgets, activeLocale]);
+
     const filteredBudgets = useMemo(() => {
         if (!searchQuery) {
-            return budgets;
+            return localizedBudgets;
         }
 
         const normalizedQuery = searchQuery.toLowerCase();
 
-        return budgets.filter((budget) => {
+        return localizedBudgets.filter((budget) => {
             const englishName = budget.name_translations?.en?.toLowerCase() ?? '';
             const arabicName = budget.name_translations?.ar?.toLowerCase() ?? '';
 
@@ -70,7 +79,7 @@ export default function Index({ auth }: { auth: any }) {
                 || englishName.includes(normalizedQuery)
                 || arabicName.includes(normalizedQuery);
         });
-    }, [budgets, searchQuery]);
+    }, [localizedBudgets, searchQuery]);
 
     const columns = useMemo<ColumnDef<BudgetRecord>[]>(() => [
         {
@@ -153,14 +162,14 @@ export default function Index({ auth }: { auth: any }) {
 
             <Create
                 open={showCreate}
-                categories={categories}
+                categories={localizedCategories}
                 onClose={() => setShowCreate(false)}
                 onCreate={onCreate}
             />
 
             <Edit
                 budget={editBudget}
-                categories={categories}
+                categories={localizedCategories}
                 onClose={() => setEditBudget(null)}
                 onDelete={onDelete}
                 onUpdate={onUpdate}

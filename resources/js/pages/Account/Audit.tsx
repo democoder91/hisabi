@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -12,32 +12,48 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
+import { withLocalizedName } from '@/Utils';
 
 const hiddenDiffFields = ['id'];
 
 export default function Audit({ auth, account }) {
     const { t } = useTranslation();
+    const activeLocale = useActiveLocale();
     const [audits, setAudits] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMorePages, setHasMorePages] = useState(true);
     const [loading, setLoading] = useState(false);
+    const previousLocaleRef = useRef(activeLocale);
+
+    const localizedAccount = useMemo(() => withLocalizedName(account, activeLocale), [account, activeLocale]);
 
     useEffect(() => {
+        const localeChanged = previousLocaleRef.current !== activeLocale;
+
+        if (localeChanged) {
+            previousLocaleRef.current = activeLocale;
+            setCurrentPage(1);
+            setHasMorePages(true);
+        }
+
+        const pageToFetch = localeChanged ? 1 : currentPage;
+
         setLoading(true);
 
-        getAccountAudits(account.id, currentPage)
+        getAccountAudits(localizedAccount.id, pageToFetch)
             .then(({ data }) => {
-                setAudits((previous) => currentPage === 1 ? data.audits : [...previous, ...data.audits]);
+                setAudits((previous) => pageToFetch === 1 ? data.audits : [...previous, ...data.audits]);
                 setHasMorePages(data.paginatorInfo.hasMorePages);
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [account.id, currentPage]);
+    }, [activeLocale, currentPage, localizedAccount.id]);
 
     const header = (
         <div className="flex w-full items-center justify-between gap-3">
             <div>
-                <h2>{account.name}</h2>
+                <h2>{localizedAccount.name}</h2>
                 <p className="text-sm text-muted-foreground">{t('account.auditDescription')}</p>
             </div>
             <Button variant="outline" asChild>
@@ -55,7 +71,7 @@ export default function Audit({ auth, account }) {
         }
 
         if (field === 'amount') {
-            return `${account.currency} ${formatNumber(value, null)}`;
+            return `${localizedAccount.currency} ${formatNumber(value, null)}`;
         }
 
         if (field.endsWith('_at')) {
@@ -175,7 +191,7 @@ export default function Audit({ auth, account }) {
 
     return (
         <Authenticated auth={auth} header={header}>
-            <Head title={`${account.name} ${t('account.auditTrail')}`} />
+            <Head title={`${localizedAccount.name} ${t('account.auditTrail')}`} />
 
             <div className="p-4">
                 <div className="mx-auto max-w-5xl space-y-4">
@@ -187,8 +203,8 @@ export default function Audit({ auth, account }) {
                             </CardTitle>
                             <CardDescription>
                                 {t('account.auditSummary', {
-                                    count: account.transactionsCount,
-                                    balance: `${account.currency} ${formatNumber(account.balance, null)}`,
+                                    count: localizedAccount.transactionsCount,
+                                    balance: `${localizedAccount.currency} ${formatNumber(localizedAccount.balance, null)}`,
                                 })}
                             </CardDescription>
                         </CardHeader>

@@ -163,6 +163,23 @@ class AccountControllerTest extends TestCase
             ->assertJsonPath('data.0.name_translations.ar', 'صندوق الطوارئ');
     }
 
+    public function test_it_returns_localized_account_names_for_the_active_locale(): void
+    {
+        $this->user->forceFill(['locale' => 'ar'])->save();
+
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Emergency Fund', 'ar' => 'صندوق الطوارئ'],
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/accounts/all');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.id', $account->id)
+            ->assertJsonPath('data.0.name', 'صندوق الطوارئ')
+            ->assertJsonPath('data.0.name_translations.en', 'Emergency Fund');
+    }
+
     public function test_it_handles_legacy_plain_string_account_names(): void
     {
         DB::table('accounts')->insert([

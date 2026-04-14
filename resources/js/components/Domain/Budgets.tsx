@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatNumber } from '@/Utils';
 import { ChartLineIcon } from '@phosphor-icons/react';
 import { getBudgets } from '@/Api/budgets';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { useInView } from '@/hooks/useInView';
+import { withLocalizedNames } from '@/Utils';
 import LoadingView from '../Global/LoadingView';
 
 interface Budget {
@@ -21,6 +23,7 @@ interface Budget {
 }
 
 export default function Budgets() {
+    const activeLocale = useActiveLocale();
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [loading, setLoading] = useState(true);
     const [ref, isInView] = useInView();
@@ -37,6 +40,8 @@ export default function Budgets() {
             });
     }, [isInView]);
 
+            const localizedBudgets = useMemo(() => withLocalizedNames(budgets, activeLocale), [budgets, activeLocale]);
+
     if (loading) {
         return (
             <div ref={ref}>
@@ -47,7 +52,7 @@ export default function Budgets() {
         );
     }
 
-    if (budgets.length === 0) return null;
+    if (localizedBudgets.length === 0) return null;
 
     return (
         <div className="flex overflow-x-auto gap-4"  style={{
@@ -55,7 +60,7 @@ export default function Budgets() {
             msOverflowStyle: 'none',
             scrollbarWidth: 'none',
           }}>
-            {budgets.map((budget) => (
+            {localizedBudgets.map((budget) => (
                 <Card key={budget.id}>
                     <CardContent className='w-84 grid gap-8'>
                         <div className='flex items-center gap-3'>

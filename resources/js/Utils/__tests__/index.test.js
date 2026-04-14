@@ -3,8 +3,10 @@ import {
   formatNumber,
   getAccountOptionLabel,
   getCategoryOptionLabel,
+  getLocalizedName,
   getSharedAccountOwnerLabel,
   isCategoryAvailableForAccount,
+  withLocalizedName,
 } from '../';
 
 it('formatNumber', () => {
@@ -49,4 +51,27 @@ it('disambiguates duplicate category labels', () => {
   expect(getCategoryOptionLabel(categories[0], categories)).toBe('Groceries · Mina');
   expect(getCategoryOptionLabel(categories[1], categories)).toBe('Groceries · Omar · #7');
   expect(getCategoryOptionLabel(categories[3], categories)).toBe('Fuel');
+});
+
+it('prefers the active locale when localizing translatable names', () => {
+  const category = {
+    name: 'Groceries',
+    name_translations: {
+      en: 'Groceries',
+      ar: 'البقالة',
+    },
+  };
+
+  expect(getLocalizedName(category, 'ar')).toBe('البقالة');
+  expect(withLocalizedName(category, 'ar').name).toBe('البقالة');
+});
+
+it('falls back to english when the active locale is missing', () => {
+  const account = {
+    name_translations: {
+      en: 'Travel Fund',
+    },
+  };
+
+  expect(getLocalizedName(account, 'ar')).toBe('Travel Fund');
 });

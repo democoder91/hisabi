@@ -147,7 +147,7 @@ class TransactionObserver
             'account_id' => isset($attributes['account_id']) ? (int) $attributes['account_id'] : null,
             'account_name' => $account?->getLocalizedName(),
             'category_id' => isset($attributes['category_id']) && $attributes['category_id'] !== null ? (int) $attributes['category_id'] : null,
-            'category_name' => $category?->getTranslation('name', app()->getLocale(), false) ?: $category?->getTranslation('name', 'en', false),
+            'category_name' => $category?->getLocalizedName(),
             'amount' => isset($attributes['amount']) ? (float) $attributes['amount'] : null,
             'transaction_type' => $attributes['transaction_type'] ?? null,
             'currency' => $attributes['currency'] ?? null,

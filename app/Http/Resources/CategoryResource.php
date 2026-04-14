@@ -13,8 +13,8 @@ class CategoryResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'name' => $this->getTranslation('name', app()->getLocale(), false) ?: $this->getTranslation('name', 'en', false),
-            'name_translations' => $this->getTranslations('name'),
+            'name' => $this->getLocalizedName(),
+            'name_translations' => $this->getSafeNameTranslations(),
             'ownerUserId' => $this->user_id,
             'ownerName' => $owner ? $owner->name : null,
             'type' => $this->type,

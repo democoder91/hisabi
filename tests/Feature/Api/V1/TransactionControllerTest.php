@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
+use App\Domains\Transaction\Models\TransactionAudit;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,6 +175,54 @@ class TransactionControllerTest extends TestCase
             ->assertJsonPath('transaction.account.id', $this->account->id)
             ->assertJsonPath('transaction.category.id', $this->expenseCategory->id)
             ->assertJsonPath('transaction.note', 'Groceries');
+    }
+
+    public function test_it_localizes_nested_account_and_category_names_for_the_active_locale(): void
+    {
+        $this->user->forceFill(['locale' => 'ar'])->save();
+
+        $this->account->update([
+            'name' => ['en' => 'Checking', 'ar' => 'الحساب الجاري'],
+        ]);
+
+        $transaction = Transaction::factory()->create([
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'note' => 'Groceries',
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/transactions/{$transaction->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('transaction.account.name', 'الحساب الجاري')
+            ->assertJsonPath('transaction.account.name_translations.en', 'Checking')
+            ->assertJsonPath('transaction.category.name', 'طعام')
+            ->assertJsonPath('transaction.category.name_translations.en', 'Food');
+    }
+
+    public function test_it_localizes_audit_snapshots_for_the_active_locale(): void
+    {
+        $this->user->forceFill(['locale' => 'ar'])->save();
+
+        $this->account->update([
+            'name' => ['en' => 'Checking', 'ar' => 'الحساب الجاري'],
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'amount' => 42,
+            'created_at' => now()->toDateString(),
+            'note' => 'Lunch',
+        ]);
+
+        $response->assertCreated();
+
+        $audit = TransactionAudit::query()->latest('id')->first();
+
+        $this->assertNotNull($audit);
+        $this->assertSame('الحساب الجاري', $audit->new_values['account_name']);
+        $this->assertSame('طعام', $audit->new_values['category_name']);
     }
 
     public function test_it_updates_a_transaction_and_its_account_reference(): void

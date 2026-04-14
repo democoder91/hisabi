@@ -155,6 +155,32 @@ class BudgetControllerTest extends TestCase
             ->assertJsonPath('budget.name_translations.ar', 'ميزانية الطوارئ');
     }
 
+    public function test_it_returns_localized_budget_and_category_names_for_the_active_locale(): void
+    {
+        $this->user->forceFill(['locale' => 'ar'])->save();
+
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Groceries', 'ar' => 'البقالة'],
+            'type' => Category::EXPENSES,
+        ]);
+
+        $budget = Budget::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Emergency Budget', 'ar' => 'ميزانية الطوارئ'],
+        ]);
+
+        $budget->categories()->sync([$category->id]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/budgets/{$budget->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('budget.name', 'ميزانية الطوارئ')
+            ->assertJsonPath('budget.categories.0.name', 'البقالة')
+            ->assertJsonPath('budget.categories.0.name_translations.en', 'Groceries');
+    }
+
     public function test_it_creates_a_budget(): void
     {
         $category = Category::factory()->create(['user_id' => $this->user->id]);

@@ -220,9 +220,7 @@ abstract class FinancialTool implements Tool
 
     protected function formatCategory(Category $category): string
     {
-        $name = $category->getTranslation('name', app()->getLocale(), false)
-            ?: $category->getTranslation('name', 'en', false)
-            ?: 'Unnamed category';
+        $name = $category->getLocalizedName() ?: 'Unnamed category';
 
         return sprintf(
             '#%d %s | type %s | color %s | icon %s | transactions %d',
@@ -240,9 +238,7 @@ abstract class FinancialTool implements Tool
         $name = $budget->getLocalizedName() ?? 'Unnamed budget';
         $categoryNames = $budget->relationLoaded('categories')
             ? $budget->categories
-            ->map(fn(Category $category) => $category->getTranslation('name', app()->getLocale(), false)
-                ?: $category->getTranslation('name', 'en', false)
-                ?: 'Unnamed category')
+            ->map(fn(Category $category) => $category->getLocalizedName() ?: 'Unnamed category')
             ->join(', ')
             : '';
 
@@ -264,9 +260,7 @@ abstract class FinancialTool implements Tool
 
     protected function formatTransaction(Transaction $transaction): string
     {
-        $categoryName = $transaction->category?->getTranslation('name', app()->getLocale(), false)
-            ?: $transaction->category?->getTranslation('name', 'en', false)
-            ?: 'Uncategorized';
+        $categoryName = $transaction->category?->getLocalizedName() ?: 'Uncategorized';
         $accountName = $transaction->account?->getLocalizedName() ?? 'Unknown account';
 
         $parts = [

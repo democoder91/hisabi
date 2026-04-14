@@ -14,8 +14,9 @@ class CreateTransactionCommandHandler
     public function handle(CreateTransactionCommand $command): CreateTransactionCommandResponse
     {
         return DB::transaction(function () use ($command) {
-            $transaction = $this->transactionService->create($command->data);
-            return new CreateTransactionCommandResponse($transaction);
+            $transactions = $this->transactionService->createWithOptionalReverse($command->data, $command->userId);
+
+            return new CreateTransactionCommandResponse($transactions);
         });
     }
 }

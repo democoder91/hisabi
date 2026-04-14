@@ -4,6 +4,7 @@ namespace App\Ai\Tools;
 
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
+use App\Scopes\OwnedAccountScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Ai\Tools\Request;
@@ -43,7 +44,7 @@ class ListTransactionsTool extends FinancialTool
         ]);
 
         $query = Transaction::query()
-            ->withoutGlobalScopes()
+            ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts($user)
             ->with(['account.sharedUsers:id,name,email', 'category']);
 

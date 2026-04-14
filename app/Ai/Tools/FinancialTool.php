@@ -7,6 +7,7 @@ use App\Domains\Budget\Models\Budget;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -172,9 +173,11 @@ abstract class FinancialTool implements Tool
     protected function transactionCategory(Account $account, ?int $categoryId, ?string $categoryType): Category
     {
         if ($categoryId) {
-            $category = Category::withoutGlobalScopes()->find($categoryId);
+            $category = Category::query()
+                ->withoutGlobalScope(TenantScope::class)
+                ->find($categoryId);
 
-            if (! $category || (int) $category->user_id !== (int) $account->user_id) {
+            if (! $category || ! in_array((int) $category->user_id, $account->participantUserIds(), true)) {
                 throw new RuntimeException('The selected category is invalid for the chosen account.');
             }
 
@@ -185,7 +188,12 @@ abstract class FinancialTool implements Tool
             throw new RuntimeException('Provide either category_id or category_type.');
         }
 
-        return Category::findOrCreateFallbackForUser($account->user_id, $categoryType);
+        $authenticatedUser = $this->authenticatedUser();
+        $fallbackOwnerId = in_array((int) $authenticatedUser->id, $account->participantUserIds(), true)
+            ? (int) $authenticatedUser->id
+            : (int) $account->user_id;
+
+        return Category::findOrCreateFallbackForUser($fallbackOwnerId, $categoryType);
     }
 
     protected function formatAmount(float|int $amount, ?string $currency = null): string

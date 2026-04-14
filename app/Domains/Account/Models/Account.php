@@ -99,6 +99,25 @@ class Account extends Model
             ->value('permission_level');
     }
 
+    public function participantUserIds(): array
+    {
+        $participantIds = [(int) $this->user_id];
+
+        if ($this->relationLoaded('sharedUsers')) {
+            $participantIds = [
+                ...$participantIds,
+                ...$this->sharedUsers->pluck('id')->map(fn (mixed $id) => (int) $id)->all(),
+            ];
+        } else {
+            $participantIds = [
+                ...$participantIds,
+                ...$this->sharedUsers()->pluck('users.id')->map(fn (mixed $id) => (int) $id)->all(),
+            ];
+        }
+
+        return array_values(array_unique($participantIds));
+    }
+
     public function canBeViewedBy(?User $user): bool
     {
         return $this->isOwnedBy($user) || $this->permissionLevelFor($user) !== null;

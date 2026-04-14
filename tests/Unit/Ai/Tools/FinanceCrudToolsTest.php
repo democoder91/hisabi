@@ -5,6 +5,7 @@ namespace Tests\Unit\Ai\Tools;
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
 use App\Ai\Tools\CreateCategoryTool;
+use App\Ai\Tools\CreateTransferTool;
 use App\Ai\Tools\EditAccountTool;
 use App\Ai\Tools\EditBudgetTool;
 use App\Ai\Tools\EditCategoryTool;
@@ -20,6 +21,7 @@ use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Tools\Request;
+use RuntimeException;
 use Tests\TestCase;
 
 class FinanceCrudToolsTest extends TestCase
@@ -175,5 +177,101 @@ class FinanceCrudToolsTest extends TestCase
         $this->assertSame($savings->id, $transaction->category_id);
         $this->assertSame(Transaction::TYPE_DEBIT, $transaction->transaction_type);
         $this->assertSame('Savings transfer', $transaction->note);
+    }
+
+    public function test_transfer_tool_can_move_money_between_editable_accounts(): void
+    {
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Checking', 'ar' => null],
+            'balance' => 300,
+            'currency' => 'AED',
+        ]);
+        $destinationAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Savings', 'ar' => null],
+            'balance' => 80,
+            'currency' => 'AED',
+        ]);
+
+        $output = (new CreateTransferTool())->handle(new Request([
+            'amount' => 45,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $destinationAccount->id,
+            'note' => 'Monthly top-up',
+        ]));
+
+        $transactions = Transaction::withoutGlobalScopes()->get();
+
+        $this->assertCount(2, $transactions);
+        $this->assertStringContainsString('Transfer created successfully', $output);
+        $this->assertSame(255.0, $sourceAccount->fresh()->balance);
+        $this->assertSame(125.0, $destinationAccount->fresh()->balance);
+    }
+
+    public function test_list_transactions_tool_excludes_soft_deleted_transactions(): void
+    {
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+        ]);
+
+        Transaction::withoutGlobalScopes()->create([
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'amount' => 10,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => 'AED',
+            'note' => 'Visible lunch',
+        ]);
+
+        $deletedTransaction = Transaction::withoutGlobalScopes()->create([
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'amount' => 20,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => 'AED',
+            'note' => 'Deleted lunch',
+        ]);
+        $deletedTransaction->delete();
+
+        $output = (new ListTransactionsTool())->handle(new Request([
+            'account_id' => $account->id,
+        ]));
+
+        $this->assertStringContainsString('Visible lunch', $output);
+        $this->assertStringNotContainsString('Deleted lunch', $output);
+    }
+
+    public function test_edit_transaction_tool_rejects_soft_deleted_transactions(): void
+    {
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+        ]);
+
+        $transaction = Transaction::withoutGlobalScopes()->create([
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'amount' => 20,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => 'AED',
+            'note' => 'Deleted draft',
+        ]);
+        $transaction->delete();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The specified transaction was not found or is not accessible.');
+
+        (new EditTransactionTool())->handle(new Request([
+            'transaction_id' => $transaction->id,
+            'note' => 'Updated',
+        ]));
     }
 }

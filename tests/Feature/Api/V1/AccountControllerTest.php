@@ -41,13 +41,34 @@ class AccountControllerTest extends TestCase
             ->assertJsonPath('paginatorInfo.total', 2)
             ->assertJsonStructure([
                 'data' => [
-                    '*' => ['id', 'name', 'name_translations', 'balance', 'transactionsCount', 'created_at', 'isOwner', 'canManage', 'canEditTransactions', 'permissionLevel'],
+                    '*' => ['id', 'name', 'name_translations', 'balance', 'transactionsCount', 'created_at', 'isOwner', 'ownerId', 'ownerName', 'participantUserIds', 'canManage', 'canEditTransactions', 'permissionLevel'],
                 ],
             ]);
 
         $this->assertContains($sharedAccount->id, collect($response->json('data'))->pluck('id'));
         $this->assertContains('owner', collect($response->json('data'))->pluck('permissionLevel'));
         $this->assertContains(Account::PERMISSION_VIEW, collect($response->json('data'))->pluck('permissionLevel'));
+
+        $sharedAccountPayload = collect($response->json('data'))->firstWhere('id', $sharedAccount->id);
+
+        $this->assertSame($sharedAccount->user_id, $sharedAccountPayload['ownerId']);
+        $this->assertContains($this->user->id, $sharedAccountPayload['participantUserIds']);
+    }
+
+    public function test_it_includes_owner_name_for_shared_accounts(): void
+    {
+        $owner = User::factory()->create(['name' => 'Shared Owner']);
+        $sharedAccount = Account::factory()->create(['user_id' => $owner->id]);
+        $sharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/accounts/all');
+
+        $response->assertOk();
+
+        $sharedAccountPayload = collect($response->json('data'))->firstWhere('id', $sharedAccount->id);
+
+        $this->assertSame('Shared Owner', $sharedAccountPayload['ownerName']);
+        $this->assertSame(Account::PERMISSION_EDIT, $sharedAccountPayload['permissionLevel']);
     }
 
     public function test_it_creates_an_account(): void

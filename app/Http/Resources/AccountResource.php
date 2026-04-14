@@ -10,6 +10,7 @@ class AccountResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $request->user();
+        $owner = $this->whenLoaded('user');
 
         return [
             'id' => $this->id,
@@ -20,6 +21,9 @@ class AccountResource extends JsonResource
             'transactionsCount' => $this->transactions_count ?? 0,
             'created_at' => $this->created_at?->format('Y-m-d'),
             'isOwner' => $this->isOwnedBy($user),
+            'ownerId' => $this->user_id,
+            'ownerName' => isset($owner->name) ? $owner->name : null,
+            'participantUserIds' => $this->participantUserIds(),
             'canManage' => $this->isOwnedBy($user),
             'canViewAudit' => $this->isOwnedBy($user),
             'canEditTransactions' => $this->canBeEditedBy($user),

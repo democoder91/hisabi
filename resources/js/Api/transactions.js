@@ -59,7 +59,7 @@ export const getTransactionFormOptions = async () => {
     };
 };
 
-export const createTransaction = async ({amount, accountId, categoryId, createdAt, note, transactionType}) => {
+export const createTransaction = async ({amount, accountId, categoryId, createdAt, note, transactionType, createReverseTransaction, reverseAccountId}) => {
     const response = await apiFetch('/api/v1/transactions', {
         method: 'POST',
         headers: {
@@ -71,7 +71,9 @@ export const createTransaction = async ({amount, accountId, categoryId, createdA
             category_id: categoryId,
             transaction_type: transactionType || null,
             created_at: createdAt,
-            note
+            note,
+            create_reverse_transaction: createReverseTransaction || false,
+            reverse_account_id: reverseAccountId || null,
         })
     });
 

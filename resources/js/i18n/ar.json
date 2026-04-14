@@ -189,6 +189,7 @@
         "searchAccounts": "بحث في الحسابات..",
         "detailsTab": "التفاصيل",
         "sharingTab": "المشاركة",
+        "sharedBy": "تمت المشاركة بواسطة {{name}}",
         "sharedWithCount": "تمت المشاركة مع {{count}} مستخدمين",
         "transactionsOnlyAccess": "يمكنك العمل على معاملات هذا الحساب، لكن إعدادات الحساب لا يغيّرها إلا المالك.",
         "ownerOnlySettings": "هذا الحساب تمت مشاركته معك. إعدادات الحساب والمشاركة مخصصة للمالك فقط.",
@@ -282,6 +283,11 @@
         "date": "التاريخ",
         "amount": "المبلغ",
         "note": "ملاحظة",
+        "createReverseTransaction": "إنشاء معاملة عكسية",
+        "createReverseTransactionHint": "سجّل معاملة مدين مطابقة في حساب آخر قابل للتعديل.",
+        "noReverseAccountOptions": "تحتاج إلى حساب آخر قابل للتعديل لإنشاء معاملة عكسية.",
+        "reverseAccount": "الحساب العكسي",
+        "reverseTransactionCategoryHint": "ستستخدم المعاملة العكسية فئة المصروفات غير المصنفة في الحساب المحدد.",
         "clearFilters": "مسح الفلاتر"
     },
     "ai": {

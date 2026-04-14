@@ -9,13 +9,18 @@ use Illuminate\Http\JsonResponse;
 readonly class CreateTransactionCommandResponse
 {
     public function __construct(
-        private Transaction $transaction
+        private array $transactions
     ) {}
 
     public function toResponse(): JsonResponse
     {
+        $transactions = collect($this->transactions)
+            ->map(fn (Transaction $transaction) => $transaction->load(['category.user:id,name', 'account.user:id,name', 'account.sharedUsers:id,name,email']))
+            ->values();
+
         return response()->json([
-            'transaction' => new TransactionResource($this->transaction->load(['category', 'account'])),
+            'transaction' => new TransactionResource($transactions->first()),
+            'transactions' => TransactionResource::collection($transactions),
         ], 201);
     }
 }

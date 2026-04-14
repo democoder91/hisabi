@@ -56,7 +56,7 @@ class AccountController extends Controller
         $account = $this->accountService->create($request->validated());
 
         return response()->json([
-            'account' => new AccountResource($account->load(['sharedUsers:id,name,email'])->loadCount('transactions')),
+            'account' => new AccountResource($account->load(['user:id,name', 'sharedUsers:id,name,email'])->loadCount('transactions')),
         ], 201);
     }
 

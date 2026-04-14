@@ -64,8 +64,8 @@ class TransactionControllerTest extends TestCase
                         'created_at',
                         'note',
                         'canEdit',
-                        'account' => ['id', 'name', 'name_translations', 'balance', 'canEditTransactions'],
-                        'category' => ['id', 'name', 'name_translations', 'type', 'color', 'icon'],
+                        'account' => ['id', 'name', 'name_translations', 'balance', 'isOwner', 'ownerId', 'ownerName', 'participantUserIds', 'permissionLevel', 'canEditTransactions'],
+                        'category' => ['id', 'name', 'name_translations', 'ownerUserId', 'type', 'color', 'icon'],
                     ],
                 ],
             ]);
@@ -117,6 +117,46 @@ class TransactionControllerTest extends TestCase
             ->assertJsonPath('transaction.category.id', $this->expenseCategory->id)
             ->assertJsonPath('transaction.note', 'Lunch')
             ->assertJsonPath('transaction.transaction_type', Transaction::TYPE_DEBIT);
+    }
+
+    public function test_it_excludes_soft_deleted_categories_from_transaction_form_options(): void
+    {
+        $deletedCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Old Groceries'],
+            'type' => Category::EXPENSES,
+        ]);
+
+        $deletedCategory->delete();
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/transactions/form-options');
+
+        $response->assertOk();
+
+        $this->assertContains($this->expenseCategory->id, collect($response->json('categories'))->pluck('id'));
+        $this->assertNotContains($deletedCategory->id, collect($response->json('categories'))->pluck('id'));
+    }
+
+    public function test_it_rejects_soft_deleted_categories_when_creating_transactions(): void
+    {
+        $deletedCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Archived Food'],
+            'type' => Category::EXPENSES,
+        ]);
+
+        $deletedCategory->delete();
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'account_id' => $this->account->id,
+            'category_id' => $deletedCategory->id,
+            'amount' => 15,
+            'created_at' => now()->toDateString(),
+            'note' => 'Should fail',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['category_id']);
     }
 
     public function test_it_shows_an_accessible_transaction(): void
@@ -175,6 +215,13 @@ class TransactionControllerTest extends TestCase
             ->assertJsonPath('transaction.id', $transaction->id);
 
         $this->assertSoftDeleted('transactions', ['id' => $transaction->id]);
+
+        $indexResponse = $this->actingAs($this->user)->getJson('/api/v1/transactions');
+        $showResponse = $this->actingAs($this->user)->getJson("/api/v1/transactions/{$transaction->id}");
+
+        $indexResponse->assertOk()
+            ->assertJsonPath('paginatorInfo.total', 0);
+        $showResponse->assertNotFound();
     }
 
     public function test_it_returns_404_for_transactions_on_other_users_accounts(): void
@@ -225,7 +272,9 @@ class TransactionControllerTest extends TestCase
 
         $showResponse->assertOk()
             ->assertJsonPath('transaction.id', $transaction->id)
-            ->assertJsonPath('transaction.canEdit', false);
+            ->assertJsonPath('transaction.canEdit', false)
+            ->assertJsonPath('transaction.account.ownerName', $owner->name)
+            ->assertJsonPath('transaction.account.permissionLevel', Account::PERMISSION_VIEW);
     }
 
     public function test_view_shared_user_cannot_write_transactions(): void
@@ -309,7 +358,7 @@ class TransactionControllerTest extends TestCase
         $deleteResponse->assertOk();
     }
 
-    public function test_shared_user_can_fetch_transaction_form_options_for_shared_account_owners(): void
+    public function test_shared_user_can_fetch_transaction_form_options_for_shared_account_participants(): void
     {
         $owner = User::factory()->createOne();
         $viewer = User::factory()->createOne();
@@ -322,14 +371,21 @@ class TransactionControllerTest extends TestCase
             'type' => Category::EXPENSES,
         ]);
 
+        $viewerCategory = Category::factory()->create([
+            'user_id' => $viewer->id,
+            'name' => ['en' => 'Viewer Health'],
+            'type' => Category::EXPENSES,
+        ]);
+
         $response = $this->actingAs($viewer)->getJson('/api/v1/transactions/form-options');
 
         $response->assertOk();
 
         $this->assertContains($category->id, collect($response->json('categories'))->pluck('id'));
+        $this->assertContains($viewerCategory->id, collect($response->json('categories'))->pluck('id'));
     }
 
-    public function test_edit_shared_user_cannot_create_transaction_with_a_category_not_owned_by_the_account_owner(): void
+    public function test_edit_shared_user_can_create_transaction_with_their_own_category_on_a_shared_account(): void
     {
         $owner = User::factory()->createOne();
         $editor = User::factory()->createOne();
@@ -353,10 +409,45 @@ class TransactionControllerTest extends TestCase
             'category_id' => $editorCategory->id,
             'amount' => 22,
             'created_at' => now()->toDateString(),
-            'note' => 'Invalid shared category',
+            'note' => 'Editor category on shared account',
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['category_id']);
+        $response->assertCreated()
+            ->assertJsonPath('transaction.category.id', $editorCategory->id)
+            ->assertJsonPath('transaction.account.ownerName', $owner->name)
+            ->assertJsonPath('transaction.account.permissionLevel', Account::PERMISSION_EDIT);
+    }
+
+    public function test_owner_can_create_a_new_transaction_with_a_shared_users_category_on_the_shared_account(): void
+    {
+        $owner = User::factory()->createOne(['name' => 'Primary Owner']);
+        $editor = User::factory()->createOne();
+        $account = Account::factory()->create(['user_id' => $owner->id]);
+        $account->sharedUsers()->attach($editor->id, ['permission_level' => Account::PERMISSION_EDIT]);
+
+        $editorCategory = Category::factory()->create([
+            'user_id' => $editor->id,
+            'name' => ['en' => 'Editor Food'],
+            'type' => Category::EXPENSES,
+        ]);
+
+        $optionsResponse = $this->actingAs($owner)->getJson('/api/v1/transactions/form-options');
+
+        $optionsResponse->assertOk();
+        $this->assertContains($editorCategory->id, collect($optionsResponse->json('categories'))->pluck('id'));
+
+        $createResponse = $this->actingAs($owner)->postJson('/api/v1/transactions', [
+            'account_id' => $account->id,
+            'category_id' => $editorCategory->id,
+            'amount' => 27,
+            'created_at' => now()->toDateString(),
+            'note' => 'Owner reused shared category',
+        ]);
+
+        $createResponse->assertCreated()
+            ->assertJsonPath('transaction.category.id', $editorCategory->id)
+            ->assertJsonPath('transaction.note', 'Owner reused shared category')
+            ->assertJsonPath('transaction.account.ownerName', 'Primary Owner')
+            ->assertJsonPath('transaction.account.permissionLevel', 'owner');
     }
 }

@@ -5,8 +5,11 @@ namespace App\Domains\Transaction\Services;
 use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
+use App\Scopes\OwnedAccountScope;
+use App\Scopes\TenantScope;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 
@@ -38,7 +41,7 @@ class TransactionService
                 ->allowedIncludes(['category', 'account'])
             ->allowedSorts(['id', 'amount', 'created_at'])
             ->defaultSort('-id')
-                ->with(['category', 'account'])
+                ->with(['category.user:id,name', 'account.user:id,name', 'account.sharedUsers:id,name,email'])
             ->paginate($perPage);
     }
 
@@ -47,17 +50,30 @@ class TransactionService
         return Transaction::query()->create($this->prepareData($data));
     }
 
+    public function createWithOptionalReverse(array $data, int $userId): array
+    {
+        $transactions = [$this->create($data)];
+
+        if (($data['create_reverse_transaction'] ?? false) && ! empty($data['reverse_account_id'])) {
+            $transactions[] = $this->create($this->prepareReverseData($data, $userId));
+        }
+
+        return $transactions;
+    }
+
     public function update(int $id, array $data): Transaction
     {
-        $transaction = $this->accessibleQuery()->findOrFail($id);
+        $transaction = Transaction::query()->withoutGlobalScope(OwnedAccountScope::class)->findOrFail($id);
         $transaction->update($this->prepareData($data, $transaction));
+
         return $transaction->fresh();
     }
 
     public function delete(int $id): Transaction
     {
-        $transaction = $this->accessibleQuery()->findOrFail($id);
+        $transaction = Transaction::query()->withoutGlobalScope(OwnedAccountScope::class)->findOrFail($id);
         $transaction->delete();
+
         return $transaction;
     }
 
@@ -66,7 +82,9 @@ class TransactionService
         $category = null;
 
         if (! empty($data['category_id'])) {
-            $category = Category::withoutGlobalScopes()->find($data['category_id']);
+            $category = Category::query()
+                ->withoutGlobalScope(TenantScope::class)
+                ->find($data['category_id']);
         }
 
         if (! empty($data['account_id'])) {
@@ -77,13 +95,45 @@ class TransactionService
             ? Transaction::transactionTypeForCategoryType($category->type)
             : strtoupper($data['transaction_type'] ?? $transaction?->transaction_type ?? Transaction::TYPE_DEBIT);
 
-        return $data;
+        return Arr::only($data, [
+            'account_id',
+            'category_id',
+            'amount',
+            'transaction_type',
+            'currency',
+            'note',
+            'created_at',
+        ]);
+    }
+
+    private function prepareReverseData(array $data, int $userId): array
+    {
+        $reverseAccount = Account::query()->findOrFail((int) $data['reverse_account_id']);
+        $reverseCategory = $this->fallbackCategoryForAccount($reverseAccount, $userId, Category::EXPENSES);
+
+        return [
+            'account_id' => $reverseAccount->id,
+            'category_id' => $reverseCategory->id,
+            'amount' => $data['amount'],
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'note' => $data['note'] ?? null,
+            'created_at' => $data['created_at'],
+        ];
+    }
+
+    private function fallbackCategoryForAccount(Account $account, int $userId, string $type): Category
+    {
+        $fallbackOwnerId = in_array($userId, $account->participantUserIds(), true)
+            ? $userId
+            : (int) $account->user_id;
+
+        return Category::findOrCreateFallbackForUser($fallbackOwnerId, $type);
     }
 
     private function accessibleQuery(): Builder
     {
         return Transaction::query()
-            ->withoutGlobalScopes()
+            ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts(auth()->user());
     }
 }

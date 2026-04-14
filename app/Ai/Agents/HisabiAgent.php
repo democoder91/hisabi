@@ -5,6 +5,7 @@ namespace App\Ai\Agents;
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
 use App\Ai\Tools\CreateCategoryTool;
+use App\Ai\Tools\CreateTransferTool;
 use App\Ai\Tools\CreateTransactionTool;
 use App\Ai\Tools\EditAccountTool;
 use App\Ai\Tools\EditBudgetTool;
@@ -58,18 +59,22 @@ Your role is to help users understand and manage their personal finances effecti
 3. Offer budget recommendations and savings advice
 4. Create, edit, and list accounts
 5. Create, edit, and list transactions
-6. Create, edit, and list budgets
-7. Create, edit, and list categories
+6. Create transfers between accessible accounts
+7. Create, edit, and list budgets
+8. Create, edit, and list categories
 
-**Tool Usage - Accounts, Transactions, Budgets, Categories:**
+**Tool Usage - Accounts, Transactions, Transfers, Budgets, Categories:**
 - Use `list_accounts`, `list_transactions`, `list_budgets`, and `list_categories` whenever you need IDs or the user asks what exists.
 - Use `create_account`, `edit_account`, `list_accounts` for account management.
 - Use `create_transaction`, `edit_transaction`, `list_transactions` for transaction management.
+- Use `create_transfer` when the user wants to move money from one account to another or create a matching reverse transfer entry.
 - Use `create_budget`, `edit_budget`, `list_budgets` for budget management.
 - Use `create_category`, `edit_category`, `list_categories` for category management.
 - Never guess IDs. If the user asks to edit something and you do not already know the correct ID, list the relevant records first or ask a clarifying question.
 - When a create or edit tool requires missing information, ask the user for the missing details before calling the tool.
 - For transaction creation, you need the amount and either category_id or category_type. account_id is optional and defaults to the user's default account.
+- For transfers, you need the amount, a source account ID, and a destination account ID. Both accounts must be editable and currently use the same currency.
+- Prefer `create_transfer` over manually calling `create_transaction` twice when money is moving between two accounts.
 - For budget creation, you need a name, amount, start date, recurrence, period, and at least one category ID.
 - For category creation, you need a name, type, color, and icon.
 - For account creation, you need a name and starting balance.
@@ -92,6 +97,7 @@ PROMPT;
         return [
             new CreateAccountTool(),
             new CreateTransactionTool(),
+            new CreateTransferTool(),
             new CreateBudgetTool(),
             new CreateCategoryTool(),
             new EditAccountTool(),

@@ -7,7 +7,7 @@ import { BankIcon, ArrowElbowDownRightIcon } from '@phosphor-icons/react';
 
 import Authenticated from '@/Layouts/Authenticated';
 import { getAccounts } from '@/Api/accounts';
-import { animateRowItem, formatNumber } from '@/Utils';
+import { animateRowItem, formatNumber, getSharedAccountOwnerLabel } from '@/Utils';
 import Create from './Create';
 import Edit from './Edit';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,7 @@ export default function Index({ auth }) {
             header: t('account.name'),
             cell: ({ row }) => {
                 const account = row.original;
+                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName) => t('account.sharedBy', { name: ownerName }));
 
                 return (
                     <div className="flex items-center gap-3">
@@ -81,6 +82,9 @@ export default function Index({ auth }) {
                                     {account.transactionsCount} {account.transactionsCount === 1 ? t('common.transaction') : t('common.transactions')}
                                 </span>
                             </div>
+                            {sharedOwnerLabel && (
+                                <p className="text-xs text-muted-foreground">{sharedOwnerLabel}</p>
+                            )}
                         </div>
                     </div>
                 );

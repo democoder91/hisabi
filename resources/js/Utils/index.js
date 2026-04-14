@@ -86,6 +86,64 @@ export const isCategoryCompatibleWithTransactionType = (category, transactionTyp
     return getTransactionTypeForCategoryType(category.type) === transactionType
 }
 
+export const isCategoryAvailableForAccount = (category, account) => {
+    if (!category || !account) {
+        return true
+    }
+
+    const participantUserIds = Array.isArray(account.participantUserIds)
+        ? account.participantUserIds.map((id) => Number(id))
+        : []
+
+    if (participantUserIds.length === 0 || category.ownerUserId == null) {
+        return true
+    }
+
+    return participantUserIds.includes(Number(category.ownerUserId))
+}
+
+export const getSharedAccountOwnerLabel = (account, formatSharedBy) => {
+    if (!account || account.isOwner || !account.ownerName) {
+        return ''
+    }
+
+    return formatSharedBy(account.ownerName)
+}
+
+export const getAccountOptionLabel = (account, formatSharedBy) => {
+    if (!account) {
+        return ''
+    }
+
+    const sharedOwnerLabel = getSharedAccountOwnerLabel(account, formatSharedBy)
+
+    return sharedOwnerLabel
+        ? `${account.name} · ${sharedOwnerLabel}`
+        : account.name
+}
+
+export const getCategoryOptionLabel = (category, categories = []) => {
+    if (!category) {
+        return ''
+    }
+
+    const baseLabel = category.name ?? ''
+    const matchingCategories = categories.filter((item) => item?.name === baseLabel)
+
+    if (matchingCategories.length <= 1) {
+        return baseLabel
+    }
+
+    const sameOwnerMatches = matchingCategories.filter((item) => item?.ownerUserId === category.ownerUserId)
+    const ownerLabel = category.ownerName ? category.ownerName : `#${category.id}`
+
+    if (sameOwnerMatches.length > 1) {
+        return `${baseLabel} · ${ownerLabel} · #${category.id}`
+    }
+
+    return `${baseLabel} · ${ownerLabel}`
+}
+
 export const isBrandCompatibleWithTransactionType = (brand, transactionType) => {
     if (!brand?.category?.type || !transactionType) {
         return true

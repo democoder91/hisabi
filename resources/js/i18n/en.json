@@ -188,6 +188,7 @@
         "searchAccounts": "Search accounts..",
         "detailsTab": "Details",
         "sharingTab": "Sharing",
+        "sharedBy": "Shared by {{name}}",
         "sharedWithCount": "Shared with {{count}} people",
         "transactionsOnlyAccess": "You can work with transactions on this account, but only the owner can change account settings.",
         "ownerOnlySettings": "This account is shared with you. Account settings and sharing are owner-only.",
@@ -281,6 +282,11 @@
         "date": "Date",
         "amount": "Amount",
         "note": "Note",
+        "createReverseTransaction": "Create reverse transaction",
+        "createReverseTransactionHint": "Record a matching debit in another editable account.",
+        "noReverseAccountOptions": "You need another editable account to create a reverse transaction.",
+        "reverseAccount": "Reverse account",
+        "reverseTransactionCategoryHint": "The reverse entry uses the selected account's uncategorized expenses category.",
         "clearFilters": "Clear Filters"
     },
     "ai": {

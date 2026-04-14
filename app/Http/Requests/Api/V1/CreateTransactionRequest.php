@@ -6,6 +6,7 @@ use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Enums\Currency;
+use App\Scopes\TenantScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,7 @@ class CreateTransactionRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id'),
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    $this->validateCategoryBelongsToAccountOwner($value, $fail);
+                    $this->validateCategoryBelongsToAccountParticipants($value, $fail);
                 },
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $this->validateCategoryMatchesTransactionType($value, $fail);
@@ -40,6 +41,29 @@ class CreateTransactionRequest extends FormRequest
             'transaction_type' => 'nullable|string|in:DEBIT,CREDIT',
             'currency' => ['nullable', Rule::enum(Currency::class)],
             'note' => 'nullable|string|max:1000',
+            'create_reverse_transaction' => [
+                'nullable',
+                'boolean',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (! $this->boolean('create_reverse_transaction')) {
+                        return;
+                    }
+
+                    if ($this->resolvedPrimaryTransactionType() !== Transaction::TYPE_CREDIT) {
+                        $fail('A reverse transaction can only be created for credit transactions.');
+                    }
+                },
+            ],
+            'reverse_account_id' => [
+                Rule::requiredIf(fn () => $this->boolean('create_reverse_transaction')),
+                'nullable',
+                'integer',
+                'different:account_id',
+                Rule::exists('accounts', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $this->validateReverseAccountIsEditable($value, $fail);
+                },
+            ],
         ];
     }
 
@@ -56,9 +80,15 @@ class CreateTransactionRequest extends FormRequest
                 'currency' => strtoupper((string) $this->input('currency')),
             ]);
         }
+
+        if ($this->has('create_reverse_transaction')) {
+            $this->merge([
+                'create_reverse_transaction' => $this->boolean('create_reverse_transaction'),
+            ]);
+        }
     }
 
-    private function validateCategoryBelongsToAccountOwner(mixed $categoryId, \Closure $fail): void
+    private function validateCategoryBelongsToAccountParticipants(mixed $categoryId, \Closure $fail): void
     {
         if (! $categoryId) {
             return;
@@ -70,9 +100,11 @@ class CreateTransactionRequest extends FormRequest
             return;
         }
 
-        $category = Category::withoutGlobalScopes()->find($categoryId);
+        $category = Category::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->find($categoryId);
 
-        if (! $category || (int) $category->user_id !== (int) $account->user_id) {
+        if (! $category || ! in_array((int) $category->user_id, $account->participantUserIds(), true)) {
             $fail('The selected category is invalid for the chosen account.');
         }
     }
@@ -83,7 +115,9 @@ class CreateTransactionRequest extends FormRequest
             return;
         }
 
-        $category = Category::withoutGlobalScopes()->find($categoryId);
+        $category = Category::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->find($categoryId);
 
         if (! $category?->type) {
             return;
@@ -94,5 +128,41 @@ class CreateTransactionRequest extends FormRequest
         if ($this->input('transaction_type') !== $expectedType) {
             $fail("The selected category requires transaction_type {$expectedType}.");
         }
+    }
+
+    private function validateReverseAccountIsEditable(mixed $reverseAccountId, \Closure $fail): void
+    {
+        if (! $this->boolean('create_reverse_transaction') || ! $reverseAccountId) {
+            return;
+        }
+
+        $account = Account::query()->accessibleTo($this->user())->find($reverseAccountId);
+
+        if (! $account || ! $account->canBeEditedBy($this->user())) {
+            $fail('The selected reverse account is invalid.');
+        }
+    }
+
+    private function resolvedPrimaryTransactionType(): ?string
+    {
+        if ($this->filled('transaction_type')) {
+            return strtoupper((string) $this->input('transaction_type'));
+        }
+
+        $categoryId = $this->input('category_id');
+
+        if (! $categoryId) {
+            return null;
+        }
+
+        $category = Category::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->find($categoryId);
+
+        if (! $category?->type) {
+            return null;
+        }
+
+        return Transaction::transactionTypeForCategoryType($category->type);
     }
 }

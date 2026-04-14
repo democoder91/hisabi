@@ -37,7 +37,7 @@ class AccountService
                     $query->orderByRaw($this->localizedNameSortSql($descending));
                 }),
             ])
-            ->with(['sharedUsers:id,name,email'])
+            ->with($this->accountResourceRelations())
             ->withCount('transactions');
 
         if (! request()->filled('sort')) {
@@ -58,7 +58,7 @@ class AccountService
                     $query->orderByRaw($this->localizedNameSortSql($descending));
                 }),
             ])
-            ->with(['sharedUsers:id,name,email'])
+            ->with($this->accountResourceRelations())
             ->withCount('transactions');
 
         if (! request()->filled('sort')) {
@@ -80,12 +80,12 @@ class AccountService
     {
         $account->update($data);
 
-        return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
+        return $this->reloadResourceAccount($account);
     }
 
     public function delete(Account $account): Account
     {
-        $account->loadCount('transactions');
+        $account->load($this->accountResourceRelations())->loadCount('transactions');
         $account->delete();
 
         return $account;
@@ -135,7 +135,7 @@ class AccountService
             ],
         );
 
-        return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
+        return $this->reloadResourceAccount($account);
     }
 
     public function updateSharePermission(Account $account, int $shareUserId, string $permissionLevel): Account
@@ -148,7 +148,7 @@ class AccountService
             'permission_level' => $permissionLevel,
             ]);
 
-        return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
+        return $this->reloadResourceAccount($account);
     }
 
     public function revokeShare(Account $account, int $shareUserId): Account
@@ -159,13 +159,13 @@ class AccountService
             ->firstOrFail()
             ->delete();
 
-        return $account->fresh()->load(['sharedUsers:id,name,email'])->loadCount('transactions');
+        return $this->reloadResourceAccount($account);
     }
 
     public function findAccessibleOrFail(int $id): Account
     {
         return $this->accessibleQuery()
-            ->with(['sharedUsers:id,name,email'])
+            ->with($this->accountResourceRelations())
             ->withCount('transactions')
             ->findOrFail($id);
     }
@@ -173,6 +173,16 @@ class AccountService
     private function accessibleQuery(): Builder
     {
         return Account::query()->accessibleTo(Auth::user());
+    }
+
+    private function accountResourceRelations(): array
+    {
+        return ['user:id,name', 'sharedUsers:id,name,email'];
+    }
+
+    private function reloadResourceAccount(Account $account): Account
+    {
+        return $account->fresh()->load($this->accountResourceRelations())->loadCount('transactions');
     }
 
     private function localizedNameSortSql(bool $descending = false): string

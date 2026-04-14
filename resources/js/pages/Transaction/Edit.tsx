@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { LongPressButton } from '@/components/ui/long-press-button';
 import Combobox from "@/components/Global/Combobox";
 import {
+    getAccountOptionLabel,
     getAppCurrency,
+    getCategoryOptionLabel,
+    getSharedAccountOwnerLabel,
     getTransactionTypeForCategoryType,
+    isCategoryAvailableForAccount,
     isCategoryCompatibleWithTransactionType,
     TRANSACTION_TYPES,
 } from '@/Utils';
@@ -28,10 +32,14 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
     const [category, setCategory] = useState(null);
     const [note, setNote] = useState('');
     const [transactionType, setTransactionType] = useState(TRANSACTION_TYPES.DEBIT);
+    const formatSharedBy = (ownerName) => t('account.sharedBy', { name: ownerName });
 
     const filteredCategories = useMemo(() => {
-        return categories.filter((item) => isCategoryCompatibleWithTransactionType(item, transactionType));
-    }, [categories, transactionType]);
+        return categories.filter((item) => {
+            return isCategoryAvailableForAccount(item, account)
+                && isCategoryCompatibleWithTransactionType(item, transactionType);
+        });
+    }, [account, categories, transactionType]);
 
     const editableAccounts = useMemo(() => {
         return accounts.filter((item) => item.canEditTransactions);
@@ -46,20 +54,21 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
 
         setAmount(transaction.amount);
         setAccount(transaction.account);
-        setCategory(transaction.category);
+        setCategory(categories.find((item) => item.id === transaction.category?.id) ?? transaction.category);
         setCreatedAt(transaction.created_at);
         setNote(transaction.note ?? '');
         setTransactionType(
             transaction.transaction_type
             ?? getTransactionTypeForCategoryType(transaction.category?.type)
         );
-    }, [transaction]);
+    }, [categories, transaction]);
 
     useEffect(() => {
-        if (category && !isCategoryCompatibleWithTransactionType(category, transactionType)) {
+        if (category && (!isCategoryCompatibleWithTransactionType(category, transactionType)
+            || !isCategoryAvailableForAccount(category, account))) {
             setCategory(null);
         }
-    }, [category, transactionType]);
+    }, [account, category, transactionType]);
 
     const handleCategoryChange = (item) => {
         setCategory(item);
@@ -68,6 +77,8 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
             setTransactionType(getTransactionTypeForCategoryType(item.type));
         }
     };
+
+    const getCategoryLabel = (item) => getCategoryOptionLabel(item, filteredCategories);
 
     const handleUpdate = () => {
         if (!transaction) return;
@@ -157,9 +168,14 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 items={editableAccounts}
                                 initialSelectedItem={account}
                                 onChange={(item) => canEdit && setAccount(item)}
-                                displayInputValue={(item) => item ? item.name : ''}
-                                displayOptionValue={(item) => item ? item.name : ''}
+                                displayInputValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
+                                displayOptionValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
                             />
+                            {account && getSharedAccountOwnerLabel(account, formatSharedBy) && (
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                    {getSharedAccountOwnerLabel(account, formatSharedBy)}
+                                </p>
+                            )}
                         </div>
 
                         <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
@@ -172,8 +188,9 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 items={filteredCategories}
                                 initialSelectedItem={category}
                                 onChange={(item) => canEdit && handleCategoryChange(item)}
-                                displayInputValue={(item) => item ? item.name : ''}
-                                displayOptionValue={(item) => item ? item.name : ''}
+                                displayInputValue={(item) => item ? getCategoryLabel(item) : ''}
+                                displayOptionValue={(item) => item ? getCategoryLabel(item) : ''}
+                                getItemValue={(item) => item ? `${getCategoryLabel(item)} ${item.id}` : ''}
                             />
                         </div>
 

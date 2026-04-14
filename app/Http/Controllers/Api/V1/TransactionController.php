@@ -18,6 +18,8 @@ use App\Http\Requests\Api\V1\CreateTransactionRequest;
 use App\Http\Requests\Api\V1\UpdateTransactionRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\TransactionResource;
+use App\Scopes\OwnedAccountScope;
+use App\Scopes\TenantScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -41,11 +43,22 @@ class TransactionController extends Controller
 
     public function store(CreateTransactionRequest $request): JsonResponse
     {
-        $account = Account::query()->accessibleTo($request->user())->findOrFail((int) $request->validated()['account_id']);
+        $validated = $request->validated();
+
+        $account = Account::query()->accessibleTo($request->user())->findOrFail((int) $validated['account_id']);
         $this->authorize('create', [Transaction::class, $account]);
 
+        if (($validated['create_reverse_transaction'] ?? false) && ! empty($validated['reverse_account_id'])) {
+            $reverseAccount = Account::query()
+                ->accessibleTo($request->user())
+                ->findOrFail((int) $validated['reverse_account_id']);
+
+            $this->authorize('create', [Transaction::class, $reverseAccount]);
+        }
+
         $command = new CreateTransactionCommand(
-            data: $request->validated()
+            data: $validated,
+            userId: (int) $request->user()->id,
         );
 
         return $this->createTransactionCommandHandler->handle($command)->toResponse();
@@ -54,9 +67,9 @@ class TransactionController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $transaction = Transaction::query()
-            ->withoutGlobalScopes()
+            ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts($request->user())
-            ->with(['account', 'category'])
+            ->with(['account.user:id,name', 'account.sharedUsers:id,name,email', 'category.user:id,name'])
             ->findOrFail($id);
 
         $this->authorize('view', $transaction);
@@ -69,9 +82,9 @@ class TransactionController extends Controller
     public function update(UpdateTransactionRequest $request, int $id): JsonResponse
     {
         $transaction = Transaction::query()
-            ->withoutGlobalScopes()
+            ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts($request->user())
-            ->with('account')
+            ->with(['account.user:id,name', 'account.sharedUsers:id,name,email'])
             ->findOrFail($id);
 
         $this->authorize('update', $transaction);
@@ -94,9 +107,9 @@ class TransactionController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $transaction = Transaction::query()
-            ->withoutGlobalScopes()
+            ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts(request()->user())
-            ->with('account')
+            ->with(['account.user:id,name', 'account.sharedUsers:id,name,email'])
             ->findOrFail($id);
 
         $this->authorize('delete', $transaction);
@@ -110,14 +123,18 @@ class TransactionController extends Controller
 
     public function formOptions(Request $request): JsonResponse
     {
-        $ownerIds = Account::query()
+        $participantIds = Account::query()
             ->accessibleTo($request->user())
-            ->select('user_id')
-            ->distinct()
-            ->pluck('user_id');
+            ->with('sharedUsers:id')
+            ->get()
+            ->flatMap(fn (Account $account) => $account->participantUserIds())
+            ->unique()
+            ->values();
 
-        $categories = Category::withoutGlobalScopes()
-            ->whereIn('user_id', $ownerIds)
+        $categories = Category::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->whereIn('user_id', $participantIds)
+            ->with('user:id,name')
             ->withCount('transactions')
             ->orderByDesc('id')
             ->get();

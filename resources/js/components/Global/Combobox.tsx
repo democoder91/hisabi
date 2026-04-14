@@ -25,11 +25,12 @@ interface ComboboxProps {
   onChange: (item: any) => void
   displayInputValue?: (item: any) => string
   displayOptionValue?: (item: any) => string
+  getItemValue?: (item: any) => string
 }
 
 const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
   function ComboboxComponent(
-    { label, items, initialSelectedItem, onChange, displayInputValue, displayOptionValue },
+    { label, items, initialSelectedItem, onChange, displayInputValue, displayOptionValue, getItemValue },
     ref
   ) {
     const [open, setOpen] = useState(false)
@@ -56,6 +57,13 @@ const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
       if (!item) return ''
       if (displayOptionValue) return displayOptionValue(item)
       return item.name
+    }
+
+    const getCommandValue = (item: any) => {
+      if (!item) return ''
+      if (getItemValue) return getItemValue(item)
+
+      return `${getOptionValue(item)} ${item.id ?? ''}`.trim()
     }
 
     return (
@@ -93,7 +101,7 @@ const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
                   {items.map((item) => (
                     <CommandItem
                       key={item.id}
-                      value={getOptionValue(item)}
+                      value={getCommandValue(item)}
                       onSelect={() => handleSelect(item)}
                     >
                       <CheckIcon

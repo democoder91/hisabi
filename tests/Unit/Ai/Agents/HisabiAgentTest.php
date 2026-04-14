@@ -6,6 +6,7 @@ use App\Ai\Agents\HisabiAgent;
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
 use App\Ai\Tools\CreateCategoryTool;
+use App\Ai\Tools\CreateTransferTool;
 use App\Ai\Tools\CreateTransactionTool;
 use App\Ai\Tools\EditAccountTool;
 use App\Ai\Tools\EditBudgetTool;
@@ -33,6 +34,7 @@ class HisabiAgentTest extends TestCase
         $this->assertSame([
             CreateAccountTool::class,
             CreateTransactionTool::class,
+            CreateTransferTool::class,
             CreateBudgetTool::class,
             CreateCategoryTool::class,
             EditAccountTool::class,
@@ -57,6 +59,7 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString("User's Financial Summary", $instructions);
         $this->assertStringContainsString('create_account', $instructions);
         $this->assertStringContainsString('create_transaction', $instructions);
+        $this->assertStringContainsString('create_transfer', $instructions);
         $this->assertStringContainsString('edit_budget', $instructions);
         $this->assertStringContainsString('list_categories', $instructions);
     }

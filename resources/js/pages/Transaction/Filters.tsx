@@ -7,6 +7,7 @@ import { FunnelIcon } from '@phosphor-icons/react';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { DateRange } from 'react-day-picker';
 import Combobox from '@/components/Global/Combobox';
+import { getCategoryOptionLabel } from '@/Utils';
 import {
     Select,
     SelectContent,
@@ -83,6 +84,7 @@ export default function TransactionFilters({ categories, onApply, activeFilters 
     };
 
     const selectedTransactionType = activeFilters.transactionType || 'ALL';
+    const getCategoryLabel = (category: any) => getCategoryOptionLabel(category, categories);
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -104,6 +106,9 @@ export default function TransactionFilters({ categories, onApply, activeFilters 
                         items={categories}
                         initialSelectedItem={getSelectedCategory()}
                         onChange={handleCategoryChange}
+                        displayInputValue={(item) => item ? getCategoryLabel(item) : ''}
+                        displayOptionValue={(item) => item ? getCategoryLabel(item) : ''}
+                        getItemValue={(item) => item ? `${getCategoryLabel(item)} ${item.id}` : ''}
                     />
 
                     <div className="grid gap-2">

@@ -14,7 +14,7 @@ import LoadMore from '@/components/Global/LoadMore';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { getTransactions, getAllAccounts, getTransactionFormOptions } from '@/Api';
-import { animateRowItem, formatNumber, isCreditTransaction } from '@/Utils';
+import { animateRowItem, formatNumber, getSharedAccountOwnerLabel, isCreditTransaction } from '@/Utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowElbowDownRightIcon, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
@@ -81,9 +81,20 @@ export default function Index({ auth }: { auth: any }) {
             .finally(() => setLoading(false));
     }, [currentPage, searchQuery, filters]);
 
-    const onCreate = (createdItem: any) => {
-        setTransactions([createdItem, ...transactions]);
-        animateRowItem(createdItem.id);
+    const onCreate = (createdItems: any) => {
+        const normalizedItems = (Array.isArray(createdItems) ? createdItems : [createdItems])
+            .filter(Boolean)
+            .sort((left, right) => right.id - left.id);
+
+        if (normalizedItems.length === 0) {
+            return;
+        }
+
+        setTransactions((current) => [...normalizedItems, ...current]);
+
+        normalizedItems.forEach((item, index) => {
+            setTimeout(() => animateRowItem(item.id), index * 75);
+        });
     };
 
     const onUpdate = (updatedItem: any) => {
@@ -213,7 +224,24 @@ export default function Index({ auth }: { auth: any }) {
         {
             id: 'account',
             header: t('transaction.account'),
-            cell: ({ row }) => row.original.account?.name ?? '-',
+            cell: ({ row }) => {
+                const account = row.original.account;
+
+                if (!account) {
+                    return '-';
+                }
+
+                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName) => t('account.sharedBy', { name: ownerName }));
+
+                return (
+                    <div className="space-y-1">
+                        <p className="font-medium">{account.name}</p>
+                        {sharedOwnerLabel && (
+                            <p className="text-xs text-muted-foreground">{sharedOwnerLabel}</p>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             id: 'type',

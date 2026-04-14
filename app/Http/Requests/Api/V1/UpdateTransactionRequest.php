@@ -6,6 +6,7 @@ use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Enums\Currency;
+use App\Scopes\TenantScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,7 @@ class UpdateTransactionRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id'),
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    $this->validateCategoryBelongsToAccountOwner($value, $fail);
+                    $this->validateCategoryBelongsToAccountParticipants($value, $fail);
                 },
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $this->validateCategoryMatchesTransactionType($value, $fail);
@@ -58,7 +59,7 @@ class UpdateTransactionRequest extends FormRequest
         }
     }
 
-    private function validateCategoryBelongsToAccountOwner(mixed $categoryId, \Closure $fail): void
+    private function validateCategoryBelongsToAccountParticipants(mixed $categoryId, \Closure $fail): void
     {
         if (! $categoryId) {
             return;
@@ -70,9 +71,11 @@ class UpdateTransactionRequest extends FormRequest
             return;
         }
 
-        $category = Category::withoutGlobalScopes()->find($categoryId);
+        $category = Category::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->find($categoryId);
 
-        if (! $category || (int) $category->user_id !== (int) $account->user_id) {
+        if (! $category || ! in_array((int) $category->user_id, $account->participantUserIds(), true)) {
             $fail('The selected category is invalid for the chosen account.');
         }
     }
@@ -83,7 +86,9 @@ class UpdateTransactionRequest extends FormRequest
             return;
         }
 
-        $category = Category::withoutGlobalScopes()->find($categoryId);
+        $category = Category::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->find($categoryId);
 
         if (! $category?->type) {
             return;

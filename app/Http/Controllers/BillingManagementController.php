@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Billing\UpdateBillingCatalogRequest;
+use App\Http\Requests\Billing\UpdateBillingCurrencyRequest;
 use App\Services\BillingCatalogService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -22,15 +22,9 @@ class BillingManagementController extends Controller
         return Inertia::render('Billing/Manage', $this->billingCatalogService->managementPayload());
     }
 
-    public function update(UpdateBillingCatalogRequest $request): RedirectResponse
+    public function updateCurrency(UpdateBillingCurrencyRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
-
-        $this->billingCatalogService->updateCatalog(
-            strtoupper($validated['currency']),
-            $validated['credit_packages'],
-            $validated['subscription_plans'],
-        );
+        $this->billingCatalogService->updateCurrency($request->validated('currency'));
 
         return redirect()->route('billing.manage');
     }

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\BillingProduct;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class BillingCatalogService
 {
@@ -55,12 +57,51 @@ class BillingCatalogService
         ];
     }
 
-    public function updateCatalog(string $currency, array $creditPackages, array $subscriptionPlans): void
+    public function updateCurrency(string $currency): void
     {
-        DB::transaction(function () use ($currency, $creditPackages, $subscriptionPlans): void {
-            $this->syncProducts(BillingProduct::TYPE_CREDITS, $currency, $creditPackages);
-            $this->syncProducts(BillingProduct::TYPE_SUBSCRIPTION, $currency, $subscriptionPlans);
-        });
+        BillingProduct::query()->update([
+            'currency' => $currency,
+        ]);
+    }
+
+    public function createCreditPackage(array $attributes): BillingProduct
+    {
+        return $this->createProduct(BillingProduct::TYPE_CREDITS, $attributes);
+    }
+
+    public function updateCreditPackage(BillingProduct $product, array $attributes): BillingProduct
+    {
+        return $this->updateProduct($product, BillingProduct::TYPE_CREDITS, $attributes);
+    }
+
+    public function deleteCreditPackage(BillingProduct $product): void
+    {
+        $this->deleteProduct($product, BillingProduct::TYPE_CREDITS);
+    }
+
+    public function reorderCreditPackages(array $productIds): void
+    {
+        $this->reorderProducts(BillingProduct::TYPE_CREDITS, $productIds);
+    }
+
+    public function createSubscriptionPlan(array $attributes): BillingProduct
+    {
+        return $this->createProduct(BillingProduct::TYPE_SUBSCRIPTION, $attributes);
+    }
+
+    public function updateSubscriptionPlan(BillingProduct $product, array $attributes): BillingProduct
+    {
+        return $this->updateProduct($product, BillingProduct::TYPE_SUBSCRIPTION, $attributes);
+    }
+
+    public function deleteSubscriptionPlan(BillingProduct $product): void
+    {
+        $this->deleteProduct($product, BillingProduct::TYPE_SUBSCRIPTION);
+    }
+
+    public function reorderSubscriptionPlans(array $productIds): void
+    {
+        $this->reorderProducts(BillingProduct::TYPE_SUBSCRIPTION, $productIds);
     }
 
     private function productsByType(string $type): Collection
@@ -87,6 +128,7 @@ class BillingCatalogService
     private function serializeManagementProduct(BillingProduct $product): array
     {
         return [
+            'id' => $product->getKey(),
             'slug' => $product->slug,
             'name_en' => $product->name_en ?: $product->name,
             'name_ar' => $product->name_ar ?: $product->name,
@@ -97,36 +139,114 @@ class BillingCatalogService
         ];
     }
 
-    private function syncProducts(string $type, string $currency, array $products): void
+    private function createProduct(string $type, array $attributes): BillingProduct
     {
-        $slugs = [];
+        return DB::transaction(function () use ($type, $attributes): BillingProduct {
+            $this->updateCurrency($attributes['currency']);
 
-        foreach (array_values($products) as $index => $product) {
-            $slugs[] = $product['slug'];
+            return BillingProduct::query()->create($this->productPayload(
+                $type,
+                $attributes,
+                ((int) BillingProduct::query()->forType($type)->max('sort_order')) + 1,
+            ));
+        });
+    }
 
-            BillingProduct::query()->updateOrCreate(
-                [
-                    'type' => $type,
-                    'slug' => $product['slug'],
-                ],
-                [
-                    'name' => $product['name_en'],
-                    'name_en' => $product['name_en'],
-                    'name_ar' => $product['name_ar'],
-                    'currency' => $currency,
-                    'price' => (int) $product['price'],
-                    'price_cents' => (int) $product['price'] * 100,
-                    'credits' => (int) $product['credits'],
-                    'renews_in_days' => $type === BillingProduct::TYPE_SUBSCRIPTION ? (int) $product['renews_in_days'] : null,
-                    'is_active' => true,
-                    'sort_order' => $index + 1,
-                ],
-            );
+    private function updateProduct(BillingProduct $product, string $type, array $attributes): BillingProduct
+    {
+        $this->guardType($product, $type);
+
+        return DB::transaction(function () use ($product, $type, $attributes): BillingProduct {
+            $this->updateCurrency($attributes['currency']);
+
+            $product->fill($this->productPayload($type, $attributes, $product->sort_order));
+            $product->save();
+
+            return $product->refresh();
+        });
+    }
+
+    private function deleteProduct(BillingProduct $product, string $type): void
+    {
+        $this->guardType($product, $type);
+
+        DB::transaction(function () use ($product, $type): void {
+            $product->delete();
+            $this->resequenceProducts($type);
+        });
+    }
+
+    private function reorderProducts(string $type, array $productIds): void
+    {
+        $normalizedProductIds = array_values(array_map('intval', $productIds));
+        $activeProductIds = BillingProduct::query()
+            ->active()
+            ->forType($type)
+            ->orderBy('sort_order')
+            ->pluck('id')
+            ->map(fn (int $id): int => $id)
+            ->all();
+
+        $expectedProductIds = $activeProductIds;
+        $receivedProductIds = $normalizedProductIds;
+
+        sort($expectedProductIds);
+        sort($receivedProductIds);
+
+        if ($expectedProductIds !== $receivedProductIds) {
+            throw ValidationException::withMessages([
+                'product_ids' => 'The provided billing products do not match the current catalog.',
+            ]);
         }
 
+        DB::transaction(function () use ($type, $normalizedProductIds): void {
+            foreach ($normalizedProductIds as $index => $productId) {
+                BillingProduct::query()
+                    ->forType($type)
+                    ->whereKey($productId)
+                    ->update([
+                        'sort_order' => $index + 1,
+                    ]);
+            }
+        });
+    }
+
+    private function productPayload(string $type, array $attributes, int $sortOrder): array
+    {
+        return [
+            'type' => $type,
+            'slug' => $attributes['slug'],
+            'name' => $attributes['name_en'],
+            'name_en' => $attributes['name_en'],
+            'name_ar' => $attributes['name_ar'],
+            'currency' => $attributes['currency'],
+            'price' => (int) $attributes['price'],
+            'price_cents' => (int) $attributes['price'] * 100,
+            'credits' => (int) $attributes['credits'],
+            'renews_in_days' => $type === BillingProduct::TYPE_SUBSCRIPTION ? (int) $attributes['renews_in_days'] : null,
+            'is_active' => true,
+            'sort_order' => $sortOrder,
+        ];
+    }
+
+    private function resequenceProducts(string $type): void
+    {
         BillingProduct::query()
             ->forType($type)
-            ->whereNotIn('slug', $slugs)
-            ->update(['is_active' => false]);
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->each(function (BillingProduct $product, int $index): void {
+                $product->update([
+                    'sort_order' => $index + 1,
+                ]);
+            });
+    }
+
+    private function guardType(BillingProduct $product, string $expectedType): void
+    {
+        if ($product->type !== $expectedType) {
+            throw new NotFoundHttpException();
+        }
     }
 }

@@ -94,3 +94,48 @@ it('creates a pending subscription transaction and redirects to paymob', functio
         'status' => 'pending',
     ]);
 });
+
+it('uses a credit package created through billing management in checkout', function () {
+    /** @var User $superUser */
+    $superUser = User::factory()->create([
+        'is_super' => true,
+    ]);
+
+    actingAs($superUser);
+
+    post(route('billing.manage.credit-packages.store'), [
+        'currency' => 'USD',
+        'slug' => 'enterprise-1500',
+        'name_en' => 'Enterprise Credits',
+        'name_ar' => 'أرصدة المؤسسات',
+        'price' => 150,
+        'credits' => 1500,
+    ])->assertRedirect(route('billing.manage'));
+
+    /** @var User $buyer */
+    $buyer = User::factory()->create();
+
+    Http::fake([
+        'https://accept.paymob.com/api/auth/tokens' => Http::response(['token' => 'auth-token']),
+        'https://accept.paymob.com/api/ecommerce/orders' => Http::response(['id' => 9001]),
+        'https://accept.paymob.com/api/acceptance/payment_keys' => Http::response(['token' => 'enterprise-key']),
+    ]);
+
+    actingAs($buyer);
+
+    $response = post(route('billing.checkout.credits', 'enterprise-1500'));
+
+    $response->assertRedirect('https://accept.paymob.com/api/acceptance/iframes/12345?payment_token=enterprise-key');
+
+    assertDatabaseHas('payment_transactions', [
+        'user_id' => $buyer->id,
+        'paymob_order_id' => 9001,
+        'product_slug' => 'enterprise-1500',
+        'product_name' => 'Enterprise Credits',
+        'amount' => 15000,
+        'currency' => 'USD',
+        'type' => 'credits',
+        'credits_added' => 1500,
+        'status' => 'pending',
+    ]);
+});

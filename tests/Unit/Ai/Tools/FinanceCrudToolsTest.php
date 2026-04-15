@@ -274,4 +274,45 @@ class FinanceCrudToolsTest extends TestCase
             'note' => 'Updated',
         ]));
     }
+
+    public function test_edit_transaction_tool_rejects_reusing_a_participant_owned_category_on_a_shared_account(): void
+    {
+        $owner = User::factory()->create();
+        $sharedAccount = Account::factory()->create([
+            'user_id' => $owner->id,
+            'name' => ['en' => 'Shared Wallet', 'ar' => null],
+        ]);
+        $sharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
+
+        $ownersCategory = Category::factory()->create([
+            'user_id' => $owner->id,
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Owner Food', 'ar' => null],
+        ]);
+
+        $editorsCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Editor Food', 'ar' => null],
+        ]);
+
+        $transaction = Transaction::withoutGlobalScopes()->create([
+            'account_id' => $sharedAccount->id,
+            'category_id' => $ownersCategory->id,
+            'amount' => 20,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => 'AED',
+            'note' => 'Shared lunch',
+            'created_at' => '2026-04-12',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The selected category is invalid for the chosen account.');
+
+        (new EditTransactionTool())->handle(new Request([
+            'transaction_id' => $transaction->id,
+            'category_id' => $editorsCategory->id,
+            'note' => 'Editor category attempt',
+        ]));
+    }
 }

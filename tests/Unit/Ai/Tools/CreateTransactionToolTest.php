@@ -35,6 +35,7 @@ class CreateTransactionToolTest extends TestCase
             'user_id' => $this->user->id,
             'name' => ['en' => 'Wallet', 'ar' => null],
             'balance' => 200,
+            'currency' => 'USD',
         ]);
         $category = Category::factory()->create([
             'user_id' => $this->user->id,
@@ -92,6 +93,31 @@ class CreateTransactionToolTest extends TestCase
 
         $this->tool->handle(new Request([
             'amount' => 40,
+        ]));
+    }
+
+    public function test_it_rejects_a_shared_users_own_category_for_an_account_owned_by_someone_else(): void
+    {
+        $owner = User::factory()->create();
+        $sharedAccount = Account::factory()->create([
+            'user_id' => $owner->id,
+            'name' => ['en' => 'Joint Wallet', 'ar' => null],
+        ]);
+        $sharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
+
+        $viewerCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Viewer Food', 'ar' => null],
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The selected category is invalid for the chosen account.');
+
+        $this->tool->handle(new Request([
+            'amount' => 12,
+            'account_id' => $sharedAccount->id,
+            'category_id' => $viewerCategory->id,
         ]));
     }
 

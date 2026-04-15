@@ -295,8 +295,8 @@ class TransactionControllerTest extends TestCase
 
     public function test_view_shared_user_can_read_transactions_for_shared_accounts(): void
     {
-        $owner = User::factory()->createOne();
-        $sharedUser = User::factory()->createOne();
+        $owner = $this->createUser();
+        $sharedUser = $this->createUser();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
@@ -328,8 +328,8 @@ class TransactionControllerTest extends TestCase
 
     public function test_view_shared_user_cannot_write_transactions(): void
     {
-        $owner = User::factory()->createOne();
-        $viewer = User::factory()->createOne();
+        $owner = $this->createUser();
+        $viewer = $this->createUser();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($viewer->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
@@ -366,8 +366,8 @@ class TransactionControllerTest extends TestCase
 
     public function test_edit_shared_user_can_write_transactions(): void
     {
-        $owner = User::factory()->createOne();
-        $editor = User::factory()->createOne();
+        $owner = $this->createUser();
+        $editor = $this->createUser();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($editor->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
@@ -407,10 +407,10 @@ class TransactionControllerTest extends TestCase
         $deleteResponse->assertOk();
     }
 
-    public function test_shared_user_can_fetch_transaction_form_options_for_shared_account_participants(): void
+    public function test_shared_user_can_fetch_the_shared_account_owners_categories_when_account_id_is_supplied(): void
     {
-        $owner = User::factory()->createOne();
-        $viewer = User::factory()->createOne();
+        $owner = $this->createUser();
+        $viewer = $this->createUser();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($viewer->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
@@ -426,18 +426,18 @@ class TransactionControllerTest extends TestCase
             'type' => Category::EXPENSES,
         ]);
 
-        $response = $this->actingAs($viewer)->getJson('/api/v1/transactions/form-options');
+        $response = $this->actingAs($viewer)->getJson("/api/v1/transactions/form-options?account_id={$account->id}");
 
         $response->assertOk();
 
         $this->assertContains($category->id, collect($response->json('categories'))->pluck('id'));
-        $this->assertContains($viewerCategory->id, collect($response->json('categories'))->pluck('id'));
+        $this->assertNotContains($viewerCategory->id, collect($response->json('categories'))->pluck('id'));
     }
 
-    public function test_edit_shared_user_can_create_transaction_with_their_own_category_on_a_shared_account(): void
+    public function test_edit_shared_user_cannot_create_transaction_with_their_own_category_on_a_shared_account(): void
     {
-        $owner = User::factory()->createOne();
-        $editor = User::factory()->createOne();
+        $owner = $this->createUser();
+        $editor = $this->createUser();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($editor->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
@@ -461,16 +461,14 @@ class TransactionControllerTest extends TestCase
             'note' => 'Editor category on shared account',
         ]);
 
-        $response->assertCreated()
-            ->assertJsonPath('transaction.category.id', $editorCategory->id)
-            ->assertJsonPath('transaction.account.ownerName', $owner->name)
-            ->assertJsonPath('transaction.account.permissionLevel', Account::PERMISSION_EDIT);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['category_id']);
     }
 
-    public function test_owner_can_create_a_new_transaction_with_a_shared_users_category_on_the_shared_account(): void
+    public function test_owner_cannot_create_a_new_transaction_with_a_shared_users_category_on_the_shared_account(): void
     {
-        $owner = User::factory()->createOne(['name' => 'Primary Owner']);
-        $editor = User::factory()->createOne();
+        $owner = $this->createUser(['name' => 'Primary Owner']);
+        $editor = $this->createUser();
         $account = Account::factory()->create(['user_id' => $owner->id]);
         $account->sharedUsers()->attach($editor->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
@@ -480,10 +478,10 @@ class TransactionControllerTest extends TestCase
             'type' => Category::EXPENSES,
         ]);
 
-        $optionsResponse = $this->actingAs($owner)->getJson('/api/v1/transactions/form-options');
+        $optionsResponse = $this->actingAs($owner)->getJson("/api/v1/transactions/form-options?account_id={$account->id}");
 
         $optionsResponse->assertOk();
-        $this->assertContains($editorCategory->id, collect($optionsResponse->json('categories'))->pluck('id'));
+        $this->assertNotContains($editorCategory->id, collect($optionsResponse->json('categories'))->pluck('id'));
 
         $createResponse = $this->actingAs($owner)->postJson('/api/v1/transactions', [
             'account_id' => $account->id,
@@ -493,10 +491,15 @@ class TransactionControllerTest extends TestCase
             'note' => 'Owner reused shared category',
         ]);
 
-        $createResponse->assertCreated()
-            ->assertJsonPath('transaction.category.id', $editorCategory->id)
-            ->assertJsonPath('transaction.note', 'Owner reused shared category')
-            ->assertJsonPath('transaction.account.ownerName', 'Primary Owner')
-            ->assertJsonPath('transaction.account.permissionLevel', 'owner');
+        $createResponse->assertStatus(422)
+            ->assertJsonValidationErrors(['category_id']);
+    }
+
+    private function createUser(array $attributes = []): User
+    {
+        /** @var User $user */
+        $user = User::factory()->create($attributes);
+
+        return $user;
     }
 }

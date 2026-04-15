@@ -177,7 +177,7 @@ abstract class FinancialTool implements Tool
                 ->withoutGlobalScope(TenantScope::class)
                 ->find($categoryId);
 
-            if (! $category || ! in_array((int) $category->user_id, $account->participantUserIds(), true)) {
+            if (! $category || (int) $category->user_id !== (int) $account->user_id) {
                 throw new RuntimeException('The selected category is invalid for the chosen account.');
             }
 
@@ -188,12 +188,7 @@ abstract class FinancialTool implements Tool
             throw new RuntimeException('Provide either category_id or category_type.');
         }
 
-        $authenticatedUser = $this->authenticatedUser();
-        $fallbackOwnerId = in_array((int) $authenticatedUser->id, $account->participantUserIds(), true)
-            ? (int) $authenticatedUser->id
-            : (int) $account->user_id;
-
-        return Category::findOrCreateFallbackForUser($fallbackOwnerId, $categoryType);
+        return Category::findOrCreateFallbackForUser((int) $account->user_id, $categoryType);
     }
 
     protected function formatAmount(float|int $amount, ?string $currency = null): string

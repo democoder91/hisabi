@@ -21,8 +21,8 @@ it('cutString', () => {
     expect(cutString('saleem', 6)).toBe('saleem')
 });
 
-it('filters categories by account participants', () => {
-  const account = { participantUserIds: [3, 8] };
+it('filters categories by account owner', () => {
+  const account = { ownerId: 8 };
 
   expect(isCategoryAvailableForAccount({ ownerUserId: 8 }, account)).toBe(true);
   expect(isCategoryAvailableForAccount({ ownerUserId: 10 }, account)).toBe(false);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Domains\Account\Models\Account;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Carbon;
@@ -38,6 +39,13 @@ class RegistrationTest extends TestCase
             'available_credits' => 10,
             'trial_ends_at' => '2026-05-13 10:00:00',
         ]);
+
+        $user = User::query()->where('email', 'new@example.com')->firstOrFail();
+        $accounts = $user->accounts()->get();
+
+        $this->assertCount(1, $accounts);
+        $this->assertSame(Account::DEFAULT_NAME, $accounts->first()->getTranslation('name', 'en'));
+        $this->assertSame(0.0, (float) $accounts->first()->balance);
 
         Carbon::setTestNow();
     }

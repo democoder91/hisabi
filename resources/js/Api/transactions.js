@@ -41,8 +41,15 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     };
 }
 
-export const getTransactionFormOptions = async () => {
-    const response = await apiFetch('/api/v1/transactions/form-options', {
+export const getTransactionFormOptions = async (accountId = null) => {
+    const params = new URLSearchParams();
+
+    if (accountId !== null && accountId !== undefined) {
+        params.append('account_id', accountId.toString());
+    }
+
+    const queryString = params.toString();
+    const response = await apiFetch(`/api/v1/transactions/form-options${queryString ? `?${queryString}` : ''}`, {
         method: 'GET',
     });
 

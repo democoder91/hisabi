@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Domains\Account\Models\Account;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -38,6 +39,13 @@ class AuthControllerTest extends TestCase
         $this->assertDatabaseHas('personal_access_tokens', [
             'name' => 'iphone',
         ]);
+
+        $user = User::query()->where('email', 'api@example.com')->firstOrFail();
+        $accounts = $user->accounts()->get();
+
+        $this->assertCount(1, $accounts);
+        $this->assertSame(Account::DEFAULT_NAME, $accounts->first()->getTranslation('name', 'en'));
+        $this->assertSame(0.0, (float) $accounts->first()->balance);
 
         Carbon::setTestNow();
     }

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createTransaction } from "@/Api";
+import { createTransaction, getTransactionFormOptions } from "@/Api";
 import Combobox from "@/components/Global/Combobox";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,9 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
     const [reverseAccount, setReverseAccount] = useState(null);
     const [isReady, setIsReady] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [availableCategories, setAvailableCategories] = useState(categories);
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
+    const previousAccountIdRef = useRef<number | null>(null);
     const formatSharedBy = (ownerName) => t('account.sharedBy', { name: ownerName });
 
     const selectedCurrency = account?.currency || getAppCurrency();
@@ -49,11 +52,11 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
     const canCreateReverseTransaction = transactionType === TRANSACTION_TYPES.CREDIT;
 
     const filteredCategories = useMemo(() => {
-        return categories.filter((item) => {
+        return availableCategories.filter((item) => {
             return isCategoryAvailableForAccount(item, account)
                 && isCategoryCompatibleWithTransactionType(item, transactionType);
         });
-    }, [account, categories, transactionType]);
+    }, [account, availableCategories, transactionType]);
 
     useEffect(() => {
         setIsReady(
@@ -61,9 +64,64 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
             && createdAt != ''
             && account !== null
             && category !== null
+            && !categoriesLoading
             && (!createReverseTransaction || reverseAccount !== null)
         );
-    }, [amount, createdAt, account, category, createReverseTransaction, reverseAccount]);
+    }, [amount, createdAt, account, category, categoriesLoading, createReverseTransaction, reverseAccount]);
+
+    useEffect(() => {
+        if (!showCreate) {
+            previousAccountIdRef.current = null;
+            setCategoriesLoading(false);
+
+            return;
+        }
+
+        if (!account?.id) {
+            previousAccountIdRef.current = null;
+            setAvailableCategories([]);
+            setCategoriesLoading(false);
+
+            return;
+        }
+
+        const accountId = Number(account.id);
+
+        if (previousAccountIdRef.current !== null && previousAccountIdRef.current !== accountId) {
+            setCategory(null);
+        }
+
+        previousAccountIdRef.current = accountId;
+        setCategoriesLoading(true);
+
+        let cancelled = false;
+
+        getTransactionFormOptions(accountId)
+            .then(({ data }) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setAvailableCategories(data.categories);
+            })
+            .catch((error) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setAvailableCategories([]);
+                console.error(error);
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setCategoriesLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [account?.id, showCreate]);
 
     useEffect(() => {
         if (!account && editableAccounts.length > 0) {
@@ -79,10 +137,11 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
 
     useEffect(() => {
         if (category && (!isCategoryCompatibleWithTransactionType(category, transactionType)
-            || !isCategoryAvailableForAccount(category, account))) {
+            || !isCategoryAvailableForAccount(category, account)
+            || !availableCategories.some((item) => item.id === category.id))) {
             setCategory(null);
         }
-    }, [account, category, transactionType]);
+    }, [account, availableCategories, category, transactionType]);
 
     useEffect(() => {
         if (!canCreateReverseTransaction) {
@@ -213,6 +272,8 @@ export default function Create({ accounts, categories, showCreate, onClose, onCr
                             items={filteredCategories}
                             initialSelectedItem={category}
                             onChange={handleCategoryChange}
+                            disabled={!account || categoriesLoading}
+                            placeholder={categoriesLoading ? t('common.loading') : undefined}
                             displayInputValue={(item) => item ? getCategoryLabel(item) : ''}
                             displayOptionValue={(item) => item ? getCategoryLabel(item) : ''}
                             getItemValue={(item) => item ? `${getCategoryLabel(item)} ${item.id}` : ''}

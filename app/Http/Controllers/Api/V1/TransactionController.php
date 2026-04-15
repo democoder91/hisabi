@@ -123,17 +123,23 @@ class TransactionController extends Controller
 
     public function formOptions(Request $request): JsonResponse
     {
-        $participantIds = Account::query()
-            ->accessibleTo($request->user())
-            ->with('sharedUsers:id')
-            ->get()
-            ->flatMap(fn (Account $account) => $account->participantUserIds())
+        $ownerIds = $request->filled('account_id')
+            ? collect([
+                (int) Account::query()
+                    ->accessibleTo($request->user())
+                    ->findOrFail((int) $request->input('account_id'))
+                    ->user_id,
+            ])
+            : Account::query()
+                ->accessibleTo($request->user())
+                ->pluck('user_id')
+                ->map(fn (mixed $userId) => (int) $userId)
             ->unique()
             ->values();
 
         $categories = Category::query()
             ->withoutGlobalScope(TenantScope::class)
-            ->whereIn('user_id', $participantIds)
+            ->whereIn('user_id', $ownerIds->all())
             ->with('user:id,name')
             ->withCount('transactions')
             ->orderByDesc('id')

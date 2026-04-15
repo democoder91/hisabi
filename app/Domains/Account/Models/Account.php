@@ -22,7 +22,8 @@ class Account extends Model
 {
     use HasFactory, HasLocalizedTranslatableName, HasTranslations, SoftDeletes;
 
-    public const DEFAULT_NAME = 'Checking';
+    public const DEFAULT_NAME = 'Cash';
+    public const LEGACY_DEFAULT_NAMES = [self::DEFAULT_NAME, 'Checking'];
     public const PERMISSION_VIEW = 'view';
     public const PERMISSION_EDIT = 'edit';
 

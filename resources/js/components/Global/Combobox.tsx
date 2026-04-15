@@ -26,11 +26,13 @@ interface ComboboxProps {
   displayInputValue?: (item: any) => string
   displayOptionValue?: (item: any) => string
   getItemValue?: (item: any) => string
+  disabled?: boolean
+  placeholder?: string
 }
 
 const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
   function ComboboxComponent(
-    { label, items, initialSelectedItem, onChange, displayInputValue, displayOptionValue, getItemValue },
+    { label, items, initialSelectedItem, onChange, displayInputValue, displayOptionValue, getItemValue, disabled = false, placeholder = 'Select...' },
     ref
   ) {
     const [open, setOpen] = useState(false)
@@ -40,6 +42,12 @@ const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
     useEffect(() => {
       setSelectedItem(initialSelectedItem)
     }, [initialSelectedItem])
+
+    useEffect(() => {
+      if (disabled) {
+        setOpen(false)
+      }
+    }, [disabled])
 
     const handleSelect = (item: any) => {
       setSelectedItem(item)
@@ -73,12 +81,13 @@ const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
             {label}
           </Label>
         )}
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={(nextOpen) => !disabled && setOpen(nextOpen)}>
           <PopoverTrigger className="w-full">
             <Button
               variant="outline"
               role="combobox"
               aria-expanded={open}
+              disabled={disabled}
               className="w-full justify-between font-normal"
             >
               <span className={cn(
@@ -87,7 +96,7 @@ const ComboboxComponent = forwardRef<HTMLDivElement, ComboboxProps>(
               )}>
                 {selectedItem
                   ? getDisplayValue(selectedItem)
-                  : 'Select...'}
+                  : placeholder}
               </span>
               <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>

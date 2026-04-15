@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from 'react-i18next';
 
-import { updateTransaction, deleteTransaction } from "../../Api";
+import { updateTransaction, deleteTransaction, getTransactionFormOptions } from "../../Api";
 import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -32,14 +32,17 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
     const [category, setCategory] = useState(null);
     const [note, setNote] = useState('');
     const [transactionType, setTransactionType] = useState(TRANSACTION_TYPES.DEBIT);
+    const [availableCategories, setAvailableCategories] = useState(categories);
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
+    const previousAccountIdRef = useRef<number | null>(null);
     const formatSharedBy = (ownerName) => t('account.sharedBy', { name: ownerName });
 
     const filteredCategories = useMemo(() => {
-        return categories.filter((item) => {
+        return availableCategories.filter((item) => {
             return isCategoryAvailableForAccount(item, account)
                 && isCategoryCompatibleWithTransactionType(item, transactionType);
         });
-    }, [account, categories, transactionType]);
+    }, [account, availableCategories, transactionType]);
 
     const editableAccounts = useMemo(() => {
         return accounts.filter((item) => item.canEditTransactions);
@@ -64,11 +67,67 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
     }, [categories, transaction]);
 
     useEffect(() => {
-        if (category && (!isCategoryCompatibleWithTransactionType(category, transactionType)
-            || !isCategoryAvailableForAccount(category, account))) {
+        if (!transaction) {
+            previousAccountIdRef.current = null;
+            setAvailableCategories(categories);
+            setCategoriesLoading(false);
+
+            return;
+        }
+
+        if (!account?.id) {
+            previousAccountIdRef.current = null;
+            setAvailableCategories([]);
+            setCategoriesLoading(false);
+
+            return;
+        }
+
+        const accountId = Number(account.id);
+
+        if (previousAccountIdRef.current !== null && previousAccountIdRef.current !== accountId) {
             setCategory(null);
         }
-    }, [account, category, transactionType]);
+
+        previousAccountIdRef.current = accountId;
+        setCategoriesLoading(true);
+
+        let cancelled = false;
+
+        getTransactionFormOptions(accountId)
+            .then(({ data }) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setAvailableCategories(data.categories);
+            })
+            .catch((error) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setAvailableCategories([]);
+                console.error(error);
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setCategoriesLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [account?.id, categories, transaction]);
+
+    useEffect(() => {
+        if (category && (!isCategoryCompatibleWithTransactionType(category, transactionType)
+            || !isCategoryAvailableForAccount(category, account)
+            || !availableCategories.some((item) => item.id === category.id))) {
+            setCategory(null);
+        }
+    }, [account, availableCategories, category, transactionType]);
 
     const handleCategoryChange = (item) => {
         setCategory(item);
@@ -167,6 +226,7 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 label={t('transaction.account')}
                                 items={editableAccounts}
                                 initialSelectedItem={account}
+                                disabled={!canEdit}
                                 onChange={(item) => canEdit && setAccount(item)}
                                 displayInputValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
                                 displayOptionValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
@@ -187,7 +247,9 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 label={t('transaction.category')}
                                 items={filteredCategories}
                                 initialSelectedItem={category}
+                                disabled={!canEdit || !account || categoriesLoading}
                                 onChange={(item) => canEdit && handleCategoryChange(item)}
+                                placeholder={categoriesLoading ? t('common.loading') : undefined}
                                 displayInputValue={(item) => item ? getCategoryLabel(item) : ''}
                                 displayOptionValue={(item) => item ? getCategoryLabel(item) : ''}
                                 getItemValue={(item) => item ? `${getCategoryLabel(item)} ${item.id}` : ''}
@@ -213,7 +275,7 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 <LongPressButton onLongPress={handleDelete}>
                                     Hold to Delete
                                 </LongPressButton>
-                                <Button onClick={handleUpdate}>
+                                <Button disabled={categoriesLoading || !account || !category || !createdAt || Number(amount) === 0} onClick={handleUpdate}>
                                     Update
                                 </Button>
                             </div>

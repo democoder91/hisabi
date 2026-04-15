@@ -31,7 +31,7 @@ class UpdateTransactionRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id'),
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    $this->validateCategoryBelongsToAccountParticipants($value, $fail);
+                    $this->validateCategoryBelongsToAccountOwner($value, $fail);
                 },
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $this->validateCategoryMatchesTransactionType($value, $fail);
@@ -59,7 +59,7 @@ class UpdateTransactionRequest extends FormRequest
         }
     }
 
-    private function validateCategoryBelongsToAccountParticipants(mixed $categoryId, \Closure $fail): void
+    private function validateCategoryBelongsToAccountOwner(mixed $categoryId, \Closure $fail): void
     {
         if (! $categoryId) {
             return;
@@ -75,7 +75,7 @@ class UpdateTransactionRequest extends FormRequest
             ->withoutGlobalScope(TenantScope::class)
             ->find($categoryId);
 
-        if (! $category || ! in_array((int) $category->user_id, $account->participantUserIds(), true)) {
+        if (! $category || (int) $category->user_id !== (int) $account->user_id) {
             $fail('The selected category is invalid for the chosen account.');
         }
     }

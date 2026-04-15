@@ -7,6 +7,7 @@ use App\Domains\Budget\Models\Budget;
 use App\Domains\Category\Models\Category as DomainCategory;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -132,7 +133,10 @@ class User extends Authenticatable
     public function getOrCreateDefaultAccount(): Account
     {
         $account = $this->accounts()
-            ->whereRaw(Account::localizedNameSqlExpression('en', false) . ' = ?', [Account::DEFAULT_NAME])
+            ->whereIn(
+                DB::raw(Account::localizedNameSqlExpression('en', false)),
+                Account::LEGACY_DEFAULT_NAMES,
+            )
             ->first();
 
         if ($account) {

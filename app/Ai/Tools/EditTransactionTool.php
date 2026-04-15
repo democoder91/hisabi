@@ -73,7 +73,7 @@ class EditTransactionTool extends FinancialTool
             && ! Arr::exists($validated, 'category_id')
             && ! Arr::exists($validated, 'category_type')
             && $transaction->category
-            && ! in_array((int) $transaction->category->user_id, $targetAccount->participantUserIds(), true)
+            && (int) $transaction->category->user_id !== (int) $targetAccount->user_id
         ) {
             throw new \RuntimeException('When moving a transaction to an account owned by a different user, provide category_id or category_type.');
         }
@@ -124,7 +124,7 @@ class EditTransactionTool extends FinancialTool
                 ->description('Optional replacement account ID. The user must be allowed to edit transactions on it.')
                 ->nullable(),
             'category_id' => $schema->integer()
-                ->description('Optional replacement category ID. It must belong to someone participating in the selected account.')
+                ->description('Optional replacement category ID. It must belong to the selected account owner.')
                 ->nullable(),
             'category_type' => $schema->string()
                 ->description('Optional replacement category type to use with a fallback category when category_id is not provided.')

@@ -214,9 +214,22 @@ class AccountControllerTest extends TestCase
             ->assertJsonPath('data.0.name', 'Legacy Savings');
     }
 
-    public function test_it_deletes_an_account(): void
+    public function test_it_rejects_deleting_the_only_owned_account(): void
     {
         $account = Account::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->deleteJson("/api/v1/accounts/{$account->id}");
+
+        $response->assertForbidden()
+            ->assertJsonPath('message', 'You must have at least one account.');
+
+        $this->assertDatabaseHas('accounts', ['id' => $account->id, 'deleted_at' => null]);
+    }
+
+    public function test_it_deletes_an_account_when_the_user_has_multiple_accounts(): void
+    {
+        $account = Account::factory()->create(['user_id' => $this->user->id]);
+        Account::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)->deleteJson("/api/v1/accounts/{$account->id}");
 

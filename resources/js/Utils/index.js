@@ -93,15 +93,11 @@ export const isCategoryAvailableForAccount = (category, account) => {
         return true
     }
 
-    const participantUserIds = Array.isArray(account.participantUserIds)
-        ? account.participantUserIds.map((id) => Number(id))
-        : []
-
-    if (participantUserIds.length === 0 || category.ownerUserId == null) {
+    if (account.ownerId == null || category.ownerUserId == null) {
         return true
     }
 
-    return participantUserIds.includes(Number(category.ownerUserId))
+    return Number(category.ownerUserId) === Number(account.ownerId)
 }
 
 export const getSharedAccountOwnerLabel = (account, formatSharedBy) => {

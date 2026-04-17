@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Ai\Contracts\Tool;
 use RuntimeException;
+use Stringable;
 
 abstract class FinancialTool implements Tool
 {
@@ -58,6 +59,82 @@ abstract class FinancialTool implements Tool
                 $input[$key] = strtoupper(trim($input[$key]));
             }
         }
+    }
+
+    protected function normalizeOptionalTextFields(array &$input, array $keys): void
+    {
+        foreach ($keys as $key) {
+            if (! Arr::exists($input, $key)) {
+                continue;
+            }
+
+            $input[$key] = $this->normalizeOptionalTextValue($input[$key]);
+        }
+    }
+
+    protected function normalizeOptionalTextValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        if (is_int($value) || is_float($value) || is_bool($value) || $value instanceof Stringable) {
+            $trimmed = trim((string) $value);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        if (is_object($value)) {
+            $value = (array) $value;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        foreach (['note', 'text', 'description', 'content', 'message', 'value', 'label', 'name', 'title'] as $preferredKey) {
+            if (! Arr::exists($value, $preferredKey)) {
+                continue;
+            }
+
+            $normalized = $this->normalizeOptionalTextValue($value[$preferredKey]);
+
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        $fragments = [];
+
+        array_walk_recursive($value, function (mixed $item) use (&$fragments): void {
+            if (is_string($item)) {
+                $trimmed = trim($item);
+
+                if ($trimmed !== '') {
+                    $fragments[] = $trimmed;
+                }
+
+                return;
+            }
+
+            if (is_int($item) || is_float($item) || is_bool($item) || $item instanceof Stringable) {
+                $fragments[] = (string) $item;
+            }
+        });
+
+        if ($fragments !== []) {
+            return implode(' | ', array_values(array_unique($fragments)));
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $encoded === false ? null : $encoded;
     }
 
     protected function normalizeLimit(mixed $value, int $default = 10, int $max = 25): int

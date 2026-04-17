@@ -21,7 +21,10 @@ class CreateTransferTool extends FinancialTool
     public function handle(Request $request): Stringable|string
     {
         $user = $this->authenticatedUser();
-        $validated = $this->validateInput($request->all(), [
+        $input = $request->all();
+        $this->normalizeOptionalTextFields($input, ['note']);
+
+        $validated = $this->validateInput($input, [
             'amount' => ['required', 'numeric', 'min:0'],
             'from_account_id' => ['required', 'integer', 'different:to_account_id'],
             'to_account_id' => ['required', 'integer'],

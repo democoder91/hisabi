@@ -86,6 +86,22 @@ class CreateTransactionToolTest extends TestCase
         $this->assertStringContains('EUR 100.00', $result);
     }
 
+    public function test_it_normalizes_structured_ai_text_fields_before_validation(): void
+    {
+        $result = $this->tool->handle(new Request([
+            'amount' => 150,
+            'category_type' => 'expenses',
+            'brand_name' => ['name' => 'Fruit Market'],
+            'note' => ['description' => 'Sweets and fruits'],
+        ]));
+
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
+
+        $this->assertEquals('Sweets and fruits | Merchant: Fruit Market', $transaction->note);
+        $this->assertStringContains('Sweets and fruits', $result);
+        $this->assertStringContains('Fruit Market', $result);
+    }
+
     public function test_it_requires_category_context(): void
     {
         $this->expectException(RuntimeException::class);

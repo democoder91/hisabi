@@ -24,6 +24,7 @@ class EditTransactionTool extends FinancialTool
         $user = $this->authenticatedUser();
         $input = $request->all();
         $this->uppercaseIfPresent($input, ['category_type', 'currency']);
+        $this->normalizeOptionalTextFields($input, ['note']);
 
         $this->ensureAnyProvided(
             $input,

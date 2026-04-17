@@ -7,6 +7,7 @@ import { BankIcon, ArrowElbowDownRightIcon } from '@phosphor-icons/react';
 
 import Authenticated from '@/Layouts/Authenticated';
 import { getAccounts } from '@/Api/accounts';
+import { getCurrencySettings } from '@/Api/settings';
 import { animateRowItem, formatNumber, getSharedAccountOwnerLabel } from '@/Utils';
 import Create from './Create';
 import Edit from './Edit';
@@ -15,56 +16,124 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LoadMore from '@/components/Global/LoadMore';
 import { withLocalizedNames } from '@/Utils';
 
-export default function Index({ auth }) {
+declare const route: any;
+
+type AccountFilters = {
+    currency: string;
+    access: string;
+};
+
+type CurrencyOption = {
+    value: string;
+    label: string;
+};
+
+export default function Index({ auth }: { auth: any }) {
     const { t } = useTranslation();
     const activeLocale = useActiveLocale();
-    const [accounts, setAccounts] = useState([]);
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get('search') || '';
+    const initialFilters = {
+        currency: urlParams.get('currency') || '',
+        access: urlParams.get('access') || '',
+    };
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMorePages, setHasMorePages] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(initialSearch);
+    const [filters, setFilters] = useState(initialFilters);
     const [loading, setLoading] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
     const [editItem, setEditItem] = useState(null);
 
     useEffect(() => {
+        getCurrencySettings()
+            .then((payload) => setCurrencies(payload.options.currencies))
+            .catch(console.error);
+    }, []);
+
+    useEffect(() => {
         setLoading(true);
 
-        getAccounts(currentPage, searchQuery)
+        getAccounts(currentPage, searchQuery, filters)
             .then(({ data }) => {
                 setAccounts((previous) => currentPage === 1 ? data.accounts.data : [...previous, ...data.accounts.data]);
                 setHasMorePages(data.accounts.paginatorInfo.hasMorePages);
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [currentPage, searchQuery]);
+    }, [currentPage, searchQuery, filters]);
 
-    const handleCreate = (account) => {
+    const handleCreate = (account: any) => {
         setShowCreate(false);
         setAccounts((previous) => [account, ...previous]);
         animateRowItem(account.id);
     };
 
-    const handleUpdate = (account) => {
+    const handleUpdate = (account: any) => {
         setAccounts((previous) => previous.map((item) => item.id === account.id ? account : item));
         animateRowItem(account.id);
     };
 
-    const handleDelete = (account) => {
+    const handleDelete = (account: any) => {
         animateRowItem(account.id, 'deleted', () => {
             setAccounts((previous) => previous.filter((item) => item.id !== account.id));
         });
     };
 
-    const performSearch = useMemo(() => debounce((event) => {
+    const syncUrl = (nextSearchQuery: string, nextFilters: AccountFilters) => {
+        const url = new URL(window.location.href);
+
+        if (nextSearchQuery) {
+            url.searchParams.set('search', nextSearchQuery);
+        } else {
+            url.searchParams.delete('search');
+        }
+
+        if (nextFilters.currency) {
+            url.searchParams.set('currency', nextFilters.currency);
+        } else {
+            url.searchParams.delete('currency');
+        }
+
+        if (nextFilters.access) {
+            url.searchParams.set('access', nextFilters.access);
+        } else {
+            url.searchParams.delete('access');
+        }
+
+        window.history.pushState({}, '', url);
+    };
+
+    const performSearch = useMemo(() => debounce((event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextSearchQuery = event.target.value ?? '';
+
         setAccounts([]);
         setCurrentPage(1);
-        setSearchQuery(event.target.value ?? '');
-    }, 300), []);
+        setSearchQuery(nextSearchQuery);
+        syncUrl(nextSearchQuery, filters);
+    }, 300), [filters]);
+
+    const handleFilterChange = (key: keyof AccountFilters, value: string) => {
+        const normalizedValue = value === 'ALL' ? '' : value;
+        const nextFilters = {
+            ...filters,
+            [key]: normalizedValue,
+        };
+
+        setAccounts([]);
+        setCurrentPage(1);
+        setFilters(nextFilters);
+        syncUrl(searchQuery, nextFilters);
+    };
 
     const localizedAccounts = useMemo(() => withLocalizedNames(accounts, activeLocale), [accounts, activeLocale]);
+    const hasActiveFilters = Boolean(searchQuery || filters.currency || filters.access);
 
     const columns = useMemo<ColumnDef<any>[]>(() => [
         {
@@ -72,7 +141,7 @@ export default function Index({ auth }) {
             header: t('account.name'),
             cell: ({ row }) => {
                 const account = row.original;
-                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName) => t('account.sharedBy', { name: ownerName }));
+                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName: string) => t('account.sharedBy', { name: ownerName }));
 
                 return (
                     <div className="flex items-center gap-3">
@@ -164,8 +233,36 @@ export default function Index({ auth }) {
 
             <div className="p-4">
                 <div className="mx-auto max-w-7xl space-y-4">
-                    {(accounts.length > 0 || searchQuery) && (
-                        <Input placeholder={t('account.searchAccounts')} className="max-w-56" onChange={performSearch} />
+                    {(accounts.length > 0 || hasActiveFilters) && (
+                        <div className="flex flex-wrap gap-2">
+                            <Input
+                                placeholder={t('account.searchAccounts')}
+                                className="max-w-56"
+                                defaultValue={searchQuery}
+                                onChange={performSearch}
+                            />
+                            <Select value={filters.access || 'ALL'} onValueChange={(value) => handleFilterChange('access', value)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('account.access')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('account.allAccess')}</SelectItem>
+                                    <SelectItem value="owned">{t('account.ownedOnly')}</SelectItem>
+                                    <SelectItem value="shared">{t('account.sharedOnly')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.currency || 'ALL'} onValueChange={(value) => handleFilterChange('currency', value)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('settings.nav.currencies')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('account.allCurrencies')}</SelectItem>
+                                    {currencies.map((currency) => (
+                                        <SelectItem key={currency.value} value={currency.value}>{currency.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     )}
 
                     <DataTable

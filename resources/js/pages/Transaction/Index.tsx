@@ -33,6 +33,7 @@ export default function Index({ auth }: { auth: any }) {
 
     // Initialize filters from URL
     const initialFilters = {
+        accountId: urlParams.get('account') || '',
         categoryId: urlParams.get('category') || '',
         transactionType: urlParams.get('type') || '',
         dateFrom: urlParams.get('dateFrom') || '',
@@ -146,6 +147,12 @@ export default function Index({ auth }: { auth: any }) {
         const url = new URL(window.location.href);
 
         // Update URL params for filters
+        if (newFilters.accountId) {
+            url.searchParams.set('account', newFilters.accountId);
+        } else {
+            url.searchParams.delete('account');
+        }
+
         if (newFilters.categoryId) {
             url.searchParams.set('category', newFilters.categoryId);
         } else {
@@ -176,6 +183,9 @@ export default function Index({ auth }: { auth: any }) {
         const updatedFilters = { ...filters };
 
         switch (filterKey) {
+            case 'account':
+                updatedFilters.accountId = '';
+                break;
             case 'category':
                 updatedFilters.categoryId = '';
                 break;
@@ -241,7 +251,7 @@ export default function Index({ auth }: { auth: any }) {
                     return '-';
                 }
 
-                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName) => t('account.sharedBy', { name: ownerName }));
+                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName: string) => t('account.sharedBy', { name: ownerName }));
 
                 return (
                     <div className="space-y-1">
@@ -288,7 +298,7 @@ export default function Index({ auth }: { auth: any }) {
 
                 return (
                     <p className={`${isIncomeTransaction ? 'text-green-500' : 'text-red-500'} whitespace-nowrap text-right`}>
-                        {isIncomeTransaction ? '' : '-'}{transaction.currency} {formatNumber(transaction.amount, null)}
+                        {isIncomeTransaction ? '' : '-'}{transaction.currency} {formatNumber(transaction.amount, '')}
                     </p>
                 );
             },
@@ -361,6 +371,16 @@ export default function Index({ auth }: { auth: any }) {
                                     <X size={14} weight="bold" />
                                 </Badge>
                             )}
+                            {filters.accountId && (
+                                <Badge
+                                    variant="secondary"
+                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
+                                    onClick={() => clearFilter('account')}
+                                >
+                                    {localizedAllAccounts.find((account: any) => account.id == filters.accountId)?.name}
+                                    <X size={14} weight="bold" />
+                                </Badge>
+                            )}
                             {filters.transactionType && (
                                 <Badge
                                     variant="secondary"
@@ -382,6 +402,7 @@ export default function Index({ auth }: { auth: any }) {
                                 </Badge>
                             )}
                             <Filters
+                                accounts={localizedAllAccounts}
                                 categories={localizedAllCategories}
                                 onApply={handleFiltersApply}
                                 activeFilters={filters}

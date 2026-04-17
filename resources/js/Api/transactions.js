@@ -14,6 +14,9 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     if (filters.categoryId) {
         params.append('filter[category_id]', filters.categoryId);
     }
+    if (filters.accountId) {
+        params.append('filter[account_id]', filters.accountId);
+    }
     if (filters.transactionType) {
         params.append('filter[transaction_type]', filters.transactionType);
     }

@@ -28,6 +28,18 @@ class AccountService
                             ->orWhereRaw(Account::localizedNameSqlExpression('ar', false) . ' LIKE ?', [$search]);
                     });
                 }),
+                AllowedFilter::exact('currency'),
+                AllowedFilter::callback('access', function (Builder $query, mixed $value) {
+                    if ($value === 'owned') {
+                        $query->where('user_id', Auth::id());
+
+                        return;
+                    }
+
+                    if ($value === 'shared') {
+                        $query->where('user_id', '!=', Auth::id());
+                    }
+                }),
             ])
             ->allowedSorts([
                 'id',

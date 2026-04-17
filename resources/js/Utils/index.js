@@ -11,6 +11,10 @@ export const getAppCurrency = () => {
     return window ? window.AppCurrency : ''
 }
 
+/**
+ * @param {number} number
+ * @param {string | null | undefined} format
+ */
 export const formatNumber = (number, format = '(0[.]000a)') => {
     numbro.setDefaults({ thousandSeparated: true, })
 
@@ -29,6 +33,11 @@ export const formatNumber = (number, format = '(0[.]000a)') => {
     return num.format(format)
 }
 
+/**
+ * @param {number | string} id
+ * @param {string} animation
+ * @param {(() => void) | null} callback
+ */
 export const animateRowItem = (id, animation = 'updated', callback = null) => {
     let rowItem = document.getElementById('item-' + id);
 

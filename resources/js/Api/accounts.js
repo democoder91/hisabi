@@ -18,7 +18,7 @@ export const getAllAccounts = async () => {
     };
 };
 
-export const getAccounts = async (page, searchQuery = '') => {
+export const getAccounts = async (page, searchQuery = '', filters = {}) => {
     const params = new URLSearchParams({
         page: page.toString(),
         perPage: '50',
@@ -26,6 +26,14 @@ export const getAccounts = async (page, searchQuery = '') => {
 
     if (searchQuery) {
         params.append('filter[search]', searchQuery);
+    }
+
+    if (filters.currency) {
+        params.append('filter[currency]', filters.currency);
+    }
+
+    if (filters.access) {
+        params.append('filter[access]', filters.access);
     }
 
     const response = await apiFetch(`/api/v1/accounts?${params.toString()}`, {

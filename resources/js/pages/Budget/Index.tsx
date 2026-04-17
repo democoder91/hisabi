@@ -6,6 +6,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 
 import { getBudgets } from '@/Api/budgets';
 import { getAllCategories } from '@/Api/categories';
+import { getCurrencySettings } from '@/Api/settings';
 import Authenticated from '@/Layouts/Authenticated';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -13,6 +14,8 @@ import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { animateRowItem, formatNumber, withLocalizedName, withLocalizedNames } from '@/Utils';
+import { filterBudgets } from '@/Utils/listFilters';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import Create from './Create';
 import Edit from './Edit';
@@ -23,15 +26,21 @@ export default function Index({ auth }: { auth: any }) {
     const activeLocale = useActiveLocale();
     const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
     const [categories, setCategories] = useState<BudgetCategory[]>([]);
+    const [currencies, setCurrencies] = useState<{ value: string; label: string }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [budgetTypeFilter, setBudgetTypeFilter] = useState('');
+    const [recurrenceFilter, setRecurrenceFilter] = useState('');
+    const [currencyFilter, setCurrencyFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const [editBudget, setEditBudget] = useState<BudgetRecord | null>(null);
 
     useEffect(() => {
-        Promise.all([getBudgets(), getAllCategories()])
-            .then(([{ data: budgetData }, { data: categoryData }]) => {
+        Promise.all([getBudgets(), getAllCategories(), getCurrencySettings()])
+            .then(([{ data: budgetData }, { data: categoryData }, currencyPayload]) => {
                 setBudgets(budgetData.budgets);
                 setCategories(categoryData.allCategories);
+                setCurrencies(currencyPayload.options.currencies);
             })
             .catch(console.error);
     }, []);
@@ -64,22 +73,15 @@ export default function Index({ auth }: { auth: any }) {
         categories: withLocalizedNames(budget.categories ?? [], activeLocale),
     })), [budgets, activeLocale]);
 
-    const filteredBudgets = useMemo(() => {
-        if (!searchQuery) {
-            return localizedBudgets;
-        }
+    const filteredBudgets = useMemo(() => filterBudgets(localizedBudgets, {
+        searchQuery,
+        budgetType: budgetTypeFilter,
+        recurrence: recurrenceFilter,
+        currency: currencyFilter,
+        categoryId: categoryFilter,
+    }), [localizedBudgets, searchQuery, budgetTypeFilter, recurrenceFilter, currencyFilter, categoryFilter]);
 
-        const normalizedQuery = searchQuery.toLowerCase();
-
-        return localizedBudgets.filter((budget) => {
-            const englishName = budget.name_translations?.en?.toLowerCase() ?? '';
-            const arabicName = budget.name_translations?.ar?.toLowerCase() ?? '';
-
-            return budget.name.toLowerCase().includes(normalizedQuery)
-                || englishName.includes(normalizedQuery)
-                || arabicName.includes(normalizedQuery);
-        });
-    }, [localizedBudgets, searchQuery]);
+    const hasActiveFilters = Boolean(searchQuery || budgetTypeFilter || recurrenceFilter || currencyFilter || categoryFilter);
 
     const columns = useMemo<ColumnDef<BudgetRecord>[]>(() => [
         {
@@ -90,7 +92,7 @@ export default function Index({ auth }: { auth: any }) {
         {
             accessorKey: 'amount',
             header: t('budget.amount'),
-            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.amount, null)}</span>,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.amount, '')}</span>,
         },
         {
             accessorKey: 'reoccurrence',
@@ -129,12 +131,12 @@ export default function Index({ auth }: { auth: any }) {
         {
             accessorKey: 'total_transactions_amount',
             header: t('budget.spent'),
-            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.total_transactions_amount, null)}</span>,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.total_transactions_amount, '')}</span>,
         },
         {
             accessorKey: 'remaining_to_spend',
             header: t('budget.remaining'),
-            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.remaining_to_spend, null)}</span>,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.currency} {formatNumber(row.original.remaining_to_spend, '')}</span>,
         },
         {
             id: 'actions',
@@ -177,19 +179,66 @@ export default function Index({ auth }: { auth: any }) {
 
             <div className="p-4">
                 <div className="max-w-7xl mx-auto grid gap-4">
-                    {(budgets.length > 0 || searchQuery) && (
-                        <Input
-                            name="search"
-                            placeholder={t('budget.searchBudgets')}
-                            className="max-w-56"
-                            onChange={performSearch}
-                        />
+                    {(budgets.length > 0 || hasActiveFilters) && (
+                        <div className="flex flex-wrap gap-2">
+                            <Input
+                                name="search"
+                                placeholder={t('budget.searchBudgets')}
+                                className="max-w-56"
+                                onChange={performSearch}
+                            />
+                            <Select value={budgetTypeFilter || 'ALL'} onValueChange={(value) => setBudgetTypeFilter(value === 'ALL' ? '' : value)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('budget.budgetType')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('budget.allBudgetTypes')}</SelectItem>
+                                    <SelectItem value="spending">{t('budget.spending')}</SelectItem>
+                                    <SelectItem value="saving">{t('budget.saving')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={recurrenceFilter || 'ALL'} onValueChange={(value) => setRecurrenceFilter(value === 'ALL' ? '' : value)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('budget.reoccurrence')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('budget.allRecurrences')}</SelectItem>
+                                    <SelectItem value="CUSTOM">{t('budget.custom')}</SelectItem>
+                                    <SelectItem value="DAILY">{t('budget.daily')}</SelectItem>
+                                    <SelectItem value="WEEKLY">{t('budget.weekly')}</SelectItem>
+                                    <SelectItem value="MONTHLY">{t('budget.monthly')}</SelectItem>
+                                    <SelectItem value="YEARLY">{t('budget.yearly')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={currencyFilter || 'ALL'} onValueChange={(value) => setCurrencyFilter(value === 'ALL' ? '' : value)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('settings.nav.currencies')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('budget.allCurrencies')}</SelectItem>
+                                    {currencies.map((currency) => (
+                                        <SelectItem key={currency.value} value={currency.value}>{currency.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={categoryFilter || 'ALL'} onValueChange={(value) => setCategoryFilter(value === 'ALL' ? '' : value)}>
+                                <SelectTrigger className="w-full sm:w-[220px]">
+                                    <SelectValue placeholder={t('budget.categories')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('budget.allCategories')}</SelectItem>
+                                    {localizedCategories.map((category) => (
+                                        <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     )}
 
                     <DataTable
                         columns={columns}
                         data={filteredBudgets}
-                        emptyMessage={searchQuery ? t('common.noResults') : t('budget.noBudgets')}
+                        emptyMessage={hasActiveFilters ? t('common.noResults') : t('budget.noBudgets')}
                         getRowId={(budget) => budget.id}
                     />
                 </div>

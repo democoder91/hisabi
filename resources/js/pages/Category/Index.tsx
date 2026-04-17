@@ -15,9 +15,11 @@ import { getAllCategories } from '@/Api';
 import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { animateRowItem } from '@/Utils';
 import { withLocalizedNames } from '@/Utils';
+import { filterCategories } from '@/Utils/listFilters';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CategoryStats from '@/components/Domain/CategoryStats';
 import { getCategoryIcon } from '@/Utils/categoryIcons';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
@@ -44,6 +46,7 @@ export default function Index({ auth }: { auth: any }) {
     const activeLocale = useActiveLocale();
     const [categories, setCategories] = useState<Category[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [activityFilter, setActivityFilter] = useState('');
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [showCreate, setShowCreate] = useState(false);
     const [dateRange, setDateRange] = useState<DateRange>({
@@ -98,15 +101,10 @@ export default function Index({ auth }: { auth: any }) {
         [categories, activeLocale]
     );
 
-    const filteredCategories = useMemo(() => {
-        if (!searchQuery) {
-            return localizedCategories;
-        }
-
-        return localizedCategories.filter((category) =>
-            category.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [localizedCategories, searchQuery]);
+    const filteredCategories = useMemo(() => filterCategories(localizedCategories, {
+        searchQuery,
+        activity: activityFilter,
+    }), [localizedCategories, searchQuery, activityFilter]);
 
     const groupedCategories = useMemo<GroupedCategories>(() => {
         const grouped: GroupedCategories = {
@@ -249,12 +247,24 @@ export default function Index({ auth }: { auth: any }) {
                     {categories.length > 0 ? (
                         <Tabs defaultValue="all" className="w-full">
                             <div className="mb-2 flex items-center justify-between">
-                                <Input
-                                    name="search"
-                                    placeholder={t('common.search')}
-                                    className="max-w-56"
-                                    onChange={performSearch}
-                                />
+                                <div className="flex flex-wrap gap-2">
+                                    <Input
+                                        name="search"
+                                        placeholder={t('category.searchCategories')}
+                                        className="max-w-56"
+                                        onChange={performSearch}
+                                    />
+                                    <Select value={activityFilter || 'ALL'} onValueChange={(value) => setActivityFilter(value === 'ALL' ? '' : value)}>
+                                        <SelectTrigger className="w-full sm:w-[180px]">
+                                            <SelectValue placeholder={t('category.activity')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">{t('category.allActivity')}</SelectItem>
+                                            <SelectItem value="used">{t('category.used')}</SelectItem>
+                                            <SelectItem value="unused">{t('category.unused')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <TabsList className="h-auto flex-wrap justify-start">
                                     {categoryTabs
                                         .filter((tab) => tab.value === 'all' || tab.items.length > 0)

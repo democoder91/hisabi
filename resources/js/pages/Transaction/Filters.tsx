@@ -7,7 +7,7 @@ import { FunnelIcon } from '@phosphor-icons/react';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { DateRange } from 'react-day-picker';
 import Combobox from '@/components/Global/Combobox';
-import { getCategoryOptionLabel } from '@/Utils';
+import { getAccountOptionLabel, getCategoryOptionLabel } from '@/Utils';
 import {
     Select,
     SelectContent,
@@ -17,14 +17,22 @@ import {
 } from '@/components/ui/select';
 
 interface FilterProps {
+    accounts: any[];
     categories: any[];
     onApply: (filters: any) => void;
     activeFilters: any;
 }
 
-export default function TransactionFilters({ categories, onApply, activeFilters }: FilterProps) {
+export default function TransactionFilters({ accounts, categories, onApply, activeFilters }: FilterProps) {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
+
+    const formatSharedBy = (ownerName: string) => t('account.sharedBy', { name: ownerName });
+
+    const handleAccountChange = (account: any) => {
+        const updatedFilters = { ...activeFilters, accountId: account ? account.id : '' };
+        onApply(updatedFilters);
+    };
 
     const handleCategoryChange = (category: any) => {
         const updatedFilters = { ...activeFilters, categoryId: category ? category.id : '' };
@@ -42,6 +50,7 @@ export default function TransactionFilters({ categories, onApply, activeFilters 
 
     const getActiveFilterCount = () => {
         let count = 0;
+        if (activeFilters.accountId) count++;
         if (activeFilters.categoryId) count++;
         if (activeFilters.transactionType) count++;
         if (activeFilters.dateFrom && activeFilters.dateTo) count++;
@@ -83,8 +92,14 @@ export default function TransactionFilters({ categories, onApply, activeFilters 
         return categories.find((c: any) => c.id == activeFilters.categoryId);
     };
 
+    const getSelectedAccount = () => {
+        if (!activeFilters.accountId) return undefined;
+        return accounts.find((account: any) => account.id == activeFilters.accountId);
+    };
+
     const selectedTransactionType = activeFilters.transactionType || 'ALL';
     const getCategoryLabel = (category: any) => getCategoryOptionLabel(category, categories);
+    const getAccountLabel = (account: any) => getAccountOptionLabel(account, formatSharedBy);
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -101,6 +116,17 @@ export default function TransactionFilters({ categories, onApply, activeFilters 
             </PopoverTrigger>
             <PopoverContent className="w-80" align="end">
                 <div className="grid gap-4">
+                    <Combobox
+                        label={t('transaction.account')}
+                        items={accounts}
+                        initialSelectedItem={getSelectedAccount()}
+                        onChange={handleAccountChange}
+                        placeholder={t('transaction.allAccounts')}
+                        displayInputValue={(item) => item ? getAccountLabel(item) : ''}
+                        displayOptionValue={(item) => item ? getAccountLabel(item) : ''}
+                        getItemValue={(item) => item ? `${getAccountLabel(item)} ${item.id}` : ''}
+                    />
+
                     <Combobox
                         label={t('transaction.category')}
                         items={categories}

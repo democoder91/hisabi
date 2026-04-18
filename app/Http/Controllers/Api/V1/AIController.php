@@ -64,24 +64,50 @@ class AIController extends Controller
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (RateLimitedException $exception) {
-            Log::warning('Hisabi AI Chat Rate Limited: ' . $exception->getMessage(), [
-                'user_id' => $authenticatedUser->id,
-            ]);
-
-            return $this->assistantErrorResponse(
+            return $this->assistantFailureResponse(
                 $authenticatedUser,
+                'warning',
+                'Hisabi AI Chat Rate Limited',
+                $exception,
                 'The AI provider is temporarily rate limited. No changes were saved. Please try again in a moment.',
             );
         } catch (Throwable $exception) {
-            Log::error('Hisabi AI Chat Error: ' . $exception->getMessage(), [
-                'user_id' => $authenticatedUser->id,
-                'trace' => $exception->getTraceAsString(),
-            ]);
-
-            return $this->assistantErrorResponse(
+            return $this->assistantFailureResponse(
                 $authenticatedUser,
+                'error',
+                'Hisabi AI Chat Error',
+                $exception,
                 'I apologize, but I encountered an error processing your request. No changes were saved. Please try again in a moment.',
             );
+        }
+    }
+
+    private function assistantFailureResponse(
+        User $user,
+        string $logLevel,
+        string $logMessage,
+        Throwable $exception,
+        string $content,
+    ): JsonResponse {
+        $this->safeLog($logLevel, $logMessage, $user, $exception);
+
+        return $this->assistantErrorResponse($user, $content);
+    }
+
+    private function safeLog(string $logLevel, string $logMessage, User $user, Throwable $exception): void
+    {
+        try {
+            $context = [
+                'user_id' => $user->id,
+            ];
+
+            if ($logLevel === 'error') {
+                $context['trace'] = $exception->getTraceAsString();
+            }
+
+            Log::log($logLevel, $logMessage . ': ' . $exception->getMessage(), $context);
+        } catch (Throwable) {
+            // Avoid masking the original assistant failure with a logging failure.
         }
     }
 
@@ -97,7 +123,16 @@ class AIController extends Controller
                 'Can you show me my spending summary?',
                 'What are my top expenses this month?',
             ],
-            'available_credits' => $user->fresh()->available_credits,
+            'available_credits' => $this->resolveAvailableCredits($user),
         ]);
+    }
+
+    private function resolveAvailableCredits(User $user): int
+    {
+        try {
+            return (int) ($user->fresh()?->available_credits ?? $user->available_credits ?? 0);
+        } catch (Throwable) {
+            return (int) ($user->available_credits ?? 0);
+        }
     }
 }

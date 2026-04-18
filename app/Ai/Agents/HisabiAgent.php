@@ -18,7 +18,6 @@ use App\Ai\Tools\ListTransactionsTool;
 use App\Models\User;
 use App\Services\AI\FinancialAnalyzer;
 use Laravel\Ai\Attributes\MaxSteps;
-use Laravel\Ai\Attributes\Model;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
@@ -28,7 +27,6 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider('zai')]
-#[Model('glm-4.7')]
 #[MaxSteps(5)]
 class HisabiAgent implements Agent, Conversational, HasTools
 {

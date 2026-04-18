@@ -1,0 +1,4 @@
+{$APP_DOMAIN:95.111.225.31.sslip.io} {
+    encode gzip zstd
+    reverse_proxy nginx:80
+}

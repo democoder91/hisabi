@@ -31,10 +31,25 @@ services:
         restart: unless-stopped
         depends_on:
             - app
-        ports:
-            - "80:80"
         volumes:
             - storage-public:/var/www/html/storage/app/public
+
+    caddy:
+        image: caddy:2.10-alpine
+        container_name: nexosoft-caddy
+        restart: unless-stopped
+        depends_on:
+            - nginx
+        environment:
+            APP_DOMAIN: ${APP_DOMAIN:-95.111.225.31.sslip.io}
+        ports:
+            - "80:80"
+            - "443:443"
+            - "443:443/udp"
+        volumes:
+            - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+            - caddy-data:/data
+            - caddy-config:/config
 
     db:
         image: mysql:8.0
@@ -57,3 +72,5 @@ services:
 volumes:
     mysql-data:
     storage-public:
+    caddy-data:
+    caddy-config:

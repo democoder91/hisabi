@@ -254,7 +254,7 @@ class InteractiveToolCallService
         $conversationAnswers = $this->conversationInteractionAnswers($conversationId, $user);
 
         $interaction['questions'] = array_map(
-            fn (array $question): array => $this->refreshQuestionOptions($question, $conversationAnswers, $user),
+            fn(array $question): array => $this->refreshQuestionOptions($question, $conversationAnswers, $user),
             $interaction['questions'],
         );
 
@@ -609,9 +609,9 @@ class InteractiveToolCallService
 
         $ownerIds = Account::query()
             ->accessibleTo($user)
-            ->when($selectedAccountIds !== [], fn ($query) => $query->whereIn('id', array_values(array_unique($selectedAccountIds))))
+            ->when($selectedAccountIds !== [], fn($query) => $query->whereIn('id', array_values(array_unique($selectedAccountIds))))
             ->pluck('user_id')
-            ->map(fn (mixed $userId): int => (int) $userId)
+            ->map(fn(mixed $userId): int => (int) $userId)
             ->unique()
             ->values()
             ->all();
@@ -716,7 +716,7 @@ class InteractiveToolCallService
         $categories = DB::table('categories')
             ->whereIn('user_id', $ownerIds)
             ->whereNull('deleted_at')
-            ->when($expectedType !== null, fn ($query) => $query->where('type', $expectedType))
+            ->when($expectedType !== null, fn($query) => $query->where('type', $expectedType))
             ->orderBy('id')
             ->get(['id', 'name', 'type']);
 
@@ -724,7 +724,7 @@ class InteractiveToolCallService
             $translations = json_decode((string) $category->name, true);
             $translations = is_array($translations) ? $translations : ['en' => (string) $category->name];
             $labelCandidates = array_values(array_unique(array_filter(array_map(
-                static fn (mixed $value): string => is_string($value) ? trim($value) : '',
+                static fn(mixed $value): string => is_string($value) ? trim($value) : '',
                 $translations,
             ))));
             $label = $labelCandidates[0] ?? ('Category #' . $category->id);

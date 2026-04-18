@@ -186,7 +186,7 @@ it('refreshes stale pending category options when reopening a conversation', fun
 
     get(route('ai.chat', ['conversation_id' => $conversationId]))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
+        ->assertInertia(fn(AssertableInertia $page) => $page
             ->component('Ai/Index')
             ->where('activeConversation.id', $conversationId)
             ->where('activeConversation.messages.0.interaction.questions.0.id', 'category_id')

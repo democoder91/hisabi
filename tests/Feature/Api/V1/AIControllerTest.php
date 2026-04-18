@@ -3,8 +3,11 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Ai\Agents\HisabiAgent;
+use App\Ai\Exceptions\PendingUserInputToolCall;
+use App\Domains\Category\Models\Category;
 use App\Http\Commands\AI\ChatCommand\ChatCommand;
 use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
+use App\Http\Commands\AI\ChatCommand\ChatCommandResponse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -268,6 +271,257 @@ class AIControllerTest extends TestCase
         $this->assertSame(0, $superUser->fresh()->available_credits);
     }
 
+    public function test_it_pauses_for_structured_user_input_and_commits_the_initial_credit_charge(): void
+    {
+        $questions = [
+            [
+                'id' => 'account_id',
+                'label' => 'Which account should I use?',
+                'type' => 'select',
+                'options' => [
+                    ['label' => 'Checking', 'value' => 'checking'],
+                    ['label' => 'Cash', 'value' => 'cash'],
+                ],
+            ],
+            [
+                'id' => 'note',
+                'label' => 'What note should I save?',
+                'type' => 'text',
+            ],
+        ];
+
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(ChatCommand::class))
+            ->andThrow(new PendingUserInputToolCall($questions));
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Create a transaction for lunch'],
+                ],
+            ]);
+
+        $conversationId = $response->json('conversation_id');
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'requires_input')
+            ->assertJsonPath('role', 'assistant')
+            ->assertJsonPath('interaction.tool_name', 'ask_user_for_input')
+            ->assertJsonPath('interaction.questions.0.id', 'account_id')
+            ->assertJsonPath('available_credits', 4);
+
+        $this->assertSame(4, $this->user->fresh()->available_credits);
+        $this->assertDatabaseHas('agent_conversations', [
+            'id' => $conversationId,
+            'user_id' => $this->user->id,
+        ]);
+        $this->assertDatabaseHas('agent_conversation_messages', [
+            'conversation_id' => $conversationId,
+            'role' => 'user',
+            'content' => 'Create a transaction for lunch',
+            'user_id' => $this->user->id,
+        ]);
+
+        $assistantMessage = DB::table('agent_conversation_messages')
+            ->where('conversation_id', $conversationId)
+            ->where('role', 'assistant')
+            ->first([
+                'content',
+                'tool_calls',
+                'meta',
+            ]);
+
+        $this->assertNotNull($assistantMessage);
+        $this->assertSame('Please provide the requested details to continue.', $assistantMessage->content);
+
+        $toolCalls = json_decode($assistantMessage->tool_calls, true);
+        $meta = json_decode($assistantMessage->meta, true);
+
+        $this->assertSame('ask_user_for_input', $toolCalls[0]['name']);
+        $this->assertSame('account_id', $toolCalls[0]['arguments']['questions'][0]['id']);
+        $this->assertSame('pending', $meta['interaction']['status']);
+    }
+
+    public function test_it_resumes_a_pending_tool_response_without_deducting_an_additional_credit(): void
+    {
+        $conversationId = $this->seedPendingToolResponseConversation([
+            [
+                'id' => 'account_id',
+                'label' => 'Which account should I use?',
+                'type' => 'select',
+                'options' => [
+                    ['label' => 'Checking', 'value' => 'checking'],
+                    ['label' => 'Cash', 'value' => 'cash'],
+                ],
+            ],
+            [
+                'id' => 'note',
+                'label' => 'What note should I save?',
+                'type' => 'text',
+            ],
+        ]);
+
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldReceive('resumeAfterToolResponse')
+            ->once()
+            ->with($conversationId)
+            ->andReturn(new ChatCommandResponse([
+                'status' => 'completed',
+                'role' => 'assistant',
+                'content' => 'Thanks, I have enough information to continue.',
+                'conversation_id' => $conversationId,
+                'charts' => [],
+                'components' => [],
+                'suggestions' => [],
+                'interaction' => null,
+            ]));
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        $response = $this->actingAs($this->user)
+            ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
+                'answers' => [
+                    'account_id' => 'checking',
+                    'note' => 'Lunch with the team',
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('content', 'Thanks, I have enough information to continue.')
+            ->assertJsonPath('conversation_id', $conversationId)
+            ->assertJsonPath('available_credits', 5);
+
+        $assistantMessage = DB::table('agent_conversation_messages')
+            ->where('conversation_id', $conversationId)
+            ->where('role', 'assistant')
+            ->first([
+                'tool_results',
+                'meta',
+            ]);
+
+        $toolResults = json_decode($assistantMessage->tool_results, true);
+        $meta = json_decode($assistantMessage->meta, true);
+
+        $this->assertSame([
+            'answers' => [
+                'account_id' => 'checking',
+                'note' => 'Lunch with the team',
+            ],
+        ], $toolResults[0]['result']);
+        $this->assertSame('completed', $meta['interaction']['status']);
+        $this->assertSame(5, $this->user->fresh()->available_credits);
+    }
+
+    public function test_it_validates_tool_response_answers_against_the_pending_questions(): void
+    {
+        $conversationId = $this->seedPendingToolResponseConversation([
+            [
+                'id' => 'account_id',
+                'label' => 'Which account should I use?',
+                'type' => 'select',
+                'options' => [
+                    ['label' => 'Checking', 'value' => 'checking'],
+                ],
+            ],
+        ]);
+
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldNotReceive('resumeAfterToolResponse');
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        $response = $this->actingAs($this->user)
+            ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
+                'answers' => [
+                    'account_id' => 'cash',
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['answers.account_id']);
+
+        $assistantMessage = DB::table('agent_conversation_messages')
+            ->where('conversation_id', $conversationId)
+            ->where('role', 'assistant')
+            ->first([
+                'tool_results',
+                'meta',
+            ]);
+
+        $meta = json_decode($assistantMessage->meta, true);
+
+        $this->assertSame([], json_decode($assistantMessage->tool_results, true));
+        $this->assertSame('pending', $meta['interaction']['status']);
+        $this->assertSame(5, $this->user->fresh()->available_credits);
+    }
+
+    public function test_it_rejects_mismatched_category_and_transaction_type_answers_before_resuming_the_ai(): void
+    {
+        $incomeCategory = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::INCOME,
+            'name' => [
+                'en' => 'Family Support',
+                'ar' => null,
+            ],
+        ]);
+
+        $conversationId = $this->seedPendingToolResponseConversation([
+            [
+                'id' => 'transaction_type',
+                'label' => 'What type of transaction is this?',
+                'type' => 'select',
+                'options' => [
+                    ['label' => 'Expense (spending)', 'value' => Category::EXPENSES],
+                    ['label' => 'Income (earning)', 'value' => Category::INCOME],
+                ],
+            ],
+            [
+                'id' => 'category_id',
+                'label' => 'Select a category',
+                'type' => 'select',
+                'options' => [
+                    ['label' => 'Family Support', 'value' => (string) $incomeCategory->id],
+                ],
+            ],
+        ]);
+
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldNotReceive('resumeAfterToolResponse');
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        $response = $this->actingAs($this->user)
+            ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
+                'answers' => [
+                    'transaction_type' => Category::EXPENSES,
+                    'category_id' => (string) $incomeCategory->id,
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['answers.category_id']);
+
+        $assistantMessage = DB::table('agent_conversation_messages')
+            ->where('conversation_id', $conversationId)
+            ->where('role', 'assistant')
+            ->first([
+                'tool_results',
+                'meta',
+            ]);
+
+        $meta = json_decode($assistantMessage->meta, true);
+
+        $this->assertSame([], json_decode($assistantMessage->tool_results, true));
+        $this->assertSame('pending', $meta['interaction']['status']);
+        $this->assertSame(5, $this->user->fresh()->available_credits);
+    }
+
     public function test_it_rolls_back_changes_and_preserves_credits_when_provider_is_rate_limited(): void
     {
         $conversationId = (string) str()->uuid();
@@ -383,5 +637,50 @@ class AIControllerTest extends TestCase
             ->assertJsonPath('available_credits', 5);
 
         $this->assertSame(5, $this->user->fresh()->available_credits);
+    }
+
+    private function seedPendingToolResponseConversation(array $questions): string
+    {
+        $conversationId = (string) str()->uuid();
+        $toolCallId = (string) str()->uuid();
+
+        DB::table('agent_conversations')->insert([
+            'id' => $conversationId,
+            'user_id' => $this->user->id,
+            'title' => 'Pending interactive conversation',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('agent_conversation_messages')->insert([
+            'id' => (string) str()->uuid(),
+            'conversation_id' => $conversationId,
+            'user_id' => $this->user->id,
+            'agent' => HisabiAgent::class,
+            'role' => 'assistant',
+            'content' => 'Please provide the requested details to continue.',
+            'attachments' => '[]',
+            'tool_calls' => json_encode([[
+                'id' => $toolCallId,
+                'name' => 'ask_user_for_input',
+                'arguments' => [
+                    'questions' => $questions,
+                ],
+            ]]),
+            'tool_results' => '[]',
+            'usage' => '[]',
+            'meta' => json_encode([
+                'interaction' => [
+                    'status' => 'pending',
+                    'tool_name' => 'ask_user_for_input',
+                    'tool_call_id' => $toolCallId,
+                    'questions' => $questions,
+                ],
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $conversationId;
     }
 }

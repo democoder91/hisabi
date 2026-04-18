@@ -3,9 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Clock3Icon, MenuIcon, MessageSquareIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { chat } from '@/Api/ai';
+import { chat, submitToolResponse } from '@/Api/ai';
 import AIFinancialWidget from '@/components/Global/AIFinancialWidget';
 import AIChartRenderer from '@/components/Global/AIChartRenderer';
+import InteractiveChatForm, { PendingInteraction } from '@/components/Global/InteractiveChatForm';
 import VoiceRecorder from '@/components/Global/VoiceRecorder';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ interface StoredMessage {
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    interaction?: PendingInteraction | null;
     createdAt: string;
 }
 
@@ -46,6 +48,7 @@ interface ChatMessage {
     charts?: unknown[];
     components?: unknown[];
     suggestions?: string[];
+    interaction?: PendingInteraction | null;
 }
 
 interface ChatPageProps {
@@ -76,6 +79,34 @@ const buildConversationTitle = (prompt: string, fallbackTitle: string): string =
 
 const createLocalMessageId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const mapStoredMessage = (storedMessage: StoredMessage, emptyAssistantReply: string): ChatMessage => ({
+    id: storedMessage.id,
+    role: storedMessage.role,
+    content: storedMessage.content || (storedMessage.role === 'assistant' ? emptyAssistantReply : ''),
+    createdAt: storedMessage.createdAt,
+    charts: [],
+    components: [],
+    suggestions: [],
+    interaction: storedMessage.interaction ?? null,
+});
+
+const buildAssistantMessage = (response: {
+    content?: string;
+    charts?: unknown[];
+    components?: unknown[];
+    suggestions?: string[];
+    interaction?: PendingInteraction | null;
+}, emptyAssistantReply: string): ChatMessage => ({
+    id: createLocalMessageId('assistant'),
+    role: 'assistant',
+    content: response.content || emptyAssistantReply,
+    createdAt: new Date().toISOString(),
+    charts: response.charts || [],
+    components: response.components || [],
+    suggestions: response.suggestions || [],
+    interaction: response.interaction ?? null,
+});
+
 export default function AiIndex({ auth, conversations, activeConversation }: ChatPageProps) {
     const { t } = useTranslation();
     const { direction = 'ltr', locale = 'en' } = usePage<{ direction?: string; locale?: string }>().props as {
@@ -90,18 +121,11 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
     const [conversationItems, setConversationItems] = useState<ConversationSummary[]>(conversations);
     const [availableCredits, setAvailableCredits] = useState(auth.user.available_credits ?? 0);
     const [needsCredits, setNeedsCredits] = useState(!isSuperUser && (auth.user.available_credits ?? 0) < 1);
+    const [interactionError, setInteractionError] = useState<string | null>(null);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
         const emptyAssistantReply = t('ai.emptyAssistantReply');
 
-        return activeConversation?.messages.map((storedMessage) => ({
-            id: storedMessage.id,
-            role: storedMessage.role,
-            content: storedMessage.content || (storedMessage.role === 'assistant' ? emptyAssistantReply : ''),
-            createdAt: storedMessage.createdAt,
-            charts: [],
-            components: [],
-            suggestions: [],
-        })) ?? [];
+        return activeConversation?.messages.map((storedMessage) => mapStoredMessage(storedMessage, emptyAssistantReply)) ?? [];
     });
 
     useEffect(() => {
@@ -110,25 +134,28 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
         setConversationItems(conversations);
         setSelectedConversationId(activeConversation?.id ?? null);
         setChatHistory(
-            activeConversation?.messages.map((storedMessage) => ({
-                id: storedMessage.id,
-                role: storedMessage.role,
-                content: storedMessage.content || (storedMessage.role === 'assistant' ? emptyAssistantReply : ''),
-                createdAt: storedMessage.createdAt,
-                charts: [],
-                components: [],
-                suggestions: [],
-            })) ?? [],
+            activeConversation?.messages.map((storedMessage) => mapStoredMessage(storedMessage, emptyAssistantReply)) ?? [],
         );
         setLoading(false);
         setNeedsCredits(false);
+        setInteractionError(null);
     }, [activeConversation, conversations, t]);
 
     useEffect(() => {
         setAvailableCredits(auth.user.available_credits ?? 0);
     }, [auth.user.available_credits]);
 
+    const pendingInteractionEntry = useMemo(() => {
+        return [...chatHistory].reverse().find((entry) => entry.role === 'assistant' && entry.interaction?.status === 'pending') ?? null;
+    }, [chatHistory]);
+
+    const hasPendingInteraction = pendingInteractionEntry !== null;
+
     const currentSuggestions = useMemo(() => {
+        if (hasPendingInteraction) {
+            return [];
+        }
+
         const lastAssistantMessage = [...chatHistory].reverse().find((entry) => entry.role === 'assistant');
 
         if (lastAssistantMessage?.suggestions && lastAssistantMessage.suggestions.length > 0) {
@@ -140,7 +167,7 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
             t('ai.defaultSuggestions.expenses'),
             t('ai.defaultSuggestions.savings'),
         ];
-    }, [chatHistory, t]);
+    }, [chatHistory, hasPendingInteraction, t]);
 
     const activeConversationTitle = selectedConversationId
         ? conversationItems.find((conversation) => conversation.id === selectedConversationId)?.title
@@ -150,7 +177,7 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
 
     const desktopLayoutClass = direction === 'rtl' ? 'lg:flex-row-reverse' : 'lg:flex-row';
     const mobileSheetSide = direction === 'rtl' ? 'right' : 'left';
-    const chatDisabled = loading || (!isSuperUser && availableCredits < 1);
+    const chatDisabled = loading || hasPendingInteraction || (!isSuperUser && availableCredits < 1);
 
     const updateConversationList = (conversationId: string, prompt: string) => {
         setConversationItems((currentConversations) => {
@@ -217,17 +244,7 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                 }));
             }
 
-            const assistantMessage: ChatMessage = {
-                id: createLocalMessageId('assistant'),
-                role: 'assistant',
-                content: aiResponse.content,
-                createdAt: new Date().toISOString(),
-                charts: aiResponse.charts || [],
-                components: aiResponse.components || [],
-                suggestions: aiResponse.suggestions || [],
-            };
-
-            setChatHistory([...nextHistory, assistantMessage]);
+            setChatHistory([...nextHistory, buildAssistantMessage(aiResponse, t('ai.emptyAssistantReply'))]);
         } catch (error) {
             const chatError = error as {
                 status?: number;
@@ -268,6 +285,71 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                         suggestions: [],
                     },
                 ]);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToolResponse = async (interaction: PendingInteraction, answers: Record<string, string | string[]>) => {
+        if (selectedConversationId === null || loading) {
+            return;
+        }
+
+        setInteractionError(null);
+        setLoading(true);
+
+        try {
+            const aiResponse = await submitToolResponse(selectedConversationId, answers);
+
+            if (!isSuperUser && typeof aiResponse.available_credits === 'number') {
+                setAvailableCredits(aiResponse.available_credits);
+            }
+
+            if (aiResponse.status === 'failed') {
+                setInteractionError(aiResponse.content || t('ai.errorMessage'));
+                return;
+            }
+
+            const nextConversationId = aiResponse.conversation_id ?? selectedConversationId;
+
+            if (nextConversationId) {
+                setSelectedConversationId(nextConversationId);
+                updateConversationList(nextConversationId, '');
+                window.history.replaceState(window.history.state, '', route('ai.chat', {
+                    conversation_id: nextConversationId,
+                }));
+            }
+
+            setChatHistory((currentHistory) => {
+                const clearedHistory = currentHistory.map((entry) => (
+                    entry.interaction?.tool_call_id === interaction.tool_call_id
+                        ? { ...entry, interaction: null }
+                        : entry
+                ));
+
+                return [...clearedHistory, buildAssistantMessage(aiResponse, t('ai.emptyAssistantReply'))];
+            });
+        } catch (error) {
+            console.error('AI Tool Response Error:', error);
+
+            const toolResponseError = error as {
+                status?: number;
+                payload?: {
+                    errors?: Record<string, string[] | string>;
+                    message?: string;
+                };
+            };
+
+            if (toolResponseError.status === 422) {
+                const validationMessages = toolResponseError.payload?.errors ?? {};
+                const firstValidationMessage = Object.values(validationMessages)
+                    .flatMap((value) => Array.isArray(value) ? value : [value])
+                    .find((value) => typeof value === 'string' && value.trim() !== '');
+
+                setInteractionError(firstValidationMessage || toolResponseError.payload?.message || t('ai.errorMessage'));
+            } else {
+                setInteractionError(t('ai.errorMessage'));
             }
         } finally {
             setLoading(false);
@@ -463,6 +545,15 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                                                     ))}
                                                                 </div>
                                                             )}
+
+                                                            {!isUserMessage && entry.interaction?.status === 'pending' && (
+                                                                <InteractiveChatForm
+                                                                    disabled={loading}
+                                                                    errorMessage={pendingInteractionEntry?.interaction?.tool_call_id === entry.interaction.tool_call_id ? interactionError : null}
+                                                                    interaction={entry.interaction}
+                                                                    onSubmit={(answers) => handleToolResponse(entry.interaction as PendingInteraction, answers)}
+                                                                />
+                                                            )}
                                                         </div>
 
                                                         {isUserMessage && (
@@ -487,7 +578,7 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
 
                             <div className="border-t border-border/70 bg-background/95 px-4 py-4 md:px-6">
                                 <div className="mx-auto w-full max-w-4xl space-y-3">
-                                    {!isSuperUser && (needsCredits || availableCredits < 1) && (
+                                    {!hasPendingInteraction && !isSuperUser && (needsCredits || availableCredits < 1) && (
                                         <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
                                             <p className="font-medium">{t('ai.creditGateTitle')}</p>
                                             <p className="mt-1 text-xs opacity-80">{t('ai.creditGateDescription')}</p>
@@ -497,24 +588,26 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                         </div>
                                     )}
 
-                                    <div className="flex flex-wrap gap-2">
-                                        {currentSuggestions.map((suggestion) => (
-                                            <button
-                                                key={suggestion}
-                                                className="rounded-full border border-border/80 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-                                                onClick={() => setMessage(suggestion)}
-                                                type="button"
-                                            >
-                                                {suggestion}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    {!hasPendingInteraction && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {currentSuggestions.map((suggestion) => (
+                                                <button
+                                                    key={suggestion}
+                                                    className="rounded-full border border-border/80 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+                                                    onClick={() => setMessage(suggestion)}
+                                                    type="button"
+                                                >
+                                                    {suggestion}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     <PromptInput className="overflow-hidden rounded-[28px] border-border/80 bg-background shadow-lg shadow-black/5" onSubmit={handleSubmit}>
                                         <PromptInputTextarea
                                             disabled={chatDisabled}
                                             onChange={(event) => setMessage(event.target.value)}
-                                            placeholder={t('ai.placeholder')}
+                                            placeholder={hasPendingInteraction ? t('ai.pendingInputPlaceholder') : t('ai.placeholder')}
                                             value={message}
                                         />
                                         <PromptInputToolbar className="px-2 py-2">
@@ -526,7 +619,7 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                                 <span className="hidden text-xs text-muted-foreground sm:inline">{t('ai.inputHelper')}</span>
                                             </div>
                                             <PromptInputSubmit
-                                                disabled={loading || message.trim() === '' || (!isSuperUser && availableCredits < 1)}
+                                                disabled={loading || hasPendingInteraction || message.trim() === '' || (!isSuperUser && availableCredits < 1)}
                                                 status={loading ? 'streaming' : 'idle'}
                                             />
                                         </PromptInputToolbar>

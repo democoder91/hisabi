@@ -76,6 +76,29 @@ export const chat = async (messages, conversationId = null) => {
     return await parseJsonResponse(response);
 }
 
+export const submitToolResponse = async (conversationId, answers) => {
+    const response = await apiFetch(`/api/v1/ai/chat/${conversationId}/tool-response`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            answers,
+        })
+    });
+
+    if (!response.ok) {
+        const payload = await parseJsonResponse(response).catch(() => ({}));
+        const error = new Error(`HTTP error! status: ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+
+        throw error;
+    }
+
+    return await parseJsonResponse(response);
+}
+
 export const getTranscriptionToken = async () => {
     const response = await apiFetch('/api/v1/ai/transcribe/token', {
         method: 'POST',

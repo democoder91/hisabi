@@ -68,6 +68,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/budgets/{id}', [BudgetController::class, 'destroy']);
 
         Route::post('/ai/chat', [AIController::class, 'chat']);
+        Route::post('/ai/chat/{conversationId}/tool-response', [AIController::class, 'toolResponse']);
         Route::post('/ai/transcribe', [TranscriptionController::class, 'transcribe']);
         Route::post('/ai/transcribe/token', [TranscriptionController::class, 'token']);
         Route::get('/settings', [SettingsController::class, 'show']);

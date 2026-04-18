@@ -4,12 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AiChatIndexRequest;
 use App\Models\User;
+use App\Services\AI\InteractiveToolCallService;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AiChatController extends Controller
 {
+    private InteractiveToolCallService $interactiveToolCallService;
+
+    public function __construct(
+        InteractiveToolCallService $interactiveToolCallService
+    ) {
+        $this->interactiveToolCallService = $interactiveToolCallService;
+    }
+
     public function index(AiChatIndexRequest $request): Response
     {
         /** @var User $user */
@@ -64,12 +73,16 @@ class AiChatController extends Controller
                 'id',
                 'role',
                 'content',
+                'meta',
                 'created_at',
             ])
             ->map(fn(object $message): array => [
                 'id' => $message->id,
                 'role' => $message->role,
                 'content' => $message->content,
+                'interaction' => $message->role === 'assistant'
+                    ? $this->interactiveToolCallService->pendingInteractionFromMeta($message->meta)
+                    : null,
                 'createdAt' => $message->created_at,
             ])
             ->values()

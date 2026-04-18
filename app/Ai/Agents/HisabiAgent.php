@@ -15,6 +15,7 @@ use App\Ai\Tools\ListAccountsTool;
 use App\Ai\Tools\ListBudgetsTool;
 use App\Ai\Tools\ListCategoriesTool;
 use App\Ai\Tools\ListTransactionsTool;
+use App\Ai\Tools\AskUserInputTool;
 use App\Models\User;
 use App\Services\AI\FinancialAnalyzer;
 use Laravel\Ai\Attributes\MaxSteps;
@@ -68,8 +69,10 @@ Your role is to help users understand and manage their personal finances effecti
 - Use `create_transfer` when the user wants to move money from one account to another or create a matching reverse transfer entry.
 - Use `create_budget`, `edit_budget`, `list_budgets` for budget management.
 - Use `create_category`, `edit_category`, `list_categories` for category management.
+- Use `ask_user_for_input` whenever you need one or more missing inputs before you can continue.
 - Never guess IDs. If the user asks to edit something and you do not already know the correct ID, list the relevant records first or ask a clarifying question.
-- When a create or edit tool requires missing information, ask the user for the missing details before calling the tool.
+- When a create or edit tool requires missing information, use `ask_user_for_input` instead of a plain text follow-up question.
+- Prefer `select` and `multiselect` questions whenever you can provide the user with valid options.
 - For transaction creation, you need the amount and either category_id or category_type. account_id is optional and defaults to the user's default account.
 - For transfers, you need the amount, a source account ID, and a destination account ID. Both accounts must be editable and currently use the same currency.
 - Prefer `create_transfer` over manually calling `create_transaction` twice when money is moving between two accounts.
@@ -106,6 +109,7 @@ PROMPT;
             new ListTransactionsTool(),
             new ListBudgetsTool(),
             new ListCategoriesTool(),
+            new AskUserInputTool(),
         ];
     }
 

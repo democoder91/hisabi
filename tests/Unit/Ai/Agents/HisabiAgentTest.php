@@ -3,6 +3,7 @@
 namespace Tests\Unit\Ai\Agents;
 
 use App\Ai\Agents\HisabiAgent;
+use App\Ai\Tools\AskUserInputTool;
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
 use App\Ai\Tools\CreateCategoryTool;
@@ -45,6 +46,7 @@ class HisabiAgentTest extends TestCase
             ListTransactionsTool::class,
             ListBudgetsTool::class,
             ListCategoriesTool::class,
+            AskUserInputTool::class,
         ], array_map(static fn($tool) => get_class($tool), $tools));
     }
 
@@ -62,6 +64,7 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString('create_transfer', $instructions);
         $this->assertStringContainsString('edit_budget', $instructions);
         $this->assertStringContainsString('list_categories', $instructions);
+        $this->assertStringContainsString('ask_user_for_input', $instructions);
     }
 
     public function test_instructions_use_user_currency(): void
@@ -118,10 +121,12 @@ class HisabiAgentTest extends TestCase
 
     public function test_agent_uses_zai_chat_completions_endpoint(): void
     {
+        $configuredModel = (string) config('ai.providers.zai.models.text.default');
+
         Http::fake([
             'https://api.z.ai/api/paas/v4/chat/completions' => Http::response([
                 'id' => 'chatcmpl-test',
-                'model' => 'glm-5.1',
+                'model' => $configuredModel,
                 'choices' => [[
                     'index' => 0,
                     'message' => [
@@ -146,7 +151,7 @@ class HisabiAgentTest extends TestCase
 
         Http::assertSent(function ($request) {
             return $request->url() === 'https://api.z.ai/api/paas/v4/chat/completions'
-                && $request['model'] === 'glm-5.1';
+                && $request['model'] === config('ai.providers.zai.models.text.default');
         });
     }
 }

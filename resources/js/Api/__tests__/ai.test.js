@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 
-import { chat, transcribeAudio } from '../ai'
+import { chat, submitToolResponse, transcribeAudio } from '../ai'
 
 afterEach(() => {
     jest.restoreAllMocks()
@@ -44,5 +44,36 @@ it('parses a successful chat response even when the body contains surrounding no
     expect(response).toEqual({
         content: 'Created successfully',
         conversation_id: '123',
+    })
+})
+
+it('submits structured tool responses to the zero-credit continuation endpoint', async () => {
+    document.cookie = 'XSRF-TOKEN=cookie-token; path=/'
+
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        text: async () => '{"status":"completed","content":"Done","conversation_id":"conversation-1"}',
+    })
+
+    const response = await submitToolResponse('conversation-1', {
+        account_id: 'checking',
+        tags: ['food', 'team'],
+    })
+
+    expect(response).toEqual({
+        status: 'completed',
+        content: 'Done',
+        conversation_id: 'conversation-1',
+    })
+
+    const [url, options] = fetchSpy.mock.calls[0]
+
+    expect(url).toBe('/api/v1/ai/chat/conversation-1/tool-response')
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({
+        answers: {
+            account_id: 'checking',
+            tags: ['food', 'team'],
+        },
     })
 })

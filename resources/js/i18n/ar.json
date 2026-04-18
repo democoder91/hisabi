@@ -7,6 +7,7 @@
         "brands": "العلامات التجارية",
         "categories": "الفئات",
         "billing": "الفوترة",
+        "nexoAi": "Nexo AI",
         "billingAdmin": "إدارة الفوترة",
         "billingUserAccess": "وصول المستخدمين",
         "aiToolLogs": "سجل أدوات الذكاء الاصطناعي"
@@ -306,7 +307,32 @@
         "clearFilters": "مسح الفلاتر"
     },
     "ai": {
-        "title": "NexoAi"
+        "title": "Nexo AI",
+        "description": "اسأل عن بياناتك المالية، وواصل المحادثات السابقة، واعمل من مساحة مخصصة للذكاء الاصطناعي داخل التطبيق.",
+        "newChat": "محادثة جديدة",
+        "history": "المحادثات",
+        "historyDescription": "أعد فتح المحادثات المحفوظة أو ابدأ محادثة جديدة.",
+        "onlineStatus": "متصل",
+        "workspaceLabel": "مساحة Nexo AI",
+        "emptyStateTitle": "ابدأ محادثة تدفع الأرقام إلى الأمام.",
+        "emptyStateDescription": "اسأل عن الإنفاق أو الميزانيات أو الأرصدة أو الاتجاهات. يحتفظ Nexo AI بسياق المحادثة ويجعل الرجوع إلى التحليلات السابقة سهلًا من قائمة المحادثات.",
+        "fallbackConversationTitle": "محادثة جديدة",
+        "noConversations": "لا توجد محادثات محفوظة بعد. ابدأ محادثة وستظهر هنا.",
+        "emptyAssistantReply": "تم حفظ هذا الرد دون نص نهائي من المساعد.",
+        "loading": "جارٍ تحليل بياناتك المالية...",
+        "placeholder": "اكتب سؤالك إلى Nexo AI حول أمورك المالية...",
+        "inputHelper": "اضغط Enter للإرسال وShift+Enter لسطر جديد.",
+        "creditGateTitle": "تحتاج إلى المزيد من الأرصدة لمتابعة المحادثة.",
+        "creditGateDescription": "اشترِ باقة شحن أو ابدأ اشتراكًا من صفحة الفوترة ثم أكمل المحادثة من هنا.",
+        "openBilling": "افتح الفوترة",
+        "errorMessage": "أعتذر، حدث خطأ أثناء معالجة الطلب. حاول مرة أخرى.",
+        "unlimitedAccess": "وصول غير محدود إلى الذكاء الاصطناعي",
+        "creditsRemaining": "{{count}} رصيد متبقٍ",
+        "defaultSuggestions": {
+            "summary": "اعرض لي ملخص إنفاقي لهذا الشهر",
+            "expenses": "ما أعلى المصروفات لدي هذا الشهر؟",
+            "savings": "كم يمكنني أن أوفر هذا الشهر؟"
+        }
     },
     "billing": {
         "title": "الفوترة والرصيد",

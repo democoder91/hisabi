@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,6 +8,7 @@ import {
   CirclesThreeIcon,
   ChartDonutIcon,
   ChartLineIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react"
 
 import {
@@ -42,6 +44,11 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       title: t('navigation.dashboard'),
       url: "dashboard",
       icon: ChartDonutIcon,
+    },
+    {
+      title: t('navigation.nexoAi'),
+      url: 'ai.chat',
+      icon: SparkleIcon,
     },
     {
       title: t('navigation.accounts'),

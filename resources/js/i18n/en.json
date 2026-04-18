@@ -7,6 +7,7 @@
         "brands": "Brands",
         "categories": "Categories",
         "billing": "Billing",
+        "nexoAi": "Nexo AI",
         "billingAdmin": "Billing Admin",
         "billingUserAccess": "User Access",
         "aiToolLogs": "AI Tool Logs"
@@ -305,7 +306,32 @@
         "clearFilters": "Clear Filters"
     },
     "ai": {
-        "title": "NexoAi"
+        "title": "Nexo AI",
+        "description": "Ask questions about your finances, continue earlier conversations, and keep everything in one dedicated workspace.",
+        "newChat": "New chat",
+        "history": "Chats",
+        "historyDescription": "Reopen saved conversations or start a fresh thread.",
+        "onlineStatus": "Online",
+        "workspaceLabel": "Nexo AI workspace",
+        "emptyStateTitle": "Start a conversation that moves the numbers forward.",
+        "emptyStateDescription": "Ask about spending, budgets, balances, or trends. Nexo AI keeps the thread and lets you jump back into earlier analysis from the chat list.",
+        "fallbackConversationTitle": "New conversation",
+        "noConversations": "No saved chats yet. Start a conversation and it will appear here.",
+        "emptyAssistantReply": "This response was saved without a final text reply.",
+        "loading": "Analyzing your finances...",
+        "placeholder": "Message Nexo AI about your finances...",
+        "inputHelper": "Enter to send, Shift+Enter for a new line.",
+        "creditGateTitle": "You need more credits to continue chatting.",
+        "creditGateDescription": "Buy a top-up or start a subscription from the billing page, then continue the conversation here.",
+        "openBilling": "Open billing",
+        "errorMessage": "I apologize, but I encountered an error. Please try again.",
+        "unlimitedAccess": "Unlimited AI access",
+        "creditsRemaining": "{{count}} credits remaining",
+        "defaultSuggestions": {
+            "summary": "Show me my spending summary for this month",
+            "expenses": "What are my top expenses this month?",
+            "savings": "How much can I save this month?"
+        }
     },
     "billing": {
         "title": "Billing and Credits",

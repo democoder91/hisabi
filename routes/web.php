@@ -5,6 +5,7 @@ use App\Contracts\ReportManager;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountAuditController;
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AiToolUsageController;
 use App\Http\Controllers\BillingCreditPackageController;
 use App\Http\Controllers\BillingManagementController;
@@ -32,6 +33,7 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/ai', [AiChatController::class, 'index'])->name('ai.chat');
 
     Route::get('/billing', function (Request $request, BillingCatalogService $billingCatalogService) {
         $user = $request->user();

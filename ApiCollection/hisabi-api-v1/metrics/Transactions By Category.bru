@@ -1,0 +1,14 @@
+meta {
+  name: Transactions By Category
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/transactions-by-category?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

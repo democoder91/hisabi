@@ -1,0 +1,14 @@
+meta {
+  name: Net Worth
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/net-worth
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

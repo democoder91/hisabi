@@ -1,0 +1,14 @@
+meta {
+  name: Transactions Std Dev
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/transactions-std-dev?from={{fromDate}}&to={{toDate}}&id={{categoryId}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

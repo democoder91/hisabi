@@ -1,0 +1,47 @@
+meta {
+  name: Paymob Webhook
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/paymob/webhook?hmac={{webhookHmac}}
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "type": "TRANSACTION",
+    "obj": {
+      "id": 9001,
+      "pending": false,
+      "amount_cents": 1000,
+      "success": true,
+      "is_auth": false,
+      "is_capture": false,
+      "is_standalone_payment": true,
+      "is_voided": false,
+      "is_refunded": false,
+      "is_3d_secure": true,
+      "integration_id": 98765,
+      "has_parent_transaction": false,
+      "order": {
+        "id": 5001
+      },
+      "created_at": "2026-04-13T10:00:00+00:00",
+      "currency": "USD",
+      "source_data": {
+        "pan": "2346",
+        "sub_type": "MasterCard",
+        "type": "card"
+      },
+      "error_occured": false,
+      "owner": 42
+    }
+  }
+}

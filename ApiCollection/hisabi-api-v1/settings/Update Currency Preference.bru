@@ -1,0 +1,21 @@
+meta {
+  name: Update Currency Preference
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/settings/currencies
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "default_currency": "EUR"
+  }
+}

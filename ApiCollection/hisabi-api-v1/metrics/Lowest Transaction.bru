@@ -1,0 +1,14 @@
+meta {
+  name: Lowest Transaction
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/lowest-transaction?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

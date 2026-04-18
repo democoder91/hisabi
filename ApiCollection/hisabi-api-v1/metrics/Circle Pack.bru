@@ -1,0 +1,14 @@
+meta {
+  name: Circle Pack
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/circle-pack?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

@@ -1,0 +1,14 @@
+meta {
+  name: Category Daily Trend
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/category-daily-trend?from={{fromDate}}&to={{toDate}}&id={{categoryId}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

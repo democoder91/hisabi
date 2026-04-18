@@ -1,0 +1,14 @@
+meta {
+  name: Revoke Share
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/accounts/{{accountId}}/shares/{{shareUserId}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

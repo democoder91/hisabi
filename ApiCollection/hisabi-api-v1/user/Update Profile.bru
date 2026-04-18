@@ -1,0 +1,23 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/api/v1/user/profile
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": "API User Updated",
+    "default_currency": "EUR",
+    "locale": "en"
+  }
+}

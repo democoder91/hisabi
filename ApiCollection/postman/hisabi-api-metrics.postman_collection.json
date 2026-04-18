@@ -1,0 +1,283 @@
+{
+    "info": {
+        "_postman_id": "0e1de95a-b524-4e45-9f29-5ed5e2f1c101",
+        "name": "Hisabi API Metrics",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "version": "1.0.0"
+    },
+    "item": [
+        {
+            "name": "Total Income",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-income?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Total Expenses",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-expenses?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Total Savings",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-savings"
+            }
+        },
+        {
+            "name": "Total Investment",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-investment"
+            }
+        },
+        {
+            "name": "Total Cash",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-cash"
+            }
+        },
+        {
+            "name": "Net Worth",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/net-worth"
+            }
+        },
+        {
+            "name": "Net Worth Trend",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/net-worth-trend?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Total Income Trend",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-income-trend?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Total Expenses Trend",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/total-expenses-trend?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Category Trend",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/category-trend?from={{fromDate}}&to={{toDate}}&id={{categoryId}}"
+            }
+        },
+        {
+            "name": "Category Daily Trend",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/category-daily-trend?from={{fromDate}}&to={{toDate}}&id={{categoryId}}"
+            }
+        },
+        {
+            "name": "Expenses By Category",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/expenses-by-category?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Income By Category",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/income-by-category?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Transactions Count",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/transactions-count?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Transactions By Category",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/transactions-by-category?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Highest Transaction",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/highest-transaction?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Lowest Transaction",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/lowest-transaction?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Average Transaction",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/average-transaction?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Transactions Std Dev",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/transactions-std-dev?from={{fromDate}}&to={{toDate}}&id={{categoryId}}"
+            }
+        },
+        {
+            "name": "Category Stats",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/category-stats?from={{fromDate}}&to={{toDate}}"
+            }
+        },
+        {
+            "name": "Circle Pack",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/api/v1/metrics/circle-pack?from={{fromDate}}&to={{toDate}}"
+            }
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+meta {
+  name: Average Transaction
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/average-transaction?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

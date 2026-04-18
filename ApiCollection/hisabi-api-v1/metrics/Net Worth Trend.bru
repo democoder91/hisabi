@@ -1,0 +1,14 @@
+meta {
+  name: Net Worth Trend
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/net-worth-trend?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

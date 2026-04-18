@@ -1,0 +1,14 @@
+meta {
+  name: Search Shareable Users
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/accounts/{{accountId}}/shareable-users?search={{shareUserEmail}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

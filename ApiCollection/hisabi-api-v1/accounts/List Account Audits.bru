@@ -1,0 +1,14 @@
+meta {
+  name: List Account Audits
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/accounts/{{accountId}}/audits
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

@@ -1,0 +1,14 @@
+meta {
+  name: List SMS
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/sms
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

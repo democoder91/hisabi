@@ -1,0 +1,14 @@
+meta {
+  name: Category Stats
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/category-stats?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

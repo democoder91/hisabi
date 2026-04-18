@@ -1,0 +1,1195 @@
+{
+    "info": {
+        "_postman_id": "0e1de95a-b524-4e45-9f29-5ed5e2f1c001",
+        "name": "Hisabi API Core",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "version": "1.0.0"
+    },
+    "item": [
+        {
+            "name": "Public",
+            "item": [
+                {
+                    "name": "Legacy Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && body.token) {",
+                                    "    pm.environment.set('token', body.token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"{{authName}}\",\"email\":\"{{authEmail}}\",\"password\":\"{{authPassword}}\",\"password_confirmation\":\"{{authPassword}}\",\"device_name\":\"{{deviceName}}\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/register"
+                    }
+                },
+                {
+                    "name": "Legacy Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 200 && body.token) {",
+                                    "    pm.environment.set('token', body.token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"{{authEmail}}\",\"password\":\"{{authPassword}}\",\"device_name\":\"{{deviceName}}\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/login"
+                    }
+                },
+                {
+                    "name": "SMS Test",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && Array.isArray(body.data) && body.data.length > 0) {",
+                                    "    pm.environment.set('smsId', body.data[0].id);",
+                                    "    if (body.data[0].transaction_id) {",
+                                    "        pm.environment.set('transactionId', body.data[0].transaction_id);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"body\":\"Payment of AED 38.7 to someBrand with Credit Card ending 9048. Avl Cr. Limit is AED 53,750.64.\",\"created_at\":\"2026-04-18\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/sms-test"
+                    }
+                },
+                {
+                    "name": "Paymob Webhook",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"type\":\"TRANSACTION\",\"obj\":{\"id\":9001,\"pending\":false,\"amount_cents\":1000,\"success\":true,\"is_auth\":false,\"is_capture\":false,\"is_standalone_payment\":true,\"is_voided\":false,\"is_refunded\":false,\"is_3d_secure\":true,\"integration_id\":98765,\"has_parent_transaction\":false,\"order\":{\"id\":5001},\"created_at\":\"2026-04-13T10:00:00+00:00\",\"currency\":\"USD\",\"source_data\":{\"pan\":\"2346\",\"sub_type\":\"MasterCard\",\"type\":\"card\"},\"error_occured\":false,\"owner\":42}}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/paymob/webhook?hmac={{webhookHmac}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && body.token) {",
+                                    "    pm.environment.set('token', body.token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"{{authName}}\",\"email\":\"{{authEmail}}\",\"password\":\"{{authPassword}}\",\"password_confirmation\":\"{{authPassword}}\",\"device_name\":\"{{deviceName}}\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/auth/register"
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 200 && body.token) {",
+                                    "    pm.environment.set('token', body.token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"{{authEmail}}\",\"password\":\"{{authPassword}}\",\"device_name\":\"{{deviceName}}\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/auth/login"
+                    }
+                },
+                {
+                    "name": "Me",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/auth/me"
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.environment.unset('token');",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/auth/logout"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Accounts",
+            "item": [
+                {
+                    "name": "List Accounts",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts"
+                    }
+                },
+                {
+                    "name": "List All Accounts",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts/all"
+                    }
+                },
+                {
+                    "name": "Show Account",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}"
+                    }
+                },
+                {
+                    "name": "Create Account",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && body.account) {",
+                                    "    pm.environment.set('accountId', body.account.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":{\"en\":\"Emergency Fund\",\"ar\":\"صندوق الطوارئ\"},\"balance\":1250.75,\"currency\":\"USD\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/accounts"
+                    }
+                },
+                {
+                    "name": "Update Account",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":{\"en\":\"Emergency Fund Updated\",\"ar\":\"صندوق الطوارئ المحدث\"},\"balance\":1499.25,\"currency\":\"USD\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}"
+                    }
+                },
+                {
+                    "name": "Delete Account",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}"
+                    }
+                },
+                {
+                    "name": "Search Shareable Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}/shareable-users?search={{shareUserEmail}}"
+                    }
+                },
+                {
+                    "name": "Share Account",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 200 && body.account && Array.isArray(body.account.sharedUsers) && body.account.sharedUsers.length > 0) {",
+                                    "    pm.environment.set('shareUserId', body.account.sharedUsers[0].id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"{{shareUserEmail}}\",\"permission_level\":\"VIEW\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}/shares"
+                    }
+                },
+                {
+                    "name": "Update Share Permission",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"permission_level\":\"EDIT\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}/shares/{{shareUserId}}"
+                    }
+                },
+                {
+                    "name": "Revoke Share",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}/shares/{{shareUserId}}"
+                    }
+                },
+                {
+                    "name": "List Account Audits",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/accounts/{{accountId}}/audits"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Categories",
+            "item": [
+                {
+                    "name": "List Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/categories/all"
+                    }
+                },
+                {
+                    "name": "Show Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/categories/{{categoryId}}"
+                    }
+                },
+                {
+                    "name": "Create Category",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && body.category) {",
+                                    "    pm.environment.set('categoryId', body.category.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":{\"en\":\"Groceries\",\"ar\":\"البقالة\"},\"type\":\"EXPENSES\",\"color\":\"#16a34a\",\"icon\":\"shopping-cart\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/categories"
+                    }
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":{\"en\":\"Groceries Updated\",\"ar\":\"البقالة المحدثة\"},\"type\":\"EXPENSES\",\"color\":\"#15803d\",\"icon\":\"shopping-cart\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/categories/{{categoryId}}"
+                    }
+                },
+                {
+                    "name": "Delete Category",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/categories/{{categoryId}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Budgets",
+            "item": [
+                {
+                    "name": "List Budgets",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/budgets"
+                    }
+                },
+                {
+                    "name": "Show Budget",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/budgets/{{budgetId}}"
+                    }
+                },
+                {
+                    "name": "Create Budget",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && body.budget) {",
+                                    "    pm.environment.set('budgetId', body.budget.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":{\"en\":\"Monthly Groceries\",\"ar\":\"ميزانية البقالة الشهرية\"},\"amount\":500,\"currency\":\"USD\",\"start_at\":\"2024-01-01\",\"end_at\":\"2024-12-31\",\"saving\":false,\"period\":1,\"reoccurrence\":\"MONTHLY\",\"category_ids\":[{{categoryId}}]}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/budgets"
+                    }
+                },
+                {
+                    "name": "Update Budget",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":{\"en\":\"Monthly Groceries Updated\",\"ar\":\"ميزانية البقالة الشهرية المحدثة\"},\"amount\":650,\"currency\":\"USD\",\"start_at\":\"2024-01-01\",\"end_at\":\"2024-12-31\",\"saving\":false,\"period\":1,\"reoccurrence\":\"MONTHLY\",\"category_ids\":[{{categoryId}}]}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/budgets/{{budgetId}}"
+                    }
+                },
+                {
+                    "name": "Delete Budget",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/budgets/{{budgetId}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Transactions",
+            "item": [
+                {
+                    "name": "List Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Transaction Form Options",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/transactions/form-options?account_id={{accountId}}"
+                    }
+                },
+                {
+                    "name": "Show Transaction",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionId}}"
+                    }
+                },
+                {
+                    "name": "Create Transaction",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && body.transaction) {",
+                                    "    pm.environment.set('transactionId', body.transaction.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"amount\":84.5,\"account_id\":{{accountId}},\"category_id\":{{categoryId}},\"created_at\":\"2024-01-15T10:30:00Z\",\"transaction_type\":\"DEBIT\",\"note\":\"Groceries\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Update Transaction",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"amount\":96.25,\"account_id\":{{accountId}},\"category_id\":{{categoryId}},\"created_at\":\"2024-01-15T11:00:00Z\",\"transaction_type\":\"DEBIT\",\"note\":\"Groceries and household items\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionId}}"
+                    }
+                },
+                {
+                    "name": "Delete Transaction",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionId}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "AI",
+            "item": [
+                {
+                    "name": "Chat",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 200 && body.conversation_id) {",
+                                    "    pm.environment.set('conversationId', body.conversation_id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"messages\":[{\"role\":\"user\",\"content\":\"Show me a quick spending summary for this month\"}]}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/ai/chat"
+                    }
+                },
+                {
+                    "name": "Continue Chat",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"conversation_id\":\"{{conversationId}}\",\"messages\":[{\"role\":\"user\",\"content\":\"Show me a quick spending summary for this month\"},{\"role\":\"assistant\",\"content\":\"Here is your spending summary.\"},{\"role\":\"user\",\"content\":\"Break that down by category\"}]}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/ai/chat"
+                    }
+                },
+                {
+                    "name": "Transcribe Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/ai/transcribe/token"
+                    }
+                },
+                {
+                    "name": "Transcribe Audio",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "audio",
+                                    "type": "file",
+                                    "src": "{{audioFile}}"
+                                }
+                            ]
+                        },
+                        "url": "{{baseUrl}}/api/v1/ai/transcribe"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Settings",
+            "item": [
+                {
+                    "name": "Get Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/settings"
+                    }
+                },
+                {
+                    "name": "Update Settings",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"default_currency\":\"USD\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/settings"
+                    }
+                },
+                {
+                    "name": "Get Currency Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/settings/currencies"
+                    }
+                },
+                {
+                    "name": "Update Currency Preference",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"default_currency\":\"EUR\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/settings/currencies"
+                    }
+                },
+                {
+                    "name": "Update Currency Rates",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"rates\":[{\"currency\":\"EUR\",\"rate\":0.92},{\"currency\":\"GBP\",\"rate\":0.79}]}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/settings/currencies/rates"
+                    }
+                },
+                {
+                    "name": "Refresh Currency Rates",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/settings/currencies/refresh"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "SMS",
+            "item": [
+                {
+                    "name": "List SMS",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/sms"
+                    }
+                },
+                {
+                    "name": "Create SMS",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (pm.response.code === 201 && Array.isArray(body.data) && body.data.length > 0) {",
+                                    "    pm.environment.set('smsId', body.data[0].id);",
+                                    "    if (body.data[0].transaction_id) {",
+                                    "        pm.environment.set('transactionId', body.data[0].transaction_id);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"body\":\"Payment of AED 38.7 to someBrand with Credit Card ending 9048. Avl Cr. Limit is AED 53,750.64.\",\"created_at\":\"2026-04-18\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/sms"
+                    }
+                },
+                {
+                    "name": "Update SMS",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"body\":\"Updated SMS body\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/sms/{{smsId}}"
+                    }
+                },
+                {
+                    "name": "Delete SMS",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/api/v1/sms/{{smsId}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User",
+            "item": [
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "content-type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"API User Updated\",\"default_currency\":\"EUR\",\"locale\":\"en\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/user/profile"
+                    }
+                }
+            ]
+        }
+    ]
+}

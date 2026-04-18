@@ -1,0 +1,14 @@
+meta {
+  name: Refresh Currency Rates
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/settings/currencies/refresh
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

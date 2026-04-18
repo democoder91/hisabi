@@ -1,0 +1,14 @@
+meta {
+  name: Total Income
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/total-income?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

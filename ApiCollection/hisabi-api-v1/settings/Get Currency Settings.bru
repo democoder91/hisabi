@@ -1,0 +1,14 @@
+meta {
+  name: Get Currency Settings
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/settings/currencies
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

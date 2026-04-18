@@ -1,0 +1,32 @@
+meta {
+  name: Create SMS
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/sms
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "body": "Payment of AED 38.7 to someBrand with Credit Card ending 9048. Avl Cr. Limit is AED 53,750.64.",
+    "created_at": "2026-04-18"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && Array.isArray(res.body.data) && res.body.data.length > 0) {
+    bru.setEnvVar("smsId", res.body.data[0].id, { persist: true });
+
+    if (res.body.data[0].transaction_id) {
+      bru.setEnvVar("transactionId", res.body.data[0].transaction_id, { persist: true });
+    }
+  }
+}

@@ -1,0 +1,30 @@
+meta {
+  name: Update Currency Rates
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/settings/currencies/rates
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "rates": [
+      {
+        "currency": "EUR",
+        "rate": 0.92
+      },
+      {
+        "currency": "GBP",
+        "rate": 0.79
+      }
+    ]
+  }
+}

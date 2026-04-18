@@ -1,0 +1,21 @@
+meta {
+  name: Update SMS
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/v1/sms/{{smsId}}
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  content-type: application/json
+}
+
+body:json {
+  {
+    "body": "Updated SMS body"
+  }
+}

@@ -8,6 +8,7 @@ use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Mockery;
 use Tests\TestCase;
@@ -347,5 +348,40 @@ class AIControllerTest extends TestCase
         $this->assertDatabaseMissing('agent_conversations', [
             'id' => $conversationId,
         ]);
+    }
+
+    public function test_it_returns_a_generic_error_message_even_when_logging_the_failure_throws(): void
+    {
+        $handler = Mockery::mock(ChatCommandHandler::class);
+        $handler->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(ChatCommand::class))
+            ->andThrow(new \RuntimeException('Boom'));
+
+        $this->app->instance(ChatCommandHandler::class, $handler);
+
+        Log::shouldReceive('log')
+            ->once()
+            ->withArgs(function (string $level, string $message, array $context): bool {
+                return $level === 'error'
+                    && $message === 'Hisabi AI Chat Error: Boom'
+                    && ($context['user_id'] ?? null) === $this->user->id;
+            })
+            ->andThrow(new \RuntimeException('Unable to write logs'));
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Do something risky'],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('role', 'assistant')
+            ->assertJsonPath('conversation_id', null)
+            ->assertJsonPath('content', 'I apologize, but I encountered an error processing your request. No changes were saved. Please try again in a moment.')
+            ->assertJsonPath('available_credits', 5);
+
+        $this->assertSame(5, $this->user->fresh()->available_credits);
     }
 }

@@ -35,7 +35,7 @@ class AiChatController extends Controller
                 'title',
                 'updated_at',
             ])
-            ->map(fn (object $conversation): array => [
+            ->map(fn(object $conversation): array => [
                 'id' => $conversation->id,
                 'title' => $conversation->title,
                 'updatedAt' => $conversation->updated_at,
@@ -66,7 +66,7 @@ class AiChatController extends Controller
                 'content',
                 'created_at',
             ])
-            ->map(fn (object $message): array => [
+            ->map(fn(object $message): array => [
                 'id' => $message->id,
                 'role' => $message->role,
                 'content' => $message->content,

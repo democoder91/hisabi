@@ -144,8 +144,8 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
 
     const activeConversationTitle = selectedConversationId
         ? conversationItems.find((conversation) => conversation.id === selectedConversationId)?.title
-            ?? activeConversation?.title
-            ?? t('ai.fallbackConversationTitle')
+        ?? activeConversation?.title
+        ?? t('ai.fallbackConversationTitle')
         : t('ai.newChat');
 
     const desktopLayoutClass = direction === 'rtl' ? 'lg:flex-row-reverse' : 'lg:flex-row';

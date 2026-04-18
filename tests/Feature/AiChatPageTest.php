@@ -85,7 +85,7 @@ it('shows the authenticated user conversations and selected thread', function ()
 
     get(route('ai.chat', ['conversation_id' => $activeConversationId]))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
+        ->assertInertia(fn(AssertableInertia $page) => $page
             ->component('Ai/Index')
             ->has('conversations', 2)
             ->where('conversations.0.id', $activeConversationId)

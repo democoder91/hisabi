@@ -1,36 +1,57 @@
-version: '3'
 services:
     app:
         build:
-            context: ./
+            context: .
+            dockerfile: Dockerfile
+            target: app
+        image: nexosoft-app:latest
+        container_name: nexosoft-app
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            APP_ENV: production
+            APP_DEBUG: 'false'
+            DB_HOST: db
+            DB_PORT: '3306'
+        depends_on:
+            - db
+        command: >
+            sh -c "mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+            && chown -R www-data:www-data storage bootstrap/cache
+            && chmod -R ug+rwx storage bootstrap/cache
+            && php-fpm"
+
+    nginx:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: nginx
+        image: nexosoft-nginx:latest
+        container_name: nexosoft-nginx
+        restart: unless-stopped
+        depends_on:
+            - app
         ports:
             - "80:80"
-        networks:
-            - hisabi
-        depends_on:
-            - mysql
-    mysql:
-        image: 'mysql/mysql-server:8.0'
-        ports:
-            - '3306:3306'
+
+    db:
+        image: mysql:8.0
+        container_name: nexosoft-db
+        restart: unless-stopped
         environment:
-            MYSQL_ROOT_PASSWORD: 'root'
-            MYSQL_ROOT_HOST: "%"
-            MYSQL_DATABASE: 'hisabi'
-            MYSQL_USER: 'hisabi'
-            MYSQL_PASSWORD: 'hisabi'
-            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_USER: ${DB_USERNAME}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
         volumes:
-            - 'hisabimysql:/var/lib/mysql'
-        networks:
-            - hisabi
+            - mysql-data:/var/lib/mysql
         healthcheck:
-            test: ["CMD", "mysqladmin", "ping", "-proot"]
-            retries: 3
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD --silent"]
+            interval: 10s
             timeout: 5s
-networks:
-    hisabi:
-        driver: bridge
+            retries: 5
+            start_period: 20s
+
 volumes:
-    hisabimysql:
-        driver: local
+    mysql-data:

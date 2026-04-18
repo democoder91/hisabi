@@ -81,7 +81,7 @@ class AiChatController extends Controller
                 'role' => $message->role,
                 'content' => $message->content,
                 'interaction' => $message->role === 'assistant'
-                    ? $this->interactiveToolCallService->pendingInteractionFromMeta($message->meta)
+                    ? $this->interactiveToolCallService->pendingInteractionFromConversation($conversationId, $user, $message->meta)
                     : null,
                 'createdAt' => $message->created_at,
             ])

@@ -4,6 +4,7 @@ namespace App\Services\AI;
 
 use App\Ai\Agents\HisabiAgent;
 use App\Ai\Exceptions\PendingUserInputToolCall;
+use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,17 @@ class InteractiveToolCallService
 
     public const STATUS_PENDING = 'pending';
 
+    private const QUESTION_ID_ALIASES = [
+        'account' => 'account_id',
+        'budget' => 'budget_id',
+        'category' => 'category_id',
+        'destination_account' => 'to_account_id',
+        'from_account' => 'from_account_id',
+        'source_account' => 'from_account_id',
+        'to_account' => 'to_account_id',
+        'transaction' => 'transaction_id',
+    ];
+
     public function normalizeQuestions(array $questions): array
     {
         if ($questions === []) {
@@ -33,7 +45,7 @@ class InteractiveToolCallService
                 throw new InvalidArgumentException(sprintf('Question %d must be an object.', $index + 1));
             }
 
-            $questionId = trim((string) ($question['id'] ?? ''));
+            $questionId = $this->canonicalizeQuestionId((string) ($question['id'] ?? ''));
             $label = trim((string) ($question['label'] ?? ''));
             $type = trim((string) ($question['type'] ?? ''));
 
@@ -149,7 +161,7 @@ class InteractiveToolCallService
             ]);
         }
 
-        $interaction = $this->pendingInteractionFromMeta($pendingMessage->meta);
+        $interaction = $this->pendingInteractionFromConversation($conversationId, $user, $pendingMessage->meta);
 
         if ($interaction === null) {
             throw ValidationException::withMessages([
@@ -159,6 +171,7 @@ class InteractiveToolCallService
 
         $validatedAnswers = $this->validateAnswers($answers, $interaction['questions']);
         $meta = $this->decodeMeta($pendingMessage->meta);
+        $meta['interaction']['questions'] = $interaction['questions'];
         $meta['interaction']['status'] = self::STATUS_COMPLETED;
         $meta['interaction']['answers'] = $validatedAnswers;
         $meta['interaction']['completed_at'] = now()->toIso8601String();
@@ -210,7 +223,10 @@ class InteractiveToolCallService
         }
 
         $questions = array_map(function (array $question): array {
-            if (($question['id'] ?? null) !== 'category_id' || ! is_array($question['options'] ?? null)) {
+            $questionId = $this->canonicalizeQuestionId((string) ($question['id'] ?? ''));
+            $question['id'] = $questionId;
+
+            if ($questionId !== 'category_id' || ! is_array($question['options'] ?? null)) {
                 return $question;
             }
 
@@ -225,6 +241,24 @@ class InteractiveToolCallService
             'tool_call_id' => $toolCallId,
             'questions' => $questions,
         ];
+    }
+
+    public function pendingInteractionFromConversation(string $conversationId, User $user, ?string $meta): ?array
+    {
+        $interaction = $this->pendingInteractionFromMeta($meta);
+
+        if ($interaction === null) {
+            return null;
+        }
+
+        $conversationAnswers = $this->conversationInteractionAnswers($conversationId, $user);
+
+        $interaction['questions'] = array_map(
+            fn (array $question): array => $this->refreshQuestionOptions($question, $conversationAnswers, $user),
+            $interaction['questions'],
+        );
+
+        return $interaction;
     }
 
     private function assertConversationOwnership(string $conversationId, User $user): void
@@ -362,6 +396,7 @@ class InteractiveToolCallService
 
     private function validateAnswers(array $answers, array $questions): array
     {
+        $answers = $this->normalizeAnswerKeys($answers, $questions);
         $errors = [];
         $normalizedAnswers = [];
         $questionMap = [];
@@ -416,7 +451,7 @@ class InteractiveToolCallService
                     continue;
                 }
 
-                $answer = trim((string) $rawAnswer);
+                $answer = $this->normalizeSubmittedOptionValue((string) $rawAnswer, $question);
 
                 if (! in_array($answer, $allowedValues, true)) {
                     $errors[$answerKey] = ['This answer must match one of the provided options.'];
@@ -441,7 +476,7 @@ class InteractiveToolCallService
                     continue 2;
                 }
 
-                $normalizedValue = trim((string) $selectedValue);
+                $normalizedValue = $this->normalizeSubmittedOptionValue((string) $selectedValue, $question);
 
                 if (! in_array($normalizedValue, $allowedValues, true)) {
                     $errors[$answerKey] = ['Each selected value must match one of the provided options.'];
@@ -468,6 +503,277 @@ class InteractiveToolCallService
         }
 
         return $normalizedAnswers;
+    }
+
+    private function canonicalizeQuestionId(string $questionId): string
+    {
+        $normalizedQuestionId = trim($questionId);
+
+        return self::QUESTION_ID_ALIASES[$normalizedQuestionId] ?? $normalizedQuestionId;
+    }
+
+    private function normalizeAnswerKeys(array $answers, array $questions): array
+    {
+        $availableQuestionIds = [];
+
+        foreach ($questions as $question) {
+            if (! is_array($question) || ! isset($question['id']) || ! is_string($question['id'])) {
+                continue;
+            }
+
+            $availableQuestionIds[$question['id']] = true;
+        }
+
+        $normalizedAnswers = [];
+
+        foreach ($answers as $answerKey => $value) {
+            $key = (string) $answerKey;
+            $canonicalKey = $this->canonicalizeQuestionId($key);
+
+            if ($canonicalKey !== $key && isset($availableQuestionIds[$canonicalKey])) {
+                if (! array_key_exists($canonicalKey, $normalizedAnswers)) {
+                    $normalizedAnswers[$canonicalKey] = $value;
+                }
+
+                continue;
+            }
+
+            if (! array_key_exists($key, $normalizedAnswers)) {
+                $normalizedAnswers[$key] = $value;
+            }
+        }
+
+        return $normalizedAnswers;
+    }
+
+    private function conversationInteractionAnswers(string $conversationId, User $user): array
+    {
+        $answers = [];
+
+        $messages = DB::table('agent_conversation_messages')
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', $user->id)
+            ->where('role', 'assistant')
+            ->orderBy('created_at')
+            ->get(['meta']);
+
+        foreach ($messages as $message) {
+            $interaction = $this->decodeMeta($message->meta)['interaction'] ?? null;
+
+            if (! is_array($interaction) || ($interaction['status'] ?? null) !== self::STATUS_COMPLETED) {
+                continue;
+            }
+
+            $interactionAnswers = $interaction['answers'] ?? null;
+
+            if (! is_array($interactionAnswers)) {
+                continue;
+            }
+
+            foreach ($interactionAnswers as $key => $value) {
+                $answers[$this->canonicalizeQuestionId((string) $key)] = $value;
+            }
+        }
+
+        return $answers;
+    }
+
+    private function refreshQuestionOptions(array $question, array $conversationAnswers, User $user): array
+    {
+        $questionId = $question['id'] ?? null;
+
+        if ($questionId !== 'category_id' || ! is_array($question['options'] ?? null)) {
+            return $question;
+        }
+
+        $question['options'] = $this->refreshCategoryOptions(
+            $question['options'],
+            $this->resolveCategoryOwnerIds($conversationAnswers, $user),
+            $this->expectedCategoryType($conversationAnswers),
+        );
+
+        return $question;
+    }
+
+    private function resolveCategoryOwnerIds(array $conversationAnswers, User $user): array
+    {
+        $selectedAccountIds = [];
+
+        foreach (['account_id', 'from_account_id', 'to_account_id'] as $key) {
+            $value = $conversationAnswers[$key] ?? null;
+
+            if (is_string($value) && ctype_digit($value)) {
+                $selectedAccountIds[] = (int) $value;
+            }
+        }
+
+        $ownerIds = Account::query()
+            ->accessibleTo($user)
+            ->when($selectedAccountIds !== [], fn ($query) => $query->whereIn('id', array_values(array_unique($selectedAccountIds))))
+            ->pluck('user_id')
+            ->map(fn (mixed $userId): int => (int) $userId)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ownerIds !== []) {
+            return $ownerIds;
+        }
+
+        return [(int) $user->id];
+    }
+
+    private function expectedCategoryType(array $conversationAnswers): ?string
+    {
+        $expectedType = $conversationAnswers['category_type'] ?? $conversationAnswers['transaction_type'] ?? null;
+
+        if (! is_string($expectedType)) {
+            return null;
+        }
+
+        $expectedType = strtoupper(trim($expectedType));
+
+        return in_array($expectedType, [
+            Category::EXPENSES,
+            Category::INCOME,
+            Category::SAVINGS,
+            Category::INVESTMENT,
+        ], true) ? $expectedType : null;
+    }
+
+    private function refreshCategoryOptions(array $options, array $ownerIds, ?string $expectedType): array
+    {
+        $currentOptions = $this->currentCategoryOptions($ownerIds, $expectedType);
+
+        if ($currentOptions === []) {
+            return $this->enrichCategoryOptionMetadata('category_id', $options);
+        }
+
+        $optionsByValue = [];
+        $optionsByLabel = [];
+
+        foreach ($currentOptions as $currentOption) {
+            $optionsByValue[$currentOption['value']] = $currentOption;
+
+            foreach ($currentOption['meta']['label_candidates'] ?? [] as $labelCandidate) {
+                $normalizedLabel = $this->normalizeOptionLabel($labelCandidate);
+
+                if ($normalizedLabel === '') {
+                    continue;
+                }
+
+                $optionsByLabel[$normalizedLabel][] = $currentOption;
+            }
+        }
+
+        $refreshedOptions = [];
+
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $label = trim((string) ($option['label'] ?? $option['value'] ?? ''));
+            $originalValue = trim((string) ($option['value'] ?? $label));
+            $matchingOptions = $optionsByLabel[$this->normalizeOptionLabel($label)] ?? [];
+            $matchedOption = null;
+
+            if ($matchingOptions !== []) {
+                $matchedOption = $matchingOptions[0];
+            } elseif ($originalValue !== '' && isset($optionsByValue[$originalValue])) {
+                $matchedOption = $optionsByValue[$originalValue];
+            }
+
+            if ($matchedOption === null) {
+                continue;
+            }
+
+            $refreshedOption = $matchedOption;
+            $refreshedOption['label'] = $label !== '' ? $label : $matchedOption['label'];
+
+            if ($originalValue !== '' && $originalValue !== $matchedOption['value']) {
+                $legacyValues = $refreshedOption['meta']['legacy_values'] ?? [];
+                $legacyValues[] = $originalValue;
+                $refreshedOption['meta']['legacy_values'] = array_values(array_unique(array_map('strval', $legacyValues)));
+            }
+
+            $refreshedOptions[$refreshedOption['value']] = $refreshedOption;
+        }
+
+        foreach ($currentOptions as $currentOption) {
+            $refreshedOptions[$currentOption['value']] ??= $currentOption;
+        }
+
+        return array_values(array_map(function (array $option): array {
+            unset($option['meta']['label_candidates']);
+
+            return $option;
+        }, $refreshedOptions));
+    }
+
+    private function currentCategoryOptions(array $ownerIds, ?string $expectedType): array
+    {
+        $categories = DB::table('categories')
+            ->whereIn('user_id', $ownerIds)
+            ->whereNull('deleted_at')
+            ->when($expectedType !== null, fn ($query) => $query->where('type', $expectedType))
+            ->orderBy('id')
+            ->get(['id', 'name', 'type']);
+
+        return $categories->map(function (object $category): array {
+            $translations = json_decode((string) $category->name, true);
+            $translations = is_array($translations) ? $translations : ['en' => (string) $category->name];
+            $labelCandidates = array_values(array_unique(array_filter(array_map(
+                static fn (mixed $value): string => is_string($value) ? trim($value) : '',
+                $translations,
+            ))));
+            $label = $labelCandidates[0] ?? ('Category #' . $category->id);
+
+            return [
+                'label' => $label,
+                'value' => (string) $category->id,
+                'meta' => [
+                    'category_type' => (string) $category->type,
+                    'label_candidates' => $labelCandidates,
+                ],
+            ];
+        })->all();
+    }
+
+    private function normalizeSubmittedOptionValue(string $value, array $question): string
+    {
+        $normalizedValue = trim($value);
+
+        foreach ($question['options'] ?? [] as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $currentValue = trim((string) ($option['value'] ?? ''));
+
+            if ($currentValue === '' || $currentValue === $normalizedValue) {
+                continue;
+            }
+
+            $legacyValues = $option['meta']['legacy_values'] ?? [];
+
+            if (! is_array($legacyValues)) {
+                continue;
+            }
+
+            foreach ($legacyValues as $legacyValue) {
+                if (trim((string) $legacyValue) === $normalizedValue) {
+                    return $currentValue;
+                }
+            }
+        }
+
+        return $normalizedValue;
+    }
+
+    private function normalizeOptionLabel(string $label): string
+    {
+        return Str::lower(trim((string) preg_replace('/\s+/', ' ', $label)));
     }
 
     private function enrichCategoryOptionMetadata(string $questionId, array $options): array

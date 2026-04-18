@@ -55,10 +55,6 @@ class CreateTransactionTool extends FinancialTool
             $validated['category_type'] ?? null,
         );
 
-        if (! empty($validated['category_type']) && $category->type !== $validated['category_type']) {
-            throw new \RuntimeException('The provided category_id does not match the provided category_type.');
-        }
-
         $resolvedNote = $validated['note'] ?? null;
 
         if (! empty($validated['brand_name'])) {

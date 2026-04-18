@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -120,4 +121,75 @@ it('returns not found when a user opens another users conversation', function ()
     actingAs($user);
 
     get(route('ai.chat', ['conversation_id' => $conversationId]))->assertNotFound();
+});
+
+it('refreshes stale pending category options when reopening a conversation', function () {
+    config()->set('inertia.testing.ensure_pages_exist', false);
+
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    $category = Category::factory()->create([
+        'user_id' => $user->id,
+        'type' => Category::EXPENSES,
+        'name' => [
+            'en' => 'Dining',
+            'ar' => null,
+        ],
+    ]);
+
+    $conversationId = (string) Str::uuid();
+    $toolCallId = (string) Str::uuid();
+    $now = now();
+
+    DB::table('agent_conversations')->insert([
+        'id' => $conversationId,
+        'user_id' => $user->id,
+        'title' => 'Pending thread',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    DB::table('agent_conversation_messages')->insert([
+        'id' => (string) Str::uuid(),
+        'conversation_id' => $conversationId,
+        'user_id' => $user->id,
+        'agent' => 'App\\Ai\\Agents\\HisabiAgent',
+        'role' => 'assistant',
+        'content' => 'Please provide the requested details to continue.',
+        'attachments' => '[]',
+        'tool_calls' => '[]',
+        'tool_results' => '[]',
+        'usage' => '[]',
+        'meta' => json_encode([
+            'interaction' => [
+                'status' => 'pending',
+                'tool_name' => 'ask_user_for_input',
+                'tool_call_id' => $toolCallId,
+                'questions' => [
+                    [
+                        'id' => 'category',
+                        'label' => 'Select a category',
+                        'type' => 'select',
+                        'options' => [
+                            ['label' => 'Dining', 'value' => '5'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    actingAs($user);
+
+    get(route('ai.chat', ['conversation_id' => $conversationId]))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Ai/Index')
+            ->where('activeConversation.id', $conversationId)
+            ->where('activeConversation.messages.0.interaction.questions.0.id', 'category_id')
+            ->where('activeConversation.messages.0.interaction.questions.0.options.0.value', (string) $category->id)
+            ->where('activeConversation.messages.0.interaction.questions.0.options.0.meta.legacy_values.0', '5'));
 });

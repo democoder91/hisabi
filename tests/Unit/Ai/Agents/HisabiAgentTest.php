@@ -65,6 +65,7 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString('edit_budget', $instructions);
         $this->assertStringContainsString('list_categories', $instructions);
         $this->assertStringContainsString('ask_user_for_input', $instructions);
+        $this->assertStringContainsString('Do not invent transaction memos', $instructions);
     }
 
     public function test_instructions_use_user_currency(): void

@@ -86,6 +86,37 @@ class CreateTransactionToolTest extends TestCase
         $this->assertStringContains('EUR 100.00', $result);
     }
 
+    public function test_it_prefers_category_id_when_the_ai_also_sends_a_mismatched_category_type(): void
+    {
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Wallet', 'ar' => null],
+        ]);
+
+        $category = Category::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Food', 'ar' => null],
+        ]);
+
+        $result = $this->tool->handle(new Request([
+            'amount' => 18,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'category_type' => Category::INCOME,
+            'note' => 'Lunch',
+        ]));
+
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
+
+        $this->assertEquals($account->id, $transaction->account_id);
+        $this->assertEquals($category->id, $transaction->category_id);
+        $this->assertEquals(Transaction::TYPE_DEBIT, $transaction->transaction_type);
+        $this->assertEquals('Lunch', $transaction->note);
+        $this->assertStringContains('Transaction created successfully', $result);
+        $this->assertStringContains('Food', $result);
+    }
+
     public function test_it_normalizes_structured_ai_text_fields_before_validation(): void
     {
         $result = $this->tool->handle(new Request([

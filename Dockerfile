@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM php:8.2-fpm-alpine AS php-base
+FROM php:8.4-fpm-alpine AS php-base
 
 WORKDIR /var/www/html
 

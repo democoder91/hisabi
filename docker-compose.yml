@@ -17,10 +17,7 @@ services:
         depends_on:
             - db
         command: >
-            sh -c "mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
-            && chown -R www-data:www-data storage bootstrap/cache
-            && chmod -R ug+rwx storage bootstrap/cache
-            && php-fpm"
+            sh -c "mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache && php-fpm"
 
     nginx:
         build:
@@ -47,7 +44,7 @@ services:
         volumes:
             - mysql-data:/var/lib/mysql
         healthcheck:
-            test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD --silent"]
+            test: [ "CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD --silent" ]
             interval: 10s
             timeout: 5s
             retries: 5

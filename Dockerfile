@@ -5,22 +5,22 @@ FROM php:8.2-fpm-alpine AS php-base
 WORKDIR /var/www/html
 
 RUN apk add --no-cache \
-        bash \
-        curl \
-        freetype \
-        libjpeg-turbo \
-        libpng \
-        libwebp \
-        libzip \
-        unzip \
-        zip \
+    bash \
+    curl \
+    freetype \
+    libjpeg-turbo \
+    libpng \
+    libwebp \
+    libzip \
+    unzip \
+    zip \
     && apk add --no-cache --virtual .build-deps \
-        $PHPIZE_DEPS \
-        freetype-dev \
-        libjpeg-turbo-dev \
-        libpng-dev \
-        libwebp-dev \
-        libzip-dev \
+    $PHPIZE_DEPS \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
+    libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" bcmath gd mysqli pdo_mysql zip \
     && pecl install redis \
@@ -34,11 +34,11 @@ FROM php-base AS vendor
 COPY . /var/www/html
 
 RUN composer install \
-        --no-dev \
-        --no-interaction \
-        --no-progress \
-        --prefer-dist \
-        --optimize-autoloader
+    --no-dev \
+    --no-interaction \
+    --no-progress \
+    --prefer-dist \
+    --optimize-autoloader
 
 FROM node:20-alpine AS assets
 
@@ -64,12 +64,12 @@ COPY --from=vendor /var/www/html /var/www/html
 COPY --from=assets /var/www/html/public/build /var/www/html/public/build
 
 RUN mkdir -p \
-        storage/app/public \
-        storage/framework/cache/data \
-        storage/framework/sessions \
-        storage/framework/views \
-        storage/logs \
-        bootstrap/cache \
+    storage/app/public \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache \
     && rm -rf public/storage \
     && ln -s /var/www/html/storage/app/public public/storage \
     && chown -R www-data:www-data storage bootstrap/cache \

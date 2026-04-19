@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Category\Models\Category;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Transaction\Models\Transaction;
 
 class TransactionsByCategoryMetricTest extends MetricsTestCase
@@ -18,7 +16,7 @@ class TransactionsByCategoryMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 300]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-by-category?range=current-year');
 
@@ -34,8 +32,8 @@ class TransactionsByCategoryMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 300]);
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-by-category?range=current-year');
 
@@ -48,8 +46,8 @@ class TransactionsByCategoryMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->count(3)->create(['brand_id' => $this->expensesBrand->id, 'amount' => 100]);
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
+        Transaction::factory()->count(3)->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-by-category?range=current-year');
 

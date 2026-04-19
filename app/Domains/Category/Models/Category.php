@@ -2,8 +2,10 @@
 
 namespace App\Domains\Category\Models;
 
+use App\Domains\Account\Models\Account;
 use App\Models\Concerns\BelongsToUser;
 use App\Models\Concerns\HasLocalizedTranslatableName;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Domains\Transaction\Models\Transaction;
@@ -34,6 +36,11 @@ class Category extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class)->withTrashed();
     }
 
     public static function findOrCreateFallbackForUser(int $userId, string $type): self

@@ -19,7 +19,7 @@ class EditCategoryTool extends FinancialTool
 
     public function handle(Request $request): Stringable|string
     {
-        $this->authenticatedUser();
+        $user = $this->authenticatedUser();
         $input = $request->all();
         $this->uppercaseIfPresent($input, ['type']);
 
@@ -43,9 +43,11 @@ class EditCategoryTool extends FinancialTool
             'icon' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $category = Category::query()->withCount('transactions')->find($validated['category_id']);
+        $category = app(CategoryService::class)->findLedgerCategoryOrFail((int) $validated['category_id'])
+            ->load('account')
+            ->loadCount('transactions');
 
-        if (! $category) {
+        if ((int) $category->user_id !== (int) $user->id) {
             throw new \RuntimeException('The specified category was not found for the authenticated user.');
         }
 
@@ -62,7 +64,9 @@ class EditCategoryTool extends FinancialTool
             }
         }
 
-        $updated = app(CategoryService::class)->update($category->id, $payload)->loadCount('transactions');
+        $updated = app(CategoryService::class)->update($category->id, $payload)
+            ->load('account')
+            ->loadCount('transactions');
 
         return 'Category updated successfully: ' . $this->formatCategory($updated);
     }

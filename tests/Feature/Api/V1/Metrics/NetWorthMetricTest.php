@@ -16,8 +16,8 @@ class NetWorthMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 10000]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 3000]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 10000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 3000]);
 
         $response = $this->getJson('/api/v1/metrics/net-worth');
 
@@ -29,8 +29,8 @@ class NetWorthMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 1000]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 3000]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 1000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 3000]);
 
         $response = $this->getJson('/api/v1/metrics/net-worth');
 
@@ -42,10 +42,10 @@ class NetWorthMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 10000]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 3000]);
-        Transaction::factory()->create(['brand_id' => $this->savingsBrand->id, 'amount' => 1000]);
-        Transaction::factory()->create(['brand_id' => $this->investmentBrand->id, 'amount' => 500]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 10000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 3000]);
+        Transaction::factory()->create(['category_id' => $this->savingsCategory->id, 'amount' => 1000]);
+        Transaction::factory()->create(['category_id' => $this->investmentCategory->id, 'amount' => 500]);
 
         $response = $this->getJson('/api/v1/metrics/net-worth');
 

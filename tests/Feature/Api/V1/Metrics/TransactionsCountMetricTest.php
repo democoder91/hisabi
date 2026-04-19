@@ -19,8 +19,8 @@ class TransactionsCountMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->count(3)->create(['brand_id' => $this->incomeBrand->id]);
-        Transaction::factory()->count(5)->create(['brand_id' => $this->expensesBrand->id]);
+        Transaction::factory()->count(3)->create(['category_id' => $this->incomeCategory->id]);
+        Transaction::factory()->count(5)->create(['category_id' => $this->expensesCategory->id]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
 
@@ -39,8 +39,8 @@ class TransactionsCountMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->count(2)->create(['brand_id' => $this->incomeBrand->id]);
-        Transaction::factory()->count(5)->create(['brand_id' => $this->expensesBrand->id]);
+        Transaction::factory()->count(2)->create(['category_id' => $this->incomeCategory->id]);
+        Transaction::factory()->count(5)->create(['category_id' => $this->expensesCategory->id]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
 
@@ -64,7 +64,7 @@ class TransactionsCountMetricTest extends MetricsTestCase
 
     public function test_shared_users_do_not_receive_metrics_for_accounts_shared_with_them(): void
     {
-        Transaction::factory()->count(2)->create(['brand_id' => $this->expensesBrand->id]);
+        Transaction::factory()->count(2)->create(['category_id' => $this->expensesCategory->id]);
 
         $sharedUser = User::factory()->create();
         $sharedAccount = Account::withoutGlobalScopes()->firstWhere('user_id', $this->user->id);

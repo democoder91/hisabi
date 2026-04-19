@@ -203,8 +203,10 @@ class FinanceCrudToolsTest extends TestCase
 
         $transactions = Transaction::withoutGlobalScopes()->get();
 
-        $this->assertCount(2, $transactions);
+        $this->assertCount(1, $transactions);
         $this->assertStringContainsString('Transfer created successfully', $output);
+        $this->assertSame($sourceAccount->id, $transactions->first()->from_account_id);
+        $this->assertSame($destinationAccount->id, $transactions->first()->to_account_id);
         $this->assertSame(255.0, $sourceAccount->fresh()->balance);
         $this->assertSame(125.0, $destinationAccount->fresh()->balance);
     }

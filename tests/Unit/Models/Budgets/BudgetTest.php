@@ -4,7 +4,6 @@ namespace Tests\Unit\Models\Budgets;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
@@ -35,7 +34,6 @@ class BudgetTest extends TestCase
     {
         $user = User::factory()->create();
         $category = Category::factory()->create(['user_id' => $user->id]);
-        $brand = Brand::factory()->create(['user_id' => $user->id, 'category_id' => $category->id]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
             'start_at' => now()->subDays(1), 
@@ -45,9 +43,9 @@ class BudgetTest extends TestCase
         ]);
         $sut->categories()->attach($category);
 
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 100]);
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 200]);
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 200, 'created_at' => now()->addDays(2)]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 100]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 200]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 200, 'created_at' => now()->addDays(2)]);
 
         $this->assertEquals(300, $sut->totalTransactionsAmount);
         $this->assertEquals(42, $sut->totalSpentPercentage);
@@ -84,7 +82,6 @@ class BudgetTest extends TestCase
     {
         $user = User::factory()->create();
         $category = Category::factory()->create(['user_id' => $user->id]);
-        $brand = Brand::factory()->create(['user_id' => $user->id, 'category_id' => $category->id]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
             'start_at' => now()->subDays(1), 
@@ -94,7 +91,7 @@ class BudgetTest extends TestCase
         ]);
         $sut->categories()->attach($category);
 
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 700]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 700]);
 
         // Should return 0 when over budget (method returns 0, not string)
         $this->assertEquals(0, $sut->totalMarginPerDay);
@@ -104,7 +101,6 @@ class BudgetTest extends TestCase
     {
         $user = User::factory()->create();
         $category = Category::factory()->create(['user_id' => $user->id]);
-        $brand = Brand::factory()->create(['user_id' => $user->id, 'category_id' => $category->id]);
         // Create budget that ends exactly 2 full days from now to get predictable division
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
@@ -115,7 +111,7 @@ class BudgetTest extends TestCase
         ]);
         $sut->categories()->attach($category);
 
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 600]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 600]);
 
         // Calculate expected value: remaining amount divided by actual days remaining
         $remainingAmount = 700 - 600; // 100
@@ -157,7 +153,6 @@ class BudgetTest extends TestCase
     {
         $user = User::factory()->create();
         $category = Category::factory()->create(['user_id' => $user->id]);
-        $brand = Brand::factory()->create(['user_id' => $user->id, 'category_id' => $category->id]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
             'start_at' => now()->subDays(1), 
@@ -167,8 +162,8 @@ class BudgetTest extends TestCase
         ]);
         $sut->categories()->attach($category);
 
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 100]);
-        Transaction::factory()->create(['brand_id' => $brand->id, 'amount' => 200]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 100]);
+        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 200]);
 
         $this->assertEquals('400', $sut->remainingToSpend);
     }

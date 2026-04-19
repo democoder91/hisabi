@@ -19,7 +19,7 @@ class CategoryDailyTrendMetricTest extends MetricsTestCase
 
         $today = Carbon::now()->startOfDay();
         Transaction::factory()->create([
-            'brand_id' => $this->expensesBrand->id,
+            'category_id' => $this->expensesCategory->id,
             'amount' => 100,
             'created_at' => $today
         ]);
@@ -30,8 +30,8 @@ class CategoryDailyTrendMetricTest extends MetricsTestCase
         $response = $this->getJson("/api/v1/metrics/category-daily-trend?from={$from}&to={$to}&id=" . $this->expensesCategory->id);
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertIsArray($data);
+        $items = $response->json('data.items');
+        $this->assertIsArray($items);
     }
 
     public function test_fills_missing_days_with_zero(): void
@@ -39,7 +39,7 @@ class CategoryDailyTrendMetricTest extends MetricsTestCase
         $this->actingAs($this->user);
 
         $today = Carbon::now()->startOfMonth()->addDays(5);
-        $t = Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 100]);
+        $t = Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
         $t->created_at = $today;
         $t->save();
 
@@ -49,11 +49,11 @@ class CategoryDailyTrendMetricTest extends MetricsTestCase
         $response = $this->getJson("/api/v1/metrics/category-daily-trend?from={$from}&to={$to}&id=" . $this->expensesCategory->id);
 
         $response->assertOk();
-        $data = $response->json('data');
+        $items = $response->json('data.items');
 
         // Should have entries for all days in the month
         $daysInMonth = Carbon::now()->daysInMonth;
-        $this->assertGreaterThanOrEqual($daysInMonth, count($data));
+        $this->assertGreaterThanOrEqual($daysInMonth, count($items));
     }
 
     public function test_filters_by_category(): void
@@ -62,11 +62,11 @@ class CategoryDailyTrendMetricTest extends MetricsTestCase
 
         $today = Carbon::now()->startOfMonth()->addDays(5);
 
-        $t1 = Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 100]);
+        $t1 = Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
         $t1->created_at = $today;
         $t1->save();
 
-        $t2 = Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
+        $t2 = Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
         $t2->created_at = $today;
         $t2->save();
 
@@ -76,9 +76,9 @@ class CategoryDailyTrendMetricTest extends MetricsTestCase
         $response = $this->getJson("/api/v1/metrics/category-daily-trend?from={$from}&to={$to}&id=" . $this->expensesCategory->id);
 
         $response->assertOk();
-        $data = $response->json('data');
+        $items = $response->json('data.items');
 
-        $dayData = collect($data)->firstWhere('label', $today->format('Y-m-d'));
+        $dayData = collect($items)->firstWhere('label', $today->format('Y-m-d'));
         $this->assertEquals(100, $dayData['value']);
     }
 }

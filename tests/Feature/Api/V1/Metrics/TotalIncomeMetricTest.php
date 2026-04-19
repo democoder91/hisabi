@@ -17,8 +17,8 @@ class TotalIncomeMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 3000]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 3000]);
 
         $from = Carbon::now()->startOfYear()->format('Y-m-d');
         $to = Carbon::now()->endOfYear()->format('Y-m-d');
@@ -33,8 +33,8 @@ class TotalIncomeMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 1000]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 1000]);
 
         $from = Carbon::now()->startOfYear()->format('Y-m-d');
         $to = Carbon::now()->endOfYear()->format('Y-m-d');
@@ -53,14 +53,14 @@ class TotalIncomeMetricTest extends MetricsTestCase
         $lastMonthDate = Carbon::now()->subMonth()->startOfMonth()->addDays(5);
 
         $currentTransaction = Transaction::factory()->create([
-            'brand_id' => $this->incomeBrand->id,
+            'category_id' => $this->incomeCategory->id,
             'amount' => 5000,
         ]);
         $currentTransaction->created_at = $currentMonthDate;
         $currentTransaction->save();
 
         $previousTransaction = Transaction::factory()->create([
-            'brand_id' => $this->incomeBrand->id,
+            'category_id' => $this->incomeCategory->id,
             'amount' => 4000,
         ]);
         $previousTransaction->created_at = $lastMonthDate;
@@ -97,14 +97,14 @@ class TotalIncomeMetricTest extends MetricsTestCase
         $twoMonthsAgoDate = Carbon::now()->subMonths(2)->startOfMonth()->addDays(5);
 
         $currentTransaction = Transaction::factory()->create([
-            'brand_id' => $this->incomeBrand->id,
+            'category_id' => $this->incomeCategory->id,
             'amount' => 5000,
         ]);
         $currentTransaction->created_at = $currentMonthDate;
         $currentTransaction->save();
 
         $oldTransaction = Transaction::factory()->create([
-            'brand_id' => $this->incomeBrand->id,
+            'category_id' => $this->incomeCategory->id,
             'amount' => 3000,
         ]);
         $oldTransaction->created_at = $twoMonthsAgoDate;

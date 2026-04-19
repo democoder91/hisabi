@@ -46,7 +46,7 @@ class ListTransactionsTool extends FinancialTool
         $query = Transaction::query()
             ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts($user)
-            ->with(['account.sharedUsers:id,name,email', 'category']);
+            ->with(['account.sharedUsers:id,name,email', 'category', 'fromAccount', 'toAccount']);
 
         if (! empty($validated['transaction_id'])) {
             $query->whereKey($validated['transaction_id']);
@@ -54,7 +54,11 @@ class ListTransactionsTool extends FinancialTool
 
         if (! empty($validated['account_id'])) {
             $account = $this->accessibleAccount((int) $validated['account_id'], $user);
-            $query->where('account_id', $account->id);
+            $query->where(function ($builder) use ($account) {
+                $builder->where('account_id', $account->id)
+                    ->orWhere('from_account_id', $account->id)
+                    ->orWhere('to_account_id', $account->id);
+            });
         }
 
         if (! empty($validated['category_id'])) {
@@ -79,10 +83,17 @@ class ListTransactionsTool extends FinancialTool
 
         if (! empty($validated['search'])) {
             $search = '%' . trim($validated['search']) . '%';
+            $plainSearch = trim($validated['search']);
 
-            $query->where(function ($builder) use ($search) {
+            $query->where(function ($builder) use ($search, $plainSearch) {
                 $builder->where('note', 'like', $search)
-                    ->orWhere('amount', 'like', $search);
+                    ->orWhere('amount', 'like', $search)
+                    ->orWhereHas('fromAccount', function ($accountQuery) use ($plainSearch) {
+                        $this->applyLocalizedSearch($accountQuery, 'name', $plainSearch);
+                    })
+                    ->orWhereHas('toAccount', function ($accountQuery) use ($plainSearch) {
+                        $this->applyLocalizedSearch($accountQuery, 'name', $plainSearch);
+                    });
             });
         }
 

@@ -16,8 +16,8 @@ class TotalInvestmentMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->investmentBrand->id, 'amount' => 2000]);
-        Transaction::factory()->create(['brand_id' => $this->investmentBrand->id, 'amount' => 1000]);
+        Transaction::factory()->create(['category_id' => $this->investmentCategory->id, 'amount' => 2000]);
+        Transaction::factory()->create(['category_id' => $this->investmentCategory->id, 'amount' => 1000]);
 
         $response = $this->getJson('/api/v1/metrics/total-investment');
 
@@ -29,9 +29,9 @@ class TotalInvestmentMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->investmentBrand->id, 'amount' => 2000]);
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
-        Transaction::factory()->create(['brand_id' => $this->savingsBrand->id, 'amount' => 1000]);
+        Transaction::factory()->create(['category_id' => $this->investmentCategory->id, 'amount' => 2000]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
+        Transaction::factory()->create(['category_id' => $this->savingsCategory->id, 'amount' => 1000]);
 
         $response = $this->getJson('/api/v1/metrics/total-investment');
 

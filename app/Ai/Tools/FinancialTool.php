@@ -5,9 +5,9 @@ namespace App\Ai\Tools;
 use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Category\Models\Category;
+use App\Domains\Category\Services\CategoryService;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
-use App\Scopes\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -218,14 +218,16 @@ abstract class FinancialTool implements Tool
     protected function ownedCategoryIds(array $categoryIds, User $user): array
     {
         $normalized = array_values(array_unique(array_map(static fn($id) => (int) $id, $categoryIds)));
+        $categoryService = app(CategoryService::class);
 
-        $count = Category::query()->whereIn('id', $normalized)->count();
+        $categories = collect($normalized)
+            ->map(fn (int $categoryId) => $categoryService->findLedgerCategoryOrFail($categoryId));
 
-        if ($count !== count($normalized)) {
+        if ($categories->contains(fn (Category $category) => (int) $category->user_id !== (int) $user->id)) {
             throw new RuntimeException('One or more category_ids are invalid for the authenticated user.');
         }
 
-        return $normalized;
+        return $categories->pluck('id')->map(fn (mixed $id) => (int) $id)->all();
     }
 
     protected function accessibleAccount(int $accountId, User $user, bool $requireEditable = false): Account
@@ -249,10 +251,10 @@ abstract class FinancialTool implements Tool
 
     protected function transactionCategory(Account $account, ?int $categoryId, ?string $categoryType): Category
     {
+        $categoryService = app(CategoryService::class);
+
         if ($categoryId) {
-            $category = Category::query()
-                ->withoutGlobalScope(TenantScope::class)
-                ->find($categoryId);
+            $category = $categoryService->findLedgerCategoryOrFail($categoryId);
 
             if (! $category || (int) $category->user_id !== (int) $account->user_id) {
                 throw new RuntimeException('The selected category is invalid for the chosen account.');
@@ -265,7 +267,9 @@ abstract class FinancialTool implements Tool
             throw new RuntimeException('Provide either category_id or category_type.');
         }
 
-        return Category::findOrCreateFallbackForUser((int) $account->user_id, $categoryType);
+        return $categoryService->findLedgerCategoryOrFail(
+            (int) Category::findOrCreateFallbackForUser((int) $account->user_id, $categoryType)->id,
+        );
     }
 
     protected function formatAmount(float|int $amount, ?string $currency = null): string
@@ -295,10 +299,11 @@ abstract class FinancialTool implements Tool
         $name = $category->getLocalizedName() ?: 'Unnamed category';
 
         return sprintf(
-            '#%d %s | type %s | color %s | icon %s | transactions %d',
+            '#%d %s | type %s | account %s | color %s | icon %s | transactions %d',
             $category->id,
             $name,
             $category->type,
+            $category->account_id ? '#' . $category->account_id : 'n/a',
             $category->color,
             $category->icon,
             (int) ($category->transactions_count ?? 0),
@@ -334,6 +339,8 @@ abstract class FinancialTool implements Tool
     {
         $categoryName = $transaction->category?->getLocalizedName() ?: 'Uncategorized';
         $accountName = $transaction->account?->getLocalizedName() ?? 'Unknown account';
+        $fromAccountName = $transaction->fromAccount?->getLocalizedName();
+        $toAccountName = $transaction->toAccount?->getLocalizedName();
 
         $parts = [
             sprintf('#%d %s', $transaction->id, $transaction->created_at?->format('Y-m-d') ?? 'n/a'),
@@ -342,6 +349,10 @@ abstract class FinancialTool implements Tool
             'account ' . $accountName,
             'category ' . $categoryName,
         ];
+
+        if ($fromAccountName && $toAccountName) {
+            $parts[] = 'ledger ' . $fromAccountName . ' -> ' . $toAccountName;
+        }
 
         if ($transaction->category?->type) {
             $parts[] = 'category_type ' . $transaction->category->type;

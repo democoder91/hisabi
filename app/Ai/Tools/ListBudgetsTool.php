@@ -52,7 +52,7 @@ class ListBudgetsTool extends FinancialTool
             return 'No budgets found for the current filters.';
         }
 
-        return "Budgets:\n" . $budgets->map(fn (Budget $budget) => $this->formatBudget($budget))->implode("\n");
+        return "Budgets:\n" . $budgets->map(fn(Budget $budget) => $this->formatBudget($budget))->implode("\n");
     }
 
     public function schema(JsonSchema $schema): array

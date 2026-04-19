@@ -18,6 +18,7 @@ class AccountFactory extends Factory
         return [
             'user_id' => Auth::id() ?? User::factory(),
             'name' => ['en' => $name],
+            'type' => Account::TYPE_ASSET,
             'balance' => 0,
             'currency' => config('hisabi.currency'),
         ];

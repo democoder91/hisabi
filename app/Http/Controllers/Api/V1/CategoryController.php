@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Domains\Category\Models\Category;
+use App\Domains\Category\Services\CategoryService;
 use App\Http\Controllers\Controller;
 use App\Http\Commands\Category\CreateCategoryCommand\CreateCategoryCommand;
 use App\Http\Commands\Category\CreateCategoryCommand\CreateCategoryCommandHandler;
@@ -19,12 +19,25 @@ use Illuminate\Http\JsonResponse;
 
 class CategoryController extends Controller
 {
+    private GetAllCategoriesQueryHandler $getAllCategoriesQueryHandler;
+    private CreateCategoryCommandHandler $createCategoryCommandHandler;
+    private UpdateCategoryCommandHandler $updateCategoryCommandHandler;
+    private DeleteCategoryCommandHandler $deleteCategoryCommandHandler;
+    private CategoryService $categoryService;
+
     public function __construct(
-        private readonly GetAllCategoriesQueryHandler $getAllCategoriesQueryHandler,
-        private readonly CreateCategoryCommandHandler $createCategoryCommandHandler,
-        private readonly UpdateCategoryCommandHandler $updateCategoryCommandHandler,
-        private readonly DeleteCategoryCommandHandler $deleteCategoryCommandHandler
-    ) {}
+        GetAllCategoriesQueryHandler $getAllCategoriesQueryHandler,
+        CreateCategoryCommandHandler $createCategoryCommandHandler,
+        UpdateCategoryCommandHandler $updateCategoryCommandHandler,
+        DeleteCategoryCommandHandler $deleteCategoryCommandHandler,
+        CategoryService $categoryService
+    ) {
+        $this->getAllCategoriesQueryHandler = $getAllCategoriesQueryHandler;
+        $this->createCategoryCommandHandler = $createCategoryCommandHandler;
+        $this->updateCategoryCommandHandler = $updateCategoryCommandHandler;
+        $this->deleteCategoryCommandHandler = $deleteCategoryCommandHandler;
+        $this->categoryService = $categoryService;
+    }
 
     public function all(): JsonResponse
     {
@@ -35,9 +48,9 @@ class CategoryController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $category = Category::query()
-            ->withCount('transactions')
-            ->findOrFail($id);
+        $category = $this->categoryService->findLedgerCategoryOrFail($id)
+            ->loadMissing('user:id,name', 'account')
+            ->loadCount('transactions');
 
         return response()->json([
             'category' => new CategoryResource($category),
@@ -46,26 +59,21 @@ class CategoryController extends Controller
 
     public function store(CreateCategoryRequest $request): JsonResponse
     {
-        $command = new CreateCategoryCommand(
-            data: $request->validated()
-        );
+        $command = new CreateCategoryCommand($request->validated());
 
         return $this->createCategoryCommandHandler->handle($command)->toResponse();
     }
 
     public function update(UpdateCategoryRequest $request, int $id): JsonResponse
     {
-        $command = new UpdateCategoryCommand(
-            id: $id,
-            data: $request->validated()
-        );
+        $command = new UpdateCategoryCommand($id, $request->validated());
 
         return $this->updateCategoryCommandHandler->handle($command)->toResponse();
     }
 
     public function destroy(int $id): JsonResponse
     {
-        $command = new DeleteCategoryCommand(id: $id);
+        $command = new DeleteCategoryCommand($id);
 
         return $this->deleteCategoryCommandHandler->handle($command)->toResponse();
     }

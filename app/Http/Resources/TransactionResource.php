@@ -15,6 +15,9 @@ class TransactionResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $request->user();
+        $date = $this->date;
+        $createdAt = $this->created_at;
+        $account = $this->account;
 
         return [
             'id' => $this->id,
@@ -22,8 +25,9 @@ class TransactionResource extends JsonResource
             'currency' => $this->currency,
             'transaction_type' => $this->transaction_type,
             'note' => $this->note,
-            'created_at' => $this->created_at?->format('Y-m-d'),
-            'canEdit' => $this->account?->canBeEditedBy($user) ?? false,
+            'date' => $date ? $date->format('Y-m-d') : null,
+            'created_at' => $createdAt ? $createdAt->format('Y-m-d') : null,
+            'canEdit' => $account ? $account->canBeEditedBy($user) : false,
             'account' => $this->whenLoaded('account', function () {
                 $owner = $this->account->relationLoaded('user') ? $this->account->user : null;
 
@@ -41,6 +45,32 @@ class TransactionResource extends JsonResource
                     'canEditTransactions' => $this->account->canBeEditedBy(request()->user()),
                 ];
             }),
+            'fromAccount' => $this->whenLoaded('fromAccount', function () {
+                if (! $this->fromAccount) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->fromAccount->id,
+                    'name' => $this->fromAccount->getLocalizedName(),
+                    'name_translations' => $this->fromAccount->getSafeNameTranslations(),
+                    'type' => $this->fromAccount->type,
+                    'currency' => $this->fromAccount->currency,
+                ];
+            }),
+            'toAccount' => $this->whenLoaded('toAccount', function () {
+                if (! $this->toAccount) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->toAccount->id,
+                    'name' => $this->toAccount->getLocalizedName(),
+                    'name_translations' => $this->toAccount->getSafeNameTranslations(),
+                    'type' => $this->toAccount->type,
+                    'currency' => $this->toAccount->currency,
+                ];
+            }),
             'category' => $this->whenLoaded('category', function () {
                 if (! $this->category) {
                     return null;
@@ -54,6 +84,7 @@ class TransactionResource extends JsonResource
                     'name_translations' => $this->category->getSafeNameTranslations(),
                     'ownerUserId' => $this->category->user_id,
                     'ownerName' => $owner ? $owner->name : null,
+                    'accountId' => $this->category->account_id,
                     'type' => $this->category->type,
                     'color' => $this->category->color,
                     'icon' => $this->category->icon,

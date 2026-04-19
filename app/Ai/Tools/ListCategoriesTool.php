@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Domains\Category\Models\Category;
+use App\Domains\Category\Services\CategoryService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Ai\Tools\Request;
@@ -17,7 +18,7 @@ class ListCategoriesTool extends FinancialTool
 
     public function handle(Request $request): Stringable|string
     {
-        $this->authenticatedUser();
+        $user = $this->authenticatedUser();
         $input = $request->all();
         $this->uppercaseIfPresent($input, ['type']);
 
@@ -32,7 +33,13 @@ class ListCategoriesTool extends FinancialTool
             'limit' => ['nullable', 'integer', 'min:1', 'max:25'],
         ]);
 
-        $query = Category::query()->withCount('transactions');
+        app(CategoryService::class)->syncLedgerCategoriesForOwners([(int) $user->id]);
+
+        $query = Category::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('account_id')
+            ->with('account')
+            ->withCount('transactions');
 
         if (! empty($validated['search'])) {
             $this->applyLocalizedSearch($query, 'name', $validated['search']);

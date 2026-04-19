@@ -11,6 +11,7 @@ class CreateDefaultAccountOnRegistered
     {
         if ($event->user instanceof User) {
             $event->user->getOrCreateDefaultAccount();
+            $event->user->getOrCreateStartingBalanceAccount();
         }
     }
 }

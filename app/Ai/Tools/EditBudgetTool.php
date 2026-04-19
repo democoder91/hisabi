@@ -69,7 +69,7 @@ class EditBudgetTool extends FinancialTool
             'reoccurrence' => Arr::exists($validated, 'reoccurrence') ? $validated['reoccurrence'] : $budget->reoccurrence,
             'category_ids' => Arr::exists($validated, 'category_ids')
                 ? $this->ownedCategoryIds($validated['category_ids'], $user)
-                : $budget->categories->pluck('id')->all(),
+                : $budget->categories->pluck('id')->map(fn (mixed $id) => (int) $id)->all(),
         ];
 
         $this->validateInput([

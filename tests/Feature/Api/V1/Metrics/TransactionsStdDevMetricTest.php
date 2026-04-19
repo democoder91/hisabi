@@ -16,9 +16,9 @@ class TransactionsStdDevMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 100]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 200]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 300]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 200]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-std-dev?range=current-year&id=' . $this->expensesCategory->id);
 
@@ -43,7 +43,7 @@ class TransactionsStdDevMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 100]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
 
         $response = $this->getJson('/api/v1/metrics/transactions-std-dev?range=current-year&id=' . $this->expensesCategory->id);
 

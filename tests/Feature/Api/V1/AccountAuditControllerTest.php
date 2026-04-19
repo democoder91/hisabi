@@ -3,10 +3,9 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Brand\Models\Brand;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Models\TransactionAudit;
-use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +16,7 @@ class AccountAuditControllerTest extends TestCase
 
     private User $user;
     private Account $account;
-    private Brand $brand;
+    private Category $category;
 
     protected function setUp(): void
     {
@@ -29,16 +28,10 @@ class AccountAuditControllerTest extends TestCase
             'name' => ['en' => 'Checking', 'ar' => 'الحساب الجاري'],
         ]);
 
-        $category = Category::factory()->create([
+        $this->category = Category::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Food'],
             'type' => Category::EXPENSES,
-        ]);
-
-        $this->brand = Brand::factory()->create([
-            'user_id' => $this->user->id,
-            'name' => ['en' => 'Cafe'],
-            'category_id' => $category->id,
         ]);
     }
 
@@ -46,8 +39,8 @@ class AccountAuditControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
             'amount' => 42,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'Lunch',
         ]);
@@ -64,7 +57,6 @@ class AccountAuditControllerTest extends TestCase
         $this->assertSame('Checking', $audit->new_values['account_name']);
         $this->assertEquals(42.0, $audit->new_values['amount']);
         $this->assertSame('Lunch', $audit->new_values['note']);
-        $this->assertSame('Cafe', $audit->new_values['brand_name']);
         $this->assertSame('Food', $audit->new_values['category_name']);
     }
 
@@ -72,15 +64,15 @@ class AccountAuditControllerTest extends TestCase
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
+            'category_id' => $this->category->id,
             'amount' => 40,
             'note' => 'Before',
         ]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
             'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
             'amount' => 75,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'After',
         ]);
@@ -95,14 +87,14 @@ class AccountAuditControllerTest extends TestCase
         $this->assertSame('Before', $audit->old_values['note']);
         $this->assertEquals(75.0, $audit->new_values['amount']);
         $this->assertSame('After', $audit->new_values['note']);
-        $this->assertSame('Cafe', $audit->new_values['brand_name']);
+        $this->assertSame('Food', $audit->new_values['category_name']);
     }
 
     public function test_deleting_a_transaction_generates_a_delete_audit_record(): void
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
+            'category_id' => $this->category->id,
             'amount' => 18,
             'note' => 'To delete',
         ]);
@@ -125,8 +117,8 @@ class AccountAuditControllerTest extends TestCase
     {
         $ownedTransaction = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
             'amount' => 33,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
         ])->json('transaction.id');
 
@@ -137,16 +129,10 @@ class AccountAuditControllerTest extends TestCase
             'name' => ['en' => 'Transport'],
             'type' => Category::EXPENSES,
         ]);
-        $otherBrand = Brand::factory()->create([
-            'user_id' => $otherOwner->id,
-            'name' => ['en' => 'Taxi'],
-            'category_id' => $otherCategory->id,
-        ]);
-
         $this->actingAs($otherOwner)->postJson('/api/v1/transactions', [
             'account_id' => $otherAccount->id,
+            'category_id' => $otherCategory->id,
             'amount' => 19,
-            'brand_id' => $otherBrand->id,
             'created_at' => now()->toDateString(),
         ])->assertCreated();
 
@@ -169,8 +155,8 @@ class AccountAuditControllerTest extends TestCase
 
         $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
             'amount' => 11,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
         ])->assertCreated();
 
@@ -188,15 +174,15 @@ class AccountAuditControllerTest extends TestCase
 
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'brand_id' => $this->brand->id,
+            'category_id' => $this->category->id,
             'amount' => 28,
             'note' => 'Before move',
         ]);
 
         $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
             'account_id' => $secondaryAccount->id,
+            'category_id' => $this->category->id,
             'amount' => 64,
-            'brand_id' => $this->brand->id,
             'created_at' => now()->toDateString(),
             'note' => 'Moved accounts',
         ])->assertOk();

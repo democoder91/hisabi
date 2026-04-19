@@ -18,7 +18,7 @@ class CategoryTrendMetricTest extends MetricsTestCase
         $this->actingAs($this->user);
 
         Transaction::factory()->create([
-            'brand_id' => $this->expensesBrand->id,
+            'category_id' => $this->expensesCategory->id,
             'amount' => 500,
             'created_at' => Carbon::now()->startOfMonth()
         ]);
@@ -26,10 +26,10 @@ class CategoryTrendMetricTest extends MetricsTestCase
         $response = $this->getJson('/api/v1/metrics/category-trend?range=current-year&id=' . $this->expensesCategory->id);
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertIsArray($data);
-        $this->assertNotEmpty($data);
-        $this->assertEquals(500, $data[0]['value']);
+        $items = $response->json('data.items');
+        $this->assertIsArray($items);
+        $this->assertNotEmpty($items);
+        $this->assertEquals(500, $items[0]['value']);
     }
 
     public function test_filters_by_category(): void
@@ -37,12 +37,12 @@ class CategoryTrendMetricTest extends MetricsTestCase
         $this->actingAs($this->user);
 
         Transaction::factory()->create([
-            'brand_id' => $this->expensesBrand->id,
+            'category_id' => $this->expensesCategory->id,
             'amount' => 500,
             'created_at' => Carbon::now()->startOfMonth()
         ]);
         Transaction::factory()->create([
-            'brand_id' => $this->incomeBrand->id,
+            'category_id' => $this->incomeCategory->id,
             'amount' => 5000,
             'created_at' => Carbon::now()->startOfMonth()
         ]);
@@ -50,9 +50,9 @@ class CategoryTrendMetricTest extends MetricsTestCase
         $response = $this->getJson('/api/v1/metrics/category-trend?range=current-year&id=' . $this->expensesCategory->id);
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertCount(1, $data);
-        $this->assertEquals(500, $data[0]['value']);
+        $items = $response->json('data.items');
+        $this->assertCount(1, $items);
+        $this->assertEquals(500, $items[0]['value']);
     }
 
     public function test_returns_empty_array_when_no_data(): void
@@ -62,7 +62,7 @@ class CategoryTrendMetricTest extends MetricsTestCase
         $response = $this->getJson('/api/v1/metrics/category-trend?range=current-year&id=' . $this->expensesCategory->id);
 
         $response->assertOk();
-        $this->assertIsArray($response->json('data'));
-        $this->assertEmpty($response->json('data'));
+        $this->assertIsArray($response->json('data.items'));
+        $this->assertEmpty($response->json('data.items'));
     }
 }

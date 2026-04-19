@@ -43,9 +43,17 @@ class AuthControllerTest extends TestCase
         $user = User::query()->where('email', 'api@example.com')->firstOrFail();
         $accounts = $user->accounts()->get();
 
-        $this->assertCount(1, $accounts);
-        $this->assertSame(Account::DEFAULT_NAME, $accounts->first()->getTranslation('name', 'en'));
-        $this->assertSame(0.0, (float) $accounts->first()->balance);
+        $this->assertCount(2, $accounts);
+
+        $defaultAccount = $accounts->firstWhere(fn (Account $account) => $account->getTranslation('name', 'en') === Account::DEFAULT_NAME);
+        $startingBalanceAccount = $accounts->firstWhere(fn (Account $account) => $account->getTranslation('name', 'en') === Account::STARTING_BALANCE_NAME);
+
+        $this->assertNotNull($defaultAccount);
+        $this->assertNotNull($startingBalanceAccount);
+        $this->assertSame(Account::TYPE_ASSET, $defaultAccount->type);
+        $this->assertSame(Account::TYPE_EQUITY, $startingBalanceAccount->type);
+        $this->assertSame(0.0, (float) $defaultAccount->balance);
+        $this->assertSame(0.0, (float) $startingBalanceAccount->balance);
 
         Carbon::setTestNow();
     }

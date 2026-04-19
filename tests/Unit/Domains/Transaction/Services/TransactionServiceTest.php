@@ -4,7 +4,6 @@ namespace Tests\Unit\Domains\Transaction\Services;
 
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Services\TransactionService;
-use App\Domains\Brand\Models\Brand;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -80,7 +79,7 @@ class TransactionServiceTest extends TestCase
         $this->assertEquals($transaction1->id, $items[2]->id);
     }
 
-    public function test_it_includes_brand_and_category_relations(): void
+    public function test_it_includes_category_relation(): void
     {
         // Arrange
         $transaction = Transaction::factory()->create();
@@ -90,10 +89,8 @@ class TransactionServiceTest extends TestCase
 
         // Assert
         $item = $result->items()[0];
-        $this->assertTrue($item->relationLoaded('brand'));
-        $this->assertTrue($item->brand->relationLoaded('category'));
-        $this->assertEquals($transaction->brand->name, $item->brand->name);
-        $this->assertEquals($transaction->brand->category->name, $item->brand->category->name);
+        $this->assertTrue($item->relationLoaded('category'));
+        $this->assertEquals($transaction->category->name, $item->category->name);
     }
 
     public function test_it_searches_by_amount(): void
@@ -128,15 +125,14 @@ class TransactionServiceTest extends TestCase
         $this->assertEquals($matchingTransaction->id, $result->items()[0]->id);
     }
 
-    public function test_it_searches_by_brand_name(): void
+    public function test_it_searches_by_category_name(): void
     {
         // Arrange
-        $category = Category::factory()->create();
-        $starbucks = Brand::factory()->create(['name' => 'Starbucks', 'category_id' => $category->id]);
-        $mcdonalds = Brand::factory()->create(['name' => 'McDonalds', 'category_id' => $category->id]);
+        $starbucks = Category::factory()->create(['name' => 'Starbucks']);
+        $mcdonalds = Category::factory()->create(['name' => 'McDonalds']);
         
-        Transaction::factory()->create(['brand_id' => $mcdonalds->id]);
-        $matchingTransaction = Transaction::factory()->create(['brand_id' => $starbucks->id]);
+        Transaction::factory()->create(['category_id' => $mcdonalds->id]);
+        $matchingTransaction = Transaction::factory()->create(['category_id' => $starbucks->id]);
 
         // Act
         request()->merge(['filter' => ['search' => 'starbucks']]);
@@ -145,29 +141,30 @@ class TransactionServiceTest extends TestCase
         // Assert
         $this->assertCount(1, $result->items());
         $this->assertEquals($matchingTransaction->id, $result->items()[0]->id);
-        $this->assertEquals('Starbucks', $result->items()[0]->brand->name);
+        $this->assertEquals('Starbucks', $result->items()[0]->category->name);
     }
 
     public function test_it_searches_across_multiple_fields(): void
     {
         // Arrange
-        $category = Category::factory()->create();
-        $coffee = Brand::factory()->create(['name' => 'Coffee Shop', 'category_id' => $category->id]);
+        $coffee = Category::factory()->create(['name' => 'Coffee Shop']);
+        $groceries = Category::factory()->create(['name' => 'Groceries']);
+        $travel = Category::factory()->create(['name' => 'Travel']);
         
         $t1 = Transaction::factory()->create([
-            'brand_id' => $coffee->id,
+            'category_id' => $coffee->id,
             'amount' => 100,
             'note' => 'Regular purchase'
         ]);
         
         $t2 = Transaction::factory()->create([
-            'brand_id' => Brand::factory()->create(['category_id' => $category->id]),
+            'category_id' => $groceries->id,
             'amount' => 200,
             'note' => 'Coffee beans'
         ]);
         
         $t3 = Transaction::factory()->create([
-            'brand_id' => Brand::factory()->create(['category_id' => $category->id]),
+            'category_id' => $travel->id,
             'amount' => 300,
             'note' => 'Other purchase'
         ]);

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Brand\Models\Brand;
 use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,10 +16,6 @@ abstract class MetricsTestCase extends TestCase
     protected Category $expensesCategory;
     protected Category $savingsCategory;
     protected Category $investmentCategory;
-    protected Brand $incomeBrand;
-    protected Brand $expensesBrand;
-    protected Brand $savingsBrand;
-    protected Brand $investmentBrand;
 
     protected function setUp(): void
     {
@@ -47,27 +42,6 @@ abstract class MetricsTestCase extends TestCase
             'user_id' => $this->user->id,
             'type' => Category::INVESTMENT,
             'name' => ['en' => 'Stocks'],
-        ]);
-
-        $this->incomeBrand = Brand::factory()->create([
-            'user_id' => $this->user->id,
-            'category_id' => $this->incomeCategory->id,
-            'name' => ['en' => 'Company A'],
-        ]);
-        $this->expensesBrand = Brand::factory()->create([
-            'user_id' => $this->user->id,
-            'category_id' => $this->expensesCategory->id,
-            'name' => ['en' => 'Restaurant'],
-        ]);
-        $this->savingsBrand = Brand::factory()->create([
-            'user_id' => $this->user->id,
-            'category_id' => $this->savingsCategory->id,
-            'name' => ['en' => 'Bank'],
-        ]);
-        $this->investmentBrand = Brand::factory()->create([
-            'user_id' => $this->user->id,
-            'category_id' => $this->investmentCategory->id,
-            'name' => ['en' => 'Broker'],
         ]);
     }
 }

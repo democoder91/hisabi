@@ -3,9 +3,11 @@
 namespace App\BusinessLogic;
 
 use Carbon\Carbon;
-use App\Models\Category;
+use App\Domains\Account\Models\Account;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Contracts\ReportManager as ReportManagerContract;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReportManager implements ReportManagerContract
 {
@@ -25,16 +27,36 @@ class ReportManager implements ReportManagerContract
         $this->startDatePrevMonthModel = Carbon::parse($startDate)->subMonthNoOverflow()->startOfMonth();
         $this->endDatePrevMonthModel = Carbon::parse($endDate)->subMonthNoOverflow()->endOfMonth();
 
-        $newCategoryIds = Category::whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->pluck('id');
+        $newCategoryIds = Category::query()
+            ->whereNotNull('account_id')
+            ->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])
+            ->pluck('id');
 
         $this->addSection('Overview', $this->getOverviewData());
 
-        foreach (Category::all()->groupBy('type') as $type => $categories) {
+        $ledgerCategories = Account::query()
+            ->with('compatibilityCategory')
+            ->whereHas('compatibilityCategory')
+            ->get()
+            ->filter(fn (Account $account) => $account->compatibilityCategory !== null)
+            ->groupBy(fn (Account $account) => $account->compatibilityCategory?->type);
+
+        foreach ($ledgerCategories as $type => $accounts) {
             $categoriesData = [];
 
-            foreach ($categories as $category) {
-                $totalCurrentMonth = $category->transactions()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
-                $totalLastMonth = $category->transactions()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
+            foreach ($accounts as $account) {
+                $category = $account->compatibilityCategory;
+
+                if (! $category) {
+                    continue;
+                }
+
+                $totalCurrentMonth = $this->transactionsForLedgerCategory($account, $category)
+                    ->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])
+                    ->sum('amount');
+                $totalLastMonth = $this->transactionsForLedgerCategory($account, $category)
+                    ->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])
+                    ->sum('amount');
                 $change = ! $totalLastMonth ? '-' : number_format(($totalCurrentMonth / $totalLastMonth - 1) * 100, 2);
 
                 if ($totalCurrentMonth == 0 && $totalLastMonth == 0) {
@@ -117,15 +139,15 @@ class ReportManager implements ReportManagerContract
 
     protected function getTotalCash()
     {
-        $totalIncome = Transaction::income()->where('created_at', '<', $this->endDateModel)->sum('amount');
-        $totalExpenses = Transaction::expenses()->where('created_at', '<', $this->endDateModel)->sum('amount');
-        $totalInvestment = Transaction::investment()->where('created_at', '<', $this->endDateModel)->sum('amount');
-        $totalSavings = Transaction::savings()->where('created_at', '<', $this->endDateModel)->sum('amount');
+        $totalIncome = $this->sumLedgerTypeBefore(Category::INCOME, $this->endDateModel);
+        $totalExpenses = $this->sumLedgerTypeBefore(Category::EXPENSES, $this->endDateModel);
+        $totalInvestment = $this->sumLedgerTypeBefore(Category::INVESTMENT, $this->endDateModel);
+        $totalSavings = $this->sumLedgerTypeBefore(Category::SAVINGS, $this->endDateModel);
 
-        $totalIncomeExcludingThisMonth = Transaction::income()->where('created_at', '<', $this->startDateModel)->sum('amount');
-        $totalExpensesExcludingThisMonth = Transaction::expenses()->where('created_at', '<', $this->startDateModel)->sum('amount');
-        $totalInvestmentExcludingThisMonth = Transaction::investment()->where('created_at', '<', $this->startDateModel)->sum('amount');
-        $totalSavingsExcludingThisMonth = Transaction::savings()->where('created_at', '<', $this->startDateModel)->sum('amount');
+        $totalIncomeExcludingThisMonth = $this->sumLedgerTypeBefore(Category::INCOME, $this->startDateModel);
+        $totalExpensesExcludingThisMonth = $this->sumLedgerTypeBefore(Category::EXPENSES, $this->startDateModel);
+        $totalInvestmentExcludingThisMonth = $this->sumLedgerTypeBefore(Category::INVESTMENT, $this->startDateModel);
+        $totalSavingsExcludingThisMonth = $this->sumLedgerTypeBefore(Category::SAVINGS, $this->startDateModel);
 
         $totalCashTillNow = $totalIncome - ($totalExpenses + $totalInvestment + $totalSavings);
         $totalCashExcludingThisMonth = $totalIncomeExcludingThisMonth - ($totalExpensesExcludingThisMonth + $totalInvestmentExcludingThisMonth + $totalSavingsExcludingThisMonth);
@@ -143,8 +165,8 @@ class ReportManager implements ReportManagerContract
 
     protected function getTotalIncome()
     {
-        $total = Transaction::income()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
-        $totalExcludingThisMonth = Transaction::income()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
+        $total = $this->sumLedgerTypeBetween(Category::INCOME, $this->startDateModel, $this->endDateModel);
+        $totalExcludingThisMonth = $this->sumLedgerTypeBetween(Category::INCOME, $this->startDatePrevMonthModel, $this->endDatePrevMonthModel);
 
         $change = ! $totalExcludingThisMonth ? '-' : number_format(($total / $totalExcludingThisMonth - 1) * 100, 2);
 
@@ -159,8 +181,8 @@ class ReportManager implements ReportManagerContract
 
     protected function getTotalExpenses()
     {
-        $total = Transaction::expenses()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
-        $totalExcludingThisMonth = Transaction::expenses()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
+        $total = $this->sumLedgerTypeBetween(Category::EXPENSES, $this->startDateModel, $this->endDateModel);
+        $totalExcludingThisMonth = $this->sumLedgerTypeBetween(Category::EXPENSES, $this->startDatePrevMonthModel, $this->endDatePrevMonthModel);
 
         $change = ! $totalExcludingThisMonth ? '-' : number_format(($total / $totalExcludingThisMonth - 1) * 100, 2);
 
@@ -175,8 +197,8 @@ class ReportManager implements ReportManagerContract
 
     protected function getTotalInvestment()
     {
-        $total = Transaction::investment()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
-        $totalExcludingThisMonth = Transaction::investment()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
+        $total = $this->sumLedgerTypeBetween(Category::INVESTMENT, $this->startDateModel, $this->endDateModel);
+        $totalExcludingThisMonth = $this->sumLedgerTypeBetween(Category::INVESTMENT, $this->startDatePrevMonthModel, $this->endDatePrevMonthModel);
 
         $change = ! $totalExcludingThisMonth ? '-' : number_format(($total / $totalExcludingThisMonth - 1) * 100, 2);
 
@@ -191,8 +213,8 @@ class ReportManager implements ReportManagerContract
 
     protected function getTotalSavings()
     {
-        $total = Transaction::savings()->whereBetween('created_at', [$this->startDateModel, $this->endDateModel])->sum('amount');
-        $totalExcludingThisMonth = Transaction::savings()->whereBetween('created_at', [$this->startDatePrevMonthModel, $this->endDatePrevMonthModel])->sum('amount');
+        $total = $this->sumLedgerTypeBetween(Category::SAVINGS, $this->startDateModel, $this->endDateModel);
+        $totalExcludingThisMonth = $this->sumLedgerTypeBetween(Category::SAVINGS, $this->startDatePrevMonthModel, $this->endDatePrevMonthModel);
 
         $change = ! $totalExcludingThisMonth ? '-' : number_format(($total / $totalExcludingThisMonth - 1) * 100, 2);
 
@@ -203,5 +225,55 @@ class ReportManager implements ReportManagerContract
             'change' => $change,
             'change_color' => $this->getChangeColor($change, 'INCOME')
         ];
+    }
+
+    protected function transactionsForLedgerCategory(Account $account, Category $category): Builder
+    {
+        return Transaction::query()->where(function (Builder $query) use ($account, $category) {
+            if ($category->type === Category::INCOME) {
+                $query->where('from_account_id', $account->id)
+                    ->where('transaction_type', Transaction::TYPE_CREDIT);
+
+                return;
+            }
+
+            $query->where('to_account_id', $account->id)
+                ->where('transaction_type', Transaction::TYPE_DEBIT);
+        });
+    }
+
+    protected function ledgerTypeQuery(string $type): Builder
+    {
+        return Transaction::query()->where(function (Builder $query) use ($type) {
+            if ($type === Category::INCOME) {
+                $query->whereHas('fromAccount', fn (Builder $builder) => $builder->where('type', Account::TYPE_INCOME))
+                    ->orWhereHas('category', fn (Builder $builder) => $builder->where('type', Category::INCOME));
+
+                return;
+            }
+
+            if ($type === Category::EXPENSES) {
+                $query->whereHas('toAccount', fn (Builder $builder) => $builder->where('type', Account::TYPE_EXPENSE))
+                    ->orWhereHas('category', fn (Builder $builder) => $builder->where('type', Category::EXPENSES));
+
+                return;
+            }
+
+            $query->whereHas('category', fn (Builder $builder) => $builder->where('type', $type));
+        });
+    }
+
+    protected function sumLedgerTypeBetween(string $type, Carbon $startDate, Carbon $endDate): float
+    {
+        return (float) $this->ledgerTypeQuery($type)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->sum('amount');
+    }
+
+    protected function sumLedgerTypeBefore(string $type, Carbon $date): float
+    {
+        return (float) $this->ledgerTypeQuery($type)
+            ->where('created_at', '<', $date)
+            ->sum('amount');
     }
 }

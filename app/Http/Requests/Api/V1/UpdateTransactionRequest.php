@@ -22,12 +22,14 @@ class UpdateTransactionRequest extends FormRequest
         return [
             'amount' => 'required|numeric|min:0',
             'account_id' => [
-                'required',
+                Rule::requiredIf(fn () => ! $this->isLedgerTransferRequest()),
+                'nullable',
                 'integer',
                 Rule::exists('accounts', 'id'),
             ],
             'category_id' => [
-                'required',
+                Rule::requiredIf(fn () => ! $this->isLedgerTransferRequest()),
+                'nullable',
                 'integer',
                 Rule::exists('categories', 'id'),
                 function (string $attribute, mixed $value, \Closure $fail) {
@@ -35,6 +37,26 @@ class UpdateTransactionRequest extends FormRequest
                 },
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $this->validateCategoryMatchesTransactionType($value, $fail);
+                },
+            ],
+            'from_account_id' => [
+                Rule::requiredIf(fn () => $this->filled('to_account_id')),
+                'nullable',
+                'integer',
+                'different:to_account_id',
+                Rule::exists('accounts', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $this->validateTransferAccountIsEditable($value, $fail);
+                },
+            ],
+            'to_account_id' => [
+                Rule::requiredIf(fn () => $this->filled('from_account_id')),
+                'nullable',
+                'integer',
+                'different:from_account_id',
+                Rule::exists('accounts', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $this->validateTransferAccountIsEditable($value, $fail);
                 },
             ],
             'created_at' => 'required|date',
@@ -65,17 +87,29 @@ class UpdateTransactionRequest extends FormRequest
             return;
         }
 
-        $account = Account::query()->accessibleTo($this->user())->find($this->input('account_id'));
-
-        if (! $account) {
-            return;
-        }
-
         $category = Category::query()
             ->withoutGlobalScope(TenantScope::class)
             ->find($categoryId);
 
-        if (! $category || (int) $category->user_id !== (int) $account->user_id) {
+        if (! $category) {
+            $fail('The selected category is invalid for the chosen account.');
+
+            return;
+        }
+
+        $ownerIds = collect([$this->input('account_id'), $this->input('from_account_id'), $this->input('to_account_id')])
+            ->filter()
+            ->map(function (mixed $accountId) {
+                $account = Account::query()->accessibleTo($this->user())->find($accountId);
+
+                return $account ? $account->user_id : null;
+            })
+            ->filter()
+            ->map(fn (mixed $ownerId) => (int) $ownerId)
+            ->unique()
+            ->values();
+
+        if ($ownerIds->isNotEmpty() && ! $ownerIds->contains((int) $category->user_id)) {
             $fail('The selected category is invalid for the chosen account.');
         }
     }
@@ -90,7 +124,7 @@ class UpdateTransactionRequest extends FormRequest
             ->withoutGlobalScope(TenantScope::class)
             ->find($categoryId);
 
-        if (! $category?->type) {
+        if (! $category || ! $category->type) {
             return;
         }
 
@@ -99,5 +133,23 @@ class UpdateTransactionRequest extends FormRequest
         if ($this->input('transaction_type') !== $expectedType) {
             $fail("The selected category requires transaction_type {$expectedType}.");
         }
+    }
+
+    private function validateTransferAccountIsEditable(mixed $accountId, \Closure $fail): void
+    {
+        if (! $accountId) {
+            return;
+        }
+
+        $account = Account::query()->accessibleTo($this->user())->find($accountId);
+
+        if (! $account || ! $account->canBeEditedBy($this->user())) {
+            $fail('The selected transfer account is invalid.');
+        }
+    }
+
+    private function isLedgerTransferRequest(): bool
+    {
+        return $this->filled('from_account_id') || $this->filled('to_account_id');
     }
 }

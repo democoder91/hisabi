@@ -140,13 +140,49 @@ class User extends Authenticatable
             ->first();
 
         if ($account) {
+            if (! $account->type) {
+                $account->forceFill([
+                    'type' => Account::TYPE_ASSET,
+                ])->saveQuietly();
+            }
+
             return $account;
         }
 
         return $this->accounts()->create([
             'name' => ['en' => Account::DEFAULT_NAME],
+            'type' => Account::TYPE_ASSET,
             'balance' => 0,
             'currency' => $this->default_currency ?: config('hisabi.currency'),
+        ]);
+    }
+
+    public function getOrCreateStartingBalanceAccount(): Account
+    {
+        $account = $this->accounts()
+            ->where(
+                DB::raw(Account::localizedNameSqlExpression('en', false)),
+                Account::STARTING_BALANCE_NAME,
+            )
+            ->first();
+
+        if ($account) {
+            if ($account->type !== Account::TYPE_EQUITY) {
+                $account->forceFill([
+                    'type' => Account::TYPE_EQUITY,
+                ])->saveQuietly();
+            }
+
+            return $account;
+        }
+
+        return $this->accounts()->create([
+            'name' => ['en' => Account::STARTING_BALANCE_NAME],
+            'type' => Account::TYPE_EQUITY,
+            'balance' => 0,
+            'currency' => $this->default_currency ?: config('hisabi.currency'),
+            'color' => 'gray',
+            'icon' => 'scale',
         ]);
     }
 }

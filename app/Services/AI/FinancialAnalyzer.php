@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Domains\Account\Models\Account;
 use App\Models\User;
 use App\Scopes\OwnedAccountScope;
 use App\Domains\Transaction\Models\Transaction;
@@ -23,25 +24,10 @@ class FinancialAnalyzer
         $currency = $this->resolveCurrency($user);
 
         // Get basic metrics
-        $totalIncome = $this->transactionQuery($user)
-            ->income()
-            ->where('created_at', '>=', $timeRange)
-            ->sum('amount');
-
-        $totalExpenses = $this->transactionQuery($user)
-            ->expenses()
-            ->where('created_at', '>=', $timeRange)
-            ->sum('amount');
-
-        $totalSavings = $this->transactionQuery($user)
-            ->savings()
-            ->where('created_at', '>=', $timeRange)
-            ->sum('amount');
-
-        $totalInvestment = $this->transactionQuery($user)
-            ->investment()
-            ->where('created_at', '>=', $timeRange)
-            ->sum('amount');
+        $totalIncome = $this->sumByLedgerType($timeRange, Category::INCOME, $user);
+        $totalExpenses = $this->sumByLedgerType($timeRange, Category::EXPENSES, $user);
+        $totalSavings = $this->sumByLedgerType($timeRange, Category::SAVINGS, $user);
+        $totalInvestment = $this->sumByLedgerType($timeRange, Category::INVESTMENT, $user);
 
         // Get category breakdown
         $expensesByCategory = $this->getExpensesByCategory($timeRange, $currency, $user);
@@ -85,15 +71,12 @@ SUMMARY;
      */
     protected function getExpensesByCategory($sinceDate, string $currency, ?User $user): string
     {
-        $nameExpression = $this->categoryNameExpression();
+        $nameExpression = $this->breakdownNameExpression();
 
-        $expenses = $this->transactionQuery($user)
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+        $expenses = $this->ledgerBreakdownQuery($sinceDate, Category::EXPENSES, $user)
             ->selectRaw("{$nameExpression} as name")
             ->selectRaw('SUM(transactions.amount) as total')
-            ->where('categories.type', Category::EXPENSES)
-            ->where('transactions.created_at', '>=', $sinceDate)
-            ->groupBy('categories.name')
+            ->groupByRaw($nameExpression)
             ->orderByDesc('total')
             ->get();
 
@@ -110,15 +93,12 @@ SUMMARY;
      */
     protected function getIncomeByCategory($sinceDate, string $currency, ?User $user): string
     {
-        $nameExpression = $this->categoryNameExpression();
+        $nameExpression = $this->breakdownNameExpression();
 
-        $income = $this->transactionQuery($user)
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+        $income = $this->ledgerBreakdownQuery($sinceDate, Category::INCOME, $user)
             ->selectRaw("{$nameExpression} as name")
             ->selectRaw('SUM(transactions.amount) as total')
-            ->where('categories.type', Category::INCOME)
-            ->where('transactions.created_at', '>=', $sinceDate)
-            ->groupBy('categories.name')
+            ->groupByRaw($nameExpression)
             ->orderByDesc('total')
             ->get();
 
@@ -140,16 +120,18 @@ SUMMARY;
             ? "strftime('%Y-%m', transactions.created_at)"
             : 'DATE_FORMAT(transactions.created_at, "%Y-%m")';
 
-        $expenseCondition = 'categories.type = "' . Category::EXPENSES . '"';
-        $incomeCondition = 'categories.type = "' . Category::INCOME . '"';
+        $expenseCondition = $this->ledgerTypeSql(Category::EXPENSES);
+        $incomeCondition = $this->ledgerTypeSql(Category::INCOME);
 
         $trends = $this->transactionQuery($user)
+            ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
+            ->leftJoin('accounts as from_accounts', 'transactions.from_account_id', '=', 'from_accounts.id')
+            ->leftJoin('accounts as to_accounts', 'transactions.to_account_id', '=', 'to_accounts.id')
             ->select(
                 DB::raw("{$monthExpr} as month"),
                 DB::raw("SUM(CASE WHEN {$expenseCondition} THEN transactions.amount ELSE 0 END) as expenses"),
                 DB::raw("SUM(CASE WHEN {$incomeCondition} THEN transactions.amount ELSE 0 END) as income")
             )
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.created_at', '>=', $sinceDate)
             ->groupBy('month')
             ->orderBy('month')
@@ -169,15 +151,12 @@ SUMMARY;
      */
     protected function getTopCategories($sinceDate, int $limit = 5, string $currency = 'AED', ?User $user = null): string
     {
-        $nameExpression = $this->categoryNameExpression();
+        $nameExpression = $this->breakdownNameExpression();
 
-        $categories = $this->transactionQuery($user)
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+        $categories = $this->ledgerBreakdownQuery($sinceDate, Category::EXPENSES, $user)
             ->selectRaw("{$nameExpression} as name")
             ->selectRaw('SUM(transactions.amount) as total')
-            ->where('categories.type', Category::EXPENSES)
-            ->where('transactions.created_at', '>=', $sinceDate)
-            ->groupBy('categories.name')
+            ->groupByRaw($nameExpression)
             ->orderByDesc('total')
             ->limit($limit)
             ->get();
@@ -204,26 +183,71 @@ SUMMARY;
 
     protected function categoryNameExpression(): string
     {
+        return $this->localizedNameExpression('categories.name');
+    }
+
+    protected function breakdownNameExpression(): string
+    {
+        $categoryName = $this->localizedNameExpression('categories.name');
+        $toAccountName = $this->localizedNameExpression('to_accounts.name');
+        $fromAccountName = $this->localizedNameExpression('from_accounts.name');
+
+        return "COALESCE({$categoryName}, {$toAccountName}, {$fromAccountName}, '')";
+    }
+
+    protected function localizedNameExpression(string $column): string
+    {
         $driver = DB::connection()->getDriverName();
         $locale = app()->getLocale();
 
         if ($driver === 'sqlite') {
             $localeExpression = sprintf(
-                "CASE WHEN json_valid(categories.name) THEN json_extract(categories.name, '$.\"%s\"') END",
+                "CASE WHEN json_valid(%s) THEN json_extract(%s, '$.\"%s\"') END",
+                $column,
+                $column,
                 $locale,
             );
-            $englishExpression = "CASE WHEN json_valid(categories.name) THEN json_extract(categories.name, '$.en') END";
-            $plainExpression = 'CASE WHEN NOT json_valid(categories.name) THEN categories.name END';
+            $englishExpression = sprintf("CASE WHEN json_valid(%s) THEN json_extract(%s, '$.en') END", $column, $column);
+            $plainExpression = sprintf('CASE WHEN NOT json_valid(%s) THEN %s END', $column, $column);
         } else {
             $localeExpression = sprintf(
-                'CASE WHEN JSON_VALID(categories.name) THEN JSON_UNQUOTE(JSON_EXTRACT(categories.name, "$.%s")) END',
+                'CASE WHEN JSON_VALID(%s) THEN JSON_UNQUOTE(JSON_EXTRACT(%s, "$.%s")) END',
+                $column,
+                $column,
                 $locale,
             );
-            $englishExpression = 'CASE WHEN JSON_VALID(categories.name) THEN JSON_UNQUOTE(JSON_EXTRACT(categories.name, "$.en")) END';
-            $plainExpression = 'CASE WHEN NOT JSON_VALID(categories.name) THEN categories.name END';
+            $englishExpression = sprintf('CASE WHEN JSON_VALID(%s) THEN JSON_UNQUOTE(JSON_EXTRACT(%s, "$.en")) END', $column, $column);
+            $plainExpression = sprintf('CASE WHEN NOT JSON_VALID(%s) THEN %s END', $column, $column);
         }
 
         return "COALESCE({$localeExpression}, {$englishExpression}, {$plainExpression}, '')";
+    }
+
+    protected function ledgerBreakdownQuery($sinceDate, string $ledgerType, ?User $user): Builder
+    {
+        $query = $this->transactionQuery($user)
+            ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
+            ->leftJoin('accounts as from_accounts', 'transactions.from_account_id', '=', 'from_accounts.id')
+            ->leftJoin('accounts as to_accounts', 'transactions.to_account_id', '=', 'to_accounts.id')
+            ->where('transactions.created_at', '>=', $sinceDate);
+
+        return $query->whereRaw($this->ledgerTypeSql($ledgerType));
+    }
+
+    protected function sumByLedgerType($sinceDate, string $ledgerType, ?User $user): float
+    {
+        return (float) $this->ledgerBreakdownQuery($sinceDate, $ledgerType, $user)->sum('transactions.amount');
+    }
+
+    protected function ledgerTypeSql(string $ledgerType): string
+    {
+        return match ($ledgerType) {
+            Category::INCOME => "(categories.type = 'INCOME' OR from_accounts.type = '" . Account::TYPE_INCOME . "')",
+            Category::EXPENSES => "(categories.type = 'EXPENSES' OR to_accounts.type = '" . Account::TYPE_EXPENSE . "')",
+            Category::SAVINGS => "categories.type = 'SAVINGS'",
+            Category::INVESTMENT => "categories.type = 'INVESTMENT'",
+            default => '1 = 0',
+        };
     }
     
     /**

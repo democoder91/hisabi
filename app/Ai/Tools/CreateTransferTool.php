@@ -3,10 +3,8 @@
 namespace App\Ai\Tools;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Services\TransactionService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Tools\Request;
 use RuntimeException;
 use Stringable;
@@ -15,7 +13,7 @@ class CreateTransferTool extends FinancialTool
 {
     public function description(): Stringable|string
     {
-        return 'Create a transfer between two accessible accounts the user can edit. Use this when the user wants to move money from one account to another. The tool creates a debit in the source account and a matching credit in the destination account.';
+        return 'Create a transfer between two accessible accounts the user can edit. Use this when the user wants to move money from one account to another. The tool creates one real ledger transfer between the source and destination accounts.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -43,48 +41,16 @@ class CreateTransferTool extends FinancialTool
             throw new RuntimeException('Transfers between accounts with different currencies are not supported yet.');
         }
 
-        $date = $validated['date'] ?? now();
-        $amount = (float) $validated['amount'];
-        $sourceCategory = $this->transactionCategory($fromAccount, null, Category::EXPENSES);
-        $destinationCategory = $this->transactionCategory($toAccount, null, Category::INCOME);
-        $sourceLabel = $this->accountLabel($fromAccount);
-        $destinationLabel = $this->accountLabel($toAccount);
+        $transaction = app(TransactionService::class)->createTransfer([
+            'from_account_id' => $fromAccount->id,
+            'to_account_id' => $toAccount->id,
+            'amount' => (float) $validated['amount'],
+            'note' => $validated['note'] ?? null,
+            'created_at' => $validated['date'] ?? now(),
+            'currency' => $fromAccount->currency,
+        ])->load(['account', 'category', 'fromAccount', 'toAccount']);
 
-        [$outgoingTransaction, $incomingTransaction] = DB::transaction(function () use (
-            $amount,
-            $date,
-            $validated,
-            $fromAccount,
-            $toAccount,
-            $sourceCategory,
-            $destinationCategory,
-            $sourceLabel,
-            $destinationLabel,
-        ): array {
-            $transactionService = app(TransactionService::class);
-
-            $outgoingTransaction = $transactionService->create([
-                'account_id' => $fromAccount->id,
-                'category_id' => $sourceCategory->id,
-                'amount' => $amount,
-                'note' => $this->transferNote($validated['note'] ?? null, "Transfer to: {$destinationLabel}"),
-                'created_at' => $date,
-            ])->load(['account', 'category']);
-
-            $incomingTransaction = $transactionService->create([
-                'account_id' => $toAccount->id,
-                'category_id' => $destinationCategory->id,
-                'amount' => $amount,
-                'note' => $this->transferNote($validated['note'] ?? null, "Transfer from: {$sourceLabel}"),
-                'created_at' => $date,
-            ])->load(['account', 'category']);
-
-            return [$outgoingTransaction, $incomingTransaction];
-        });
-
-        return "Transfer created successfully:\n"
-            . 'Outgoing: ' . $this->formatTransaction($outgoingTransaction) . "\n"
-            . 'Incoming: ' . $this->formatTransaction($incomingTransaction);
+        return 'Transfer created successfully: ' . $this->formatTransaction($transaction);
     }
 
     public function schema(JsonSchema $schema): array
@@ -100,21 +66,12 @@ class CreateTransferTool extends FinancialTool
                 ->description('The destination account ID to credit. The user must be allowed to edit transactions on it.')
                 ->required(),
             'note' => $schema->string()
-                ->description('Optional note to include on both transfer entries.')
+                ->description('Optional note to include on the transfer entry.')
                 ->nullable(),
             'date' => $schema->string()
                 ->description('Optional transfer date in YYYY-MM-DD format. Defaults to today.')
                 ->nullable(),
         ];
-    }
-
-    private function transferNote(?string $userNote, string $directionNote): string
-    {
-        $trimmedUserNote = is_string($userNote) ? trim($userNote) : '';
-
-        return $trimmedUserNote !== ''
-            ? "{$trimmedUserNote} | {$directionNote}"
-            : $directionNote;
     }
 
     private function accountLabel(Account $account): string

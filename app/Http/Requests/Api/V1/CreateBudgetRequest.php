@@ -24,7 +24,7 @@ class CreateBudgetRequest extends FormRequest
             'currency' => ['required', Rule::enum(Currency::class)],
             'start_at' => ['required', 'date'],
             'end_at' => [
-                Rule::requiredIf(fn () => $this->input('reoccurrence') === Budget::CUSTOM),
+                Rule::requiredIf(fn() => $this->input('reoccurrence') === Budget::CUSTOM),
                 'nullable',
                 'date',
                 'after_or_equal:start_at',
@@ -41,7 +41,7 @@ class CreateBudgetRequest extends FormRequest
             'category_ids' => ['required', 'array', 'min:1'],
             'category_ids.*' => [
                 'integer',
-                Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)),
+                Rule::exists('categories', 'id')->where(fn($query) => $query->where('user_id', $this->user()->id)),
             ],
         ];
     }

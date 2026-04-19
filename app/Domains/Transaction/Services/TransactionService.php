@@ -4,17 +4,26 @@ namespace App\Domains\Transaction\Services;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
+use App\Domains\Category\Services\CategoryService;
 use App\Domains\Transaction\Models\Transaction;
 use App\Scopes\OwnedAccountScope;
-use App\Scopes\TenantScope;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use RuntimeException;
 
 class TransactionService
 {
+    private CategoryService $categoryService;
+
+    public function __construct(?CategoryService $categoryService = null)
+    {
+        $this->categoryService = $categoryService ?? app(CategoryService::class);
+    }
+
     public function getPaginated(int $perPage = 50): LengthAwarePaginator
     {
         return QueryBuilder::for($this->accessibleQuery())
@@ -38,10 +47,17 @@ class TransactionService
                     $query->whereDate('created_at', '<=', $value);
                 }),
             ])
-            ->allowedIncludes(['category', 'account'])
+            ->allowedIncludes(['category', 'account', 'fromAccount', 'toAccount'])
             ->allowedSorts(['id', 'amount', 'created_at'])
             ->defaultSort('-id')
-            ->with(['category.user:id,name', 'account.user:id,name', 'account.sharedUsers:id,name,email'])
+            ->with([
+                'category.user:id,name',
+                'category.account',
+                'account.user:id,name',
+                'account.sharedUsers:id,name,email',
+                'fromAccount.user:id,name',
+                'toAccount.user:id,name',
+            ])
             ->paginate($perPage);
     }
 
@@ -52,13 +68,20 @@ class TransactionService
 
     public function createWithOptionalReverse(array $data, int $userId): array
     {
-        $transactions = [$this->create($data)];
-
         if (($data['create_reverse_transaction'] ?? false) && ! empty($data['reverse_account_id'])) {
-            $transactions[] = $this->create($this->prepareReverseData($data, $userId));
+            return [$this->create($this->prepareReverseTransferData($data, $userId))];
         }
 
-        return $transactions;
+        return [$this->create($data)];
+    }
+
+    public function createTransfer(array $data): Transaction
+    {
+        return $this->create([
+            ...$data,
+            'from_account_id' => $data['from_account_id'] ?? null,
+            'to_account_id' => $data['to_account_id'] ?? null,
+        ]);
     }
 
     public function update(int $id, array $data): Transaction
@@ -79,46 +102,147 @@ class TransactionService
 
     private function prepareData(array $data, ?Transaction $transaction = null): array
     {
-        $category = null;
-
-        if (! empty($data['category_id'])) {
-            $category = Category::query()
-                ->withoutGlobalScope(TenantScope::class)
-                ->find($data['category_id']);
+        if (
+            Arr::exists($data, 'from_account_id')
+            || Arr::exists($data, 'to_account_id')
+            || ($transaction && $transaction->usesDoubleEntry() && ! Arr::exists($data, 'account_id') && ! Arr::exists($data, 'category_id'))
+        ) {
+            return $this->prepareLedgerTransferData($data, $transaction);
         }
 
-        if (! empty($data['account_id'])) {
-            Account::query()->findOrFail($data['account_id']);
-        }
-
-        $data['transaction_type'] = $category?->type
-            ? Transaction::transactionTypeForCategoryType($category->type)
-            : strtoupper($data['transaction_type'] ?? $transaction?->transaction_type ?? Transaction::TYPE_DEBIT);
-
-        return Arr::only($data, [
-            'account_id',
-            'category_id',
-            'amount',
-            'transaction_type',
-            'currency',
-            'note',
-            'created_at',
-        ]);
+        return $this->prepareCategoryBackedData($data, $transaction);
     }
 
-    private function prepareReverseData(array $data, int $userId): array
+    private function prepareCategoryBackedData(array $data, ?Transaction $transaction = null): array
     {
-        $reverseAccount = Account::query()->findOrFail((int) $data['reverse_account_id']);
-        $reverseCategory = $this->fallbackCategoryForAccount($reverseAccount, $userId, Category::EXPENSES);
+        $primaryAccountId = (int) ($data['account_id'] ?? $transaction?->account_id ?? 0);
+
+        if ($primaryAccountId <= 0) {
+            throw new RuntimeException('A primary account is required to create a transaction.');
+        }
+
+        $primaryAccount = Account::query()->findOrFail($primaryAccountId);
+        $category = $this->resolveCompatibilityCategory($data, $transaction, $primaryAccount);
+
+        if (! $category) {
+            throw new RuntimeException('A valid category is required to create a category-backed transaction.');
+        }
+
+        $counterpartyAccount = $category->account;
+
+        if (! $counterpartyAccount) {
+            throw new RuntimeException('The selected category is not linked to a ledger account.');
+        }
+
+        $transactionType = Transaction::transactionTypeForCategoryType($category->type);
+
+        $fromAccountId = $transactionType === Transaction::TYPE_CREDIT
+            ? (int) $counterpartyAccount->id
+            : (int) $primaryAccount->id;
+        $toAccountId = $transactionType === Transaction::TYPE_CREDIT
+            ? (int) $primaryAccount->id
+            : (int) $counterpartyAccount->id;
+        $timestamp = $data['date'] ?? $data['created_at'] ?? $transaction?->date ?? $transaction?->created_at ?? now();
 
         return [
-            'account_id' => $reverseAccount->id,
-            'category_id' => $reverseCategory->id,
+            'user_id' => $primaryAccount->user_id,
+            'account_id' => $primaryAccount->id,
+            'category_id' => $category->id,
+            'from_account_id' => $fromAccountId,
+            'to_account_id' => $toAccountId,
+            'amount' => (float) ($data['amount'] ?? $transaction?->amount ?? 0),
+            'transaction_type' => $transactionType,
+            'currency' => strtoupper((string) ($data['currency'] ?? $primaryAccount->currency ?? $transaction?->currency ?? config('hisabi.currency'))),
+            'note' => array_key_exists('note', $data) ? $data['note'] : $transaction?->note,
+            'description' => array_key_exists('note', $data) ? $data['note'] : $transaction?->description,
+            'date' => $timestamp,
+            'created_at' => $timestamp,
+        ];
+    }
+
+    private function prepareLedgerTransferData(array $data, ?Transaction $transaction = null): array
+    {
+        $fromAccountId = (int) ($data['from_account_id'] ?? $transaction?->from_account_id ?? 0);
+        $toAccountId = (int) ($data['to_account_id'] ?? $transaction?->to_account_id ?? 0);
+
+        if ($fromAccountId <= 0 || $toAccountId <= 0) {
+            throw new RuntimeException('Both from_account_id and to_account_id are required for ledger transfers.');
+        }
+
+        $fromAccount = Account::query()->findOrFail($fromAccountId);
+        $toAccount = Account::query()->findOrFail($toAccountId);
+
+        if ((int) $fromAccount->id === (int) $toAccount->id) {
+            throw new RuntimeException('The source and destination accounts must be different.');
+        }
+
+        $category = $this->resolveCompatibilityCategory($data, $transaction, $toAccount, false);
+        $transactionType = $category
+            ? Transaction::transactionTypeForCategoryType($category->type)
+            : ($fromAccount->type === Account::TYPE_INCOME ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT);
+        $primaryAccountId = $transactionType === Transaction::TYPE_CREDIT ? $toAccount->id : $fromAccount->id;
+        $timestamp = $data['date'] ?? $data['created_at'] ?? $transaction?->date ?? $transaction?->created_at ?? now();
+
+        return [
+            'user_id' => $fromAccount->user_id,
+            'account_id' => $primaryAccountId,
+            'category_id' => $category?->id,
+            'from_account_id' => $fromAccount->id,
+            'to_account_id' => $toAccount->id,
+            'amount' => (float) ($data['amount'] ?? $transaction?->amount ?? 0),
+            'transaction_type' => $transactionType,
+            'currency' => strtoupper((string) ($data['currency'] ?? $fromAccount->currency ?? $transaction?->currency ?? config('hisabi.currency'))),
+            'note' => array_key_exists('note', $data) ? $data['note'] : $transaction?->note,
+            'description' => array_key_exists('note', $data) ? $data['note'] : $transaction?->description,
+            'date' => $timestamp,
+            'created_at' => $timestamp,
+        ];
+    }
+
+    private function prepareReverseTransferData(array $data, int $userId): array
+    {
+        return [
+            'from_account_id' => (int) $data['reverse_account_id'],
+            'to_account_id' => (int) $data['account_id'],
+            'account_id' => (int) $data['account_id'],
+            'category_id' => $data['category_id'] ?? null,
             'amount' => $data['amount'],
-            'transaction_type' => Transaction::TYPE_DEBIT,
+            'transaction_type' => Transaction::TYPE_CREDIT,
+            'currency' => $data['currency'] ?? null,
             'note' => $data['note'] ?? null,
             'created_at' => $data['created_at'],
         ];
+    }
+
+    private function resolveCompatibilityCategory(
+        array $data,
+        ?Transaction $transaction,
+        Account $account,
+        bool $allowFallbackType = true
+    ): ?Category {
+        $categoryId = $data['category_id'] ?? $transaction?->category_id;
+
+        if ($categoryId) {
+            return $this->categoryService->findLedgerCategoryOrFail((int) $categoryId);
+        }
+
+        $categoryType = $data['category_type'] ?? null;
+
+        if (! $categoryType && ! $allowFallbackType) {
+            return null;
+        }
+
+        if (! $categoryType && $transaction?->category) {
+            return $this->categoryService->findLedgerCategoryOrFail((int) $transaction->category->id);
+        }
+
+        if (! $categoryType) {
+            return null;
+        }
+
+        $legacyCategory = Category::findOrCreateFallbackForUser((int) $account->user_id, strtoupper((string) $categoryType));
+
+        return $this->categoryService->findLedgerCategoryOrFail((int) $legacyCategory->id);
     }
 
     private function fallbackCategoryForAccount(Account $account, int $userId, string $type): Category
@@ -134,6 +258,6 @@ class TransactionService
     {
         return Transaction::query()
             ->withoutGlobalScope(OwnedAccountScope::class)
-            ->forAccessibleAccounts(auth()->user());
+            ->forAccessibleAccounts(Auth::user());
     }
 }

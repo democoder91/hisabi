@@ -16,16 +16,16 @@ class AverageTransactionMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 100]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 200]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 300]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 200]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
 
         $response = $this->getJson('/api/v1/metrics/average-transaction?range=current-year');
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertIsArray($data);
-        $foodCategory = collect($data)->firstWhere('label', 'Food');
+        $items = $response->json('data.items');
+        $this->assertIsArray($items);
+        $foodCategory = collect($items)->firstWhere('label', 'Food');
         $this->assertEquals(200, $foodCategory['value']);
     }
 
@@ -33,14 +33,14 @@ class AverageTransactionMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 500]);
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
 
         $response = $this->getJson('/api/v1/metrics/average-transaction?range=current-year');
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertCount(2, $data);
+        $items = $response->json('data.items');
+        $this->assertCount(2, $items);
     }
 
     public function test_returns_empty_array_when_no_data(): void
@@ -50,7 +50,7 @@ class AverageTransactionMetricTest extends MetricsTestCase
         $response = $this->getJson('/api/v1/metrics/average-transaction?range=current-year');
 
         $response->assertOk();
-        $this->assertIsArray($response->json('data'));
-        $this->assertEmpty($response->json('data'));
+        $this->assertIsArray($response->json('data.items'));
+        $this->assertEmpty($response->json('data.items'));
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,43 @@ class Transaction extends Model
         static::addGlobalScope(new OwnedAccountScope());
 
         static::saving(function (self $transaction) {
+            if ($transaction->usesDoubleEntry()) {
+                $fromAccount = $transaction->from_account_id
+                    ? Account::withoutGlobalScopes()->find($transaction->from_account_id)
+                    : null;
+                $toAccount = $transaction->to_account_id
+                    ? Account::withoutGlobalScopes()->find($transaction->to_account_id)
+                    : null;
+
+                if (! $transaction->currency) {
+                    $transaction->currency = $fromAccount
+                        ? $fromAccount->currency
+                        : ($toAccount ? $toAccount->currency : null);
+                }
+
+                if (! $transaction->user_id) {
+                    $transaction->user_id = $fromAccount
+                        ? $fromAccount->user_id
+                        : ($toAccount ? $toAccount->user_id : null);
+                }
+
+                if (! $transaction->account_id) {
+                    $transaction->account_id = strtoupper((string) $transaction->transaction_type) === self::TYPE_CREDIT
+                        ? $transaction->to_account_id
+                        : $transaction->from_account_id;
+                }
+
+                if (! $transaction->description && $transaction->note) {
+                    $transaction->description = $transaction->note;
+                }
+
+                if (! $transaction->date && $transaction->created_at) {
+                    $transaction->date = $transaction->created_at;
+                }
+
+                return;
+            }
+
             if (! $transaction->account_id) {
                 return;
             }
@@ -57,28 +95,19 @@ class Transaction extends Model
         });
 
         static::created(function (self $transaction) {
-            $transaction->applyAccountBalanceDelta($transaction->account_id, $transaction->signedAmount());
+            $transaction->applyBalanceImpacts($transaction->currentBalanceImpacts());
         });
 
         static::updating(function (self $transaction) {
-            $transaction->balanceSnapshot = [
-                'account_id' => (int) ($transaction->getOriginal('account_id') ?? $transaction->account_id),
-                'signed_amount' => self::signedAmountFromValues(
-                    (float) ($transaction->getOriginal('amount') ?? $transaction->amount),
-                    (string) ($transaction->getOriginal('transaction_type') ?? $transaction->transaction_type)
-                ),
-            ];
+            $transaction->balanceSnapshot = $transaction->originalBalanceImpacts();
         });
 
         static::updated(function (self $transaction) {
             if ($transaction->balanceSnapshot !== []) {
-                $transaction->applyAccountBalanceDelta(
-                    $transaction->balanceSnapshot['account_id'],
-                    -1 * $transaction->balanceSnapshot['signed_amount']
-                );
+                $transaction->applyBalanceImpacts($transaction->balanceSnapshot, true);
             }
 
-            $transaction->applyAccountBalanceDelta($transaction->account_id, $transaction->signedAmount());
+            $transaction->applyBalanceImpacts($transaction->currentBalanceImpacts());
             $transaction->balanceSnapshot = [];
         });
 
@@ -87,11 +116,11 @@ class Transaction extends Model
                 return;
             }
 
-            $transaction->applyAccountBalanceDelta($transaction->account_id, -1 * $transaction->signedAmount());
+            $transaction->applyBalanceImpacts($transaction->currentBalanceImpacts(), true);
         });
 
         static::restored(function (self $transaction) {
-            $transaction->applyAccountBalanceDelta($transaction->account_id, $transaction->signedAmount());
+            $transaction->applyBalanceImpacts($transaction->currentBalanceImpacts());
         });
 
         static::forceDeleted(function (self $transaction) {
@@ -99,23 +128,34 @@ class Transaction extends Model
                 return;
             }
 
-            $transaction->applyAccountBalanceDelta($transaction->account_id, -1 * $transaction->signedAmount());
+            $transaction->applyBalanceImpacts($transaction->currentBalanceImpacts(), true);
         });
     }
 
     protected $casts = [
         'meta' => 'array',
         'amount' => 'float',
+        'date' => 'datetime',
     ];
 
-    public function account()
+    public function account(): BelongsTo
     {
-        return $this->belongsTo(Account::class);
+        return $this->belongsTo(Account::class)->withTrashed();
     }
 
-    public function category()
+    public function fromAccount(): BelongsTo
     {
-        return $this->belongsTo(Category::class)->withoutGlobalScopes();
+        return $this->belongsTo(Account::class, 'from_account_id')->withTrashed();
+    }
+
+    public function toAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'to_account_id')->withTrashed();
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class)->withoutGlobalScopes()->withTrashed();
     }
 
     public function audits(): HasMany
@@ -133,6 +173,11 @@ class Transaction extends Model
     public function signedAmount(): float
     {
         return self::signedAmountFromValues((float) $this->amount, (string) $this->transaction_type);
+    }
+
+    public function usesDoubleEntry(): bool
+    {
+        return (int) ($this->from_account_id ?? 0) > 0 || (int) ($this->to_account_id ?? 0) > 0;
     }
 
     public static function signedAmountFromValues(float $amount, string $transactionType): float
@@ -185,6 +230,40 @@ class Transaction extends Model
             : self::TYPE_DEBIT;
     }
 
+    public function categoryLedgerType(): ?string
+    {
+        if ($this->category) {
+            return $this->category->type;
+        }
+
+        $counterpartyAccount = $this->counterpartyAccount();
+
+        if (! $counterpartyAccount) {
+            return null;
+        }
+
+        if ($counterpartyAccount->type === Account::TYPE_INCOME) {
+            return Category::INCOME;
+        }
+
+        if ($counterpartyAccount->type === Account::TYPE_EXPENSE) {
+            return Category::EXPENSES;
+        }
+
+        return null;
+    }
+
+    public function counterpartyAccount(): ?Account
+    {
+        if (! $this->usesDoubleEntry()) {
+            return null;
+        }
+
+        return strtoupper((string) $this->transaction_type) === self::TYPE_CREDIT
+            ? $this->fromAccount
+            : $this->toAccount;
+    }
+
     public static function tryCreateFromSms($sms)
     {
         $user = Auth::user();
@@ -225,6 +304,122 @@ class Transaction extends Model
         }
 
         $account->applyBalanceDelta($delta);
+    }
+
+    /**
+     * @return array<int, float>
+     */
+    private function currentBalanceImpacts(): array
+    {
+        return $this->buildBalanceImpactsFromAttributes([
+            'account_id' => $this->account_id,
+            'from_account_id' => $this->from_account_id,
+            'to_account_id' => $this->to_account_id,
+            'amount' => $this->amount,
+            'transaction_type' => $this->transaction_type,
+        ]);
+    }
+
+    /**
+     * @return array<int, float>
+     */
+    private function originalBalanceImpacts(): array
+    {
+        return $this->buildBalanceImpactsFromAttributes([
+            'account_id' => $this->getOriginal('account_id') ?? $this->account_id,
+            'from_account_id' => $this->getOriginal('from_account_id') ?? $this->from_account_id,
+            'to_account_id' => $this->getOriginal('to_account_id') ?? $this->to_account_id,
+            'amount' => $this->getOriginal('amount') ?? $this->amount,
+            'transaction_type' => $this->getOriginal('transaction_type') ?? $this->transaction_type,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<int, float>
+     */
+    private function buildBalanceImpactsFromAttributes(array $attributes): array
+    {
+        $amount = round((float) ($attributes['amount'] ?? 0), 2);
+
+        if ($amount === 0.0) {
+            return [];
+        }
+
+        if ($this->usesDoubleEntryFromAttributes($attributes)) {
+            $impacts = [];
+
+            $this->appendBalanceImpact(
+                $impacts,
+                (int) ($attributes['from_account_id'] ?? 0),
+                $amount,
+                true,
+            );
+            $this->appendBalanceImpact(
+                $impacts,
+                (int) ($attributes['to_account_id'] ?? 0),
+                $amount,
+                false,
+            );
+
+            return $impacts;
+        }
+
+        $accountId = (int) ($attributes['account_id'] ?? 0);
+
+        if ($accountId <= 0) {
+            return [];
+        }
+
+        return [
+            $accountId => self::signedAmountFromValues(
+                $amount,
+                (string) ($attributes['transaction_type'] ?? self::TYPE_DEBIT),
+            ),
+        ];
+    }
+
+    /**
+     * @param  array<int, float>  $impacts
+     */
+    private function applyBalanceImpacts(array $impacts, bool $reverse = false): void
+    {
+        foreach ($impacts as $accountId => $delta) {
+            $this->applyAccountBalanceDelta(
+                (int) $accountId,
+                $reverse ? round(-1 * $delta, 2) : round($delta, 2),
+            );
+        }
+    }
+
+    /**
+     * @param  array<int, float>  $impacts
+     */
+    private function appendBalanceImpact(array &$impacts, int $accountId, float $amount, bool $credit): void
+    {
+        if ($accountId <= 0) {
+            return;
+        }
+
+        $account = Account::withoutGlobalScopes()->find($accountId);
+
+        if (! $account) {
+            return;
+        }
+
+        $delta = $credit
+            ? $account->balanceDeltaForCredit($amount)
+            : $account->balanceDeltaForDebit($amount);
+
+        $impacts[$accountId] = round(($impacts[$accountId] ?? 0) + $delta, 2);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function usesDoubleEntryFromAttributes(array $attributes): bool
+    {
+        return (int) ($attributes['from_account_id'] ?? 0) > 0 || (int) ($attributes['to_account_id'] ?? 0) > 0;
     }
 
     public function storeAuditSnapshot(array $snapshot): void

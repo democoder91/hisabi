@@ -44,7 +44,7 @@ class CreateCategoryTool extends FinancialTool
             'type' => $validated['type'],
             'color' => $validated['color'],
             'icon' => $validated['icon'],
-        ])->loadCount('transactions');
+        ])->load(['account'])->loadCount('transactions');
 
         return 'Category created successfully: ' . $this->formatCategory($category);
     }

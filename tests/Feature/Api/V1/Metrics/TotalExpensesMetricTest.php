@@ -16,8 +16,8 @@ class TotalExpensesMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 500]);
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 300]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
 
         $response = $this->getJson('/api/v1/metrics/total-expenses?range=current-year');
 
@@ -29,8 +29,8 @@ class TotalExpensesMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['brand_id' => $this->expensesBrand->id, 'amount' => 500]);
-        Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
+        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
+        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
 
         $response = $this->getJson('/api/v1/metrics/total-expenses?range=current-year');
 

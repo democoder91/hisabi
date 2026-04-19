@@ -51,7 +51,7 @@ class EditTransactionTool extends FinancialTool
         $transaction = Transaction::query()
             ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts($user)
-            ->with(['account.sharedUsers:id,name,email', 'category'])
+            ->with(['account.sharedUsers:id,name,email', 'category', 'fromAccount', 'toAccount'])
             ->find($validated['transaction_id']);
 
         if (! $transaction) {
@@ -93,21 +93,29 @@ class EditTransactionTool extends FinancialTool
             $category = $transaction->category;
         }
 
-        if (! $category) {
+        if (! $category && ! $transaction->usesDoubleEntry()) {
             throw new \RuntimeException('A valid category is required to update this transaction.');
         }
 
         $payload = [
-            'account_id' => $targetAccount->id,
-            'category_id' => $category->id,
             'amount' => Arr::exists($validated, 'amount') ? (float) $validated['amount'] : (float) $transaction->amount,
-            'transaction_type' => Transaction::transactionTypeForCategoryType($category->type),
             'currency' => Arr::exists($input, 'currency') ? ($validated['currency'] ?? null) : $transaction->currency,
             'note' => Arr::exists($input, 'note') ? ($validated['note'] ?? null) : $transaction->note,
             'created_at' => Arr::exists($validated, 'date') ? $validated['date'] : $transaction->created_at,
         ];
 
-        $updated = app(TransactionService::class)->update($transaction->id, $payload)->load(['account', 'category']);
+        if ($category) {
+            $payload['account_id'] = $targetAccount->id;
+            $payload['category_id'] = $category->id;
+            $payload['transaction_type'] = Transaction::transactionTypeForCategoryType($category->type);
+        } else {
+            $payload['from_account_id'] = Arr::exists($validated, 'account_id')
+                ? $targetAccount->id
+                : $transaction->from_account_id;
+            $payload['to_account_id'] = $transaction->to_account_id;
+        }
+
+        $updated = app(TransactionService::class)->update($transaction->id, $payload)->load(['account', 'category', 'fromAccount', 'toAccount']);
 
         return 'Transaction updated successfully: ' . $this->formatTransaction($updated);
     }

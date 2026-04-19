@@ -71,7 +71,7 @@ class CreateTransactionTool extends FinancialTool
             'currency' => $validated['currency'] ?? $this->defaultCurrency(),
             'note' => $resolvedNote,
             'created_at' => $validated['date'] ?? now(),
-        ])->load(['account', 'category']);
+        ])->load(['account', 'category', 'fromAccount', 'toAccount']);
 
         return 'Transaction created successfully: ' . $this->formatTransaction($transaction);
     }

@@ -18,12 +18,12 @@ class NetWorthTrendMetricTest extends MetricsTestCase
         $this->actingAs($this->user);
 
         Transaction::factory()->create([
-            'brand_id' => $this->incomeBrand->id,
+            'category_id' => $this->incomeCategory->id,
             'amount' => 5000,
             'created_at' => Carbon::now()->startOfMonth()
         ]);
         Transaction::factory()->create([
-            'brand_id' => $this->expensesBrand->id,
+            'category_id' => $this->expensesCategory->id,
             'amount' => 2000,
             'created_at' => Carbon::now()->startOfMonth()
         ]);
@@ -31,9 +31,9 @@ class NetWorthTrendMetricTest extends MetricsTestCase
         $response = $this->getJson('/api/v1/metrics/net-worth-trend?range=current-year');
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertIsArray($data);
-        $this->assertNotEmpty($data);
+        $items = $response->json('data.items');
+        $this->assertIsArray($items);
+        $this->assertNotEmpty($items);
     }
 
     public function test_calculates_running_net_worth(): void
@@ -43,23 +43,23 @@ class NetWorthTrendMetricTest extends MetricsTestCase
         $lastMonth = Carbon::now()->subMonth()->startOfMonth()->addDays(5);
         $thisMonth = Carbon::now()->startOfMonth()->addDays(5);
 
-        $t1 = Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 5000]);
+        $t1 = Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
         $t1->created_at = $lastMonth;
         $t1->save();
 
-        $t2 = Transaction::factory()->create(['brand_id' => $this->incomeBrand->id, 'amount' => 3000]);
+        $t2 = Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 3000]);
         $t2->created_at = $thisMonth;
         $t2->save();
 
         $response = $this->getJson('/api/v1/metrics/net-worth-trend?range=current-year');
 
         $response->assertOk();
-        $data = $response->json('data');
+        $items = $response->json('data.items');
 
         // Should show cumulative net worth
-        $this->assertCount(2, $data);
-        $this->assertEquals(5000, $data[0]['value']);
-        $this->assertEquals(8000, $data[1]['value']); // 5000 + 3000
+        $this->assertCount(2, $items);
+        $this->assertEquals(5000, $items[0]['value']);
+        $this->assertEquals(8000, $items[1]['value']);
     }
 
     public function test_returns_empty_array_when_no_data(): void
@@ -69,7 +69,7 @@ class NetWorthTrendMetricTest extends MetricsTestCase
         $response = $this->getJson('/api/v1/metrics/net-worth-trend?range=current-year');
 
         $response->assertOk();
-        $this->assertIsArray($response->json('data'));
-        $this->assertEmpty($response->json('data'));
+        $this->assertIsArray($response->json('data.items'));
+        $this->assertEmpty($response->json('data.items'));
     }
 }

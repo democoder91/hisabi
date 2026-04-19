@@ -37,6 +37,10 @@ class Account extends Model
 
     protected $guarded = [];
 
+    protected $attributes = [
+        'type' => self::TYPE_ASSET,
+    ];
+
     protected $casts = [
         'balance' => 'float',
     ];

@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Account\Services\AccountService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Arr;
@@ -22,8 +23,8 @@ class EditAccountTool extends FinancialTool
 
         $this->ensureAnyProvided(
             $input,
-            ['name_en', 'name_ar', 'balance'],
-            'Provide at least one field to update: name_en, name_ar, or balance.'
+            ['name_en', 'name_ar', 'balance', 'type', 'parent_id'],
+            'Provide at least one field to update: name_en, name_ar, balance, type, or parent_id.'
         );
 
         $validated = $this->validateInput($input, [
@@ -31,6 +32,8 @@ class EditAccountTool extends FinancialTool
             'name_en' => ['nullable', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'balance' => ['nullable', 'numeric'],
+            'type' => ['nullable', 'string', 'in:' . implode(',', Account::ledgerTypes())],
+            'parent_id' => ['nullable', 'integer', 'exists:accounts,id'],
         ]);
 
         $account = $this->accessibleAccount((int) $validated['account_id'], $user);
@@ -48,6 +51,14 @@ class EditAccountTool extends FinancialTool
 
         if (Arr::exists($validated, 'balance')) {
             $payload['balance'] = (float) $validated['balance'];
+        }
+
+        if (Arr::exists($validated, 'type') && $validated['type'] !== null) {
+            $payload['type'] = $validated['type'];
+        }
+
+        if (array_key_exists('parent_id', $validated)) {
+            $payload['parent_id'] = $validated['parent_id'];
         }
 
         $updated = app(AccountService::class)->update($account, $payload);
@@ -69,6 +80,12 @@ class EditAccountTool extends FinancialTool
                 ->nullable(),
             'balance' => $schema->number()
                 ->description('Optional replacement balance for the account.')
+                ->nullable(),
+            'type' => $schema->string()
+                ->description('Optional new account type. One of: asset, liability, equity, income, expense.')
+                ->nullable(),
+            'parent_id' => $schema->integer()
+                ->description('Optional ID of a parent account. Pass null to remove the current parent.')
                 ->nullable(),
         ];
     }

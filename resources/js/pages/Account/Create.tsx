@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createAccount } from '@/Api/accounts';
+import { createAccount, getAllAccounts } from '@/Api/accounts';
 import { getCurrencySettings } from '@/Api/settings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -40,7 +40,10 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
     const [nameLang, setNameLang] = useState<'en' | 'ar'>('en');
     const [balance, setBalance] = useState('0');
     const [currency, setCurrency] = useState('');
+    const [type, setType] = useState('asset');
+    const [parentId, setParentId] = useState<string>('none');
     const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
+    const [availableAccounts, setAvailableAccounts] = useState<AccountRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const selectedCurrencyLabel = currencies.find((item) => item.value === currency)?.label ?? currency;
 
@@ -52,6 +55,10 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
                     setCurrency(payload.settings.effective_currency);
                 })
                 .catch(console.error);
+
+            getAllAccounts()
+                .then(({ data }) => setAvailableAccounts(data.allAccounts))
+                .catch(console.error);
         }
 
         if (!open) {
@@ -60,6 +67,8 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
             setNameLang('en');
             setBalance('0');
             setCurrency('');
+            setType('asset');
+            setParentId('none');
             setLoading(false);
         }
     }, [open]);
@@ -78,6 +87,8 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
             },
             balance: Number(balance || 0),
             currency,
+            type,
+            parentId: parentId && parentId !== 'none' ? Number(parentId) : null,
         })
             .then(({ data }) => {
                 onCreate(data.createAccount);
@@ -89,7 +100,7 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-            <DialogContent>
+            <DialogContent aria-describedby={undefined}>
                 <DialogTitle className="sr-only">{t('account.createTitle')}</DialogTitle>
                 <div className="space-y-4">
                     <div>
@@ -121,6 +132,21 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
                         </Tabs>
                     </div>
                     <div>
+                        <Label htmlFor="account-type">{t('account.type')}</Label>
+                        <Select value={type} onValueChange={setType}>
+                            <SelectTrigger id="account-type" className="mt-1">
+                                <SelectValue placeholder={t('account.typePlaceholder')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(['asset', 'liability', 'equity', 'income', 'expense'] as const).map((accountType) => (
+                                    <SelectItem key={accountType} value={accountType}>
+                                        {t(`account.type_${accountType}`)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
                         <Label htmlFor="account-balance">{t('account.balance')}</Label>
                         <Input
                             id="account-balance"
@@ -147,6 +173,23 @@ export default function Create({ open, onClose, onCreate }: CreateAccountProps) 
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="account-parent">{t('account.parentAccount')}</Label>
+                        <Select value={parentId} onValueChange={setParentId}>
+                            <SelectTrigger id="account-parent" className="mt-1">
+                                <SelectValue placeholder={t('account.parentAccountPlaceholder')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">{t('account.parentAccountPlaceholder')}</SelectItem>
+                                {availableAccounts.map((account) => (
+                                    <SelectItem key={account.id} value={String(account.id)}>
+                                        {account.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="mt-1 text-xs text-muted-foreground">{t('account.parentAccountHelp')}</p>
                     </div>
                     <div className="flex justify-end">
                         <Button onClick={handleCreate} disabled={loading || !nameEn.trim() || !currency}>

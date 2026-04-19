@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { deleteAccount, inviteAccountShare, revokeAccountShare, searchAccountShareableUsers, updateAccount, updateAccountSharePermission } from '@/Api/accounts';
+import { deleteAccount, getAllAccounts, inviteAccountShare, revokeAccountShare, searchAccountShareableUsers, updateAccount, updateAccountSharePermission } from '@/Api/accounts';
 import { getCurrencySettings } from '@/Api/settings';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,8 @@ type AccountRecord = {
     name_translations?: AccountTranslations;
     balance: number;
     currency: string;
+    type: string;
+    parentId: number | null;
     canManage: boolean;
     permissionLevel: string;
     sharedUsers?: SharedUser[];
@@ -62,7 +64,10 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
     const [nameLang, setNameLang] = useState<'en' | 'ar'>('en');
     const [balance, setBalance] = useState('0');
     const [currency, setCurrency] = useState('');
+    const [type, setType] = useState('asset');
+    const [parentId, setParentId] = useState<string>('none');
     const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
+    const [availableAccounts, setAvailableAccounts] = useState<AccountRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [shareSearch, setShareSearch] = useState('');
     const [selectedShareUser, setSelectedShareUser] = useState<ShareableUser | null>(null);
@@ -86,6 +91,8 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
         setNameLang('en');
         setBalance(String(account.balance ?? 0));
         setCurrency(account.currency ?? '');
+        setType(account.type ?? 'asset');
+        setParentId(account.parentId ? String(account.parentId) : 'none');
         setShareSearch('');
         setSelectedShareUser(null);
         setShareResults([]);
@@ -103,6 +110,10 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
 
         getCurrencySettings()
             .then((payload) => setCurrencies(payload.options.currencies))
+            .catch(console.error);
+
+        getAllAccounts()
+            .then(({ data }) => setAvailableAccounts(data.allAccounts))
             .catch(console.error);
     }, [account]);
 
@@ -178,6 +189,8 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
             },
             balance: Number(balance || 0),
             currency,
+            type,
+            parentId: parentId && parentId !== 'none' ? Number(parentId) : null,
         })
             .then(({ data }) => {
                 setCurrentAccount(data.updateAccount);
@@ -275,7 +288,7 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
 
     return (
         <Dialog open={!!account} onOpenChange={(isOpen) => !isOpen && onClose()}>
-            <DialogContent>
+            <DialogContent aria-describedby={undefined}>
                 <DialogTitle className="sr-only">{t('account.editTitle')}</DialogTitle>
                 {currentAccount && (
                     <div className="space-y-4">
@@ -321,6 +334,40 @@ export default function Edit({ account, onClose, onDelete, onUpdate }: EditAccou
                                             />
                                         )}
                                     </Tabs>
+                                </div>
+                                <div>
+                                    <Label htmlFor="account-type">{t('account.type')}</Label>
+                                    <Select value={type} onValueChange={setType} disabled={!canManage}>
+                                        <SelectTrigger id="account-type" className="mt-1">
+                                            <SelectValue placeholder={t('account.typePlaceholder')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(['asset', 'liability', 'equity', 'income', 'expense'] as const).map((accountType) => (
+                                                <SelectItem key={accountType} value={accountType}>
+                                                    {t(`account.type_${accountType}`)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="account-parent">{t('account.parentAccount')}</Label>
+                                    <Select value={parentId} onValueChange={setParentId} disabled={!canManage}>
+                                        <SelectTrigger id="account-parent" className="mt-1">
+                                            <SelectValue placeholder={t('account.parentAccountPlaceholder')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">{t('account.parentAccountPlaceholder')}</SelectItem>
+                                            {availableAccounts
+                                                .filter((a) => a.id !== currentAccount.id)
+                                                .map((a) => (
+                                                    <SelectItem key={a.id} value={String(a.id)}>
+                                                        {a.name}
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="mt-1 text-xs text-muted-foreground">{t('account.parentAccountHelp')}</p>
                                 </div>
                                 <div>
                                     <Label htmlFor="account-balance">{t('account.balance')}</Label>

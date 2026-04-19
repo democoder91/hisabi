@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Account\Services\AccountService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
@@ -23,6 +24,8 @@ class CreateAccountTool extends FinancialTool
             'name_en' => ['required', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'balance' => ['required', 'numeric'],
+            'type' => ['nullable', 'string', 'in:' . implode(',', Account::ledgerTypes())],
+            'parent_id' => ['nullable', 'integer', 'exists:accounts,id'],
         ]);
 
         $account = app(AccountService::class)->create([
@@ -32,6 +35,8 @@ class CreateAccountTool extends FinancialTool
                 'ar' => $validated['name_ar'] ?? null,
             ],
             'balance' => (float) $validated['balance'],
+            'type' => $validated['type'] ?? Account::TYPE_ASSET,
+            'parent_id' => $validated['parent_id'] ?? null,
         ])->load(['sharedUsers:id,name,email'])->loadCount('transactions');
 
         return 'Account created successfully: ' . $this->formatAccount($account);
@@ -49,6 +54,12 @@ class CreateAccountTool extends FinancialTool
             'balance' => $schema->number()
                 ->description('The starting balance for the account. Can be 0.')
                 ->required(),
+            'type' => $schema->string()
+                ->description('The account type. One of: asset, liability, equity, income, expense. Defaults to asset.')
+                ->nullable(),
+            'parent_id' => $schema->integer()
+                ->description('Optional ID of a parent account to nest this account under.')
+                ->nullable(),
         ];
     }
 }

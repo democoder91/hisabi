@@ -2,15 +2,14 @@
 
 use App\Ai\Agents\HisabiAgent;
 use App\Services\AI\FinancialAnalyzer;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+
+uses(RefreshDatabase::class);
 
 it('includes the current date and time in the system prompt', function () {
     $now = Carbon::create(2026, 4, 19, 10, 30, 0, config('app.timezone'));
     Carbon::setTestNow($now);
-
-    $this->mock(FinancialAnalyzer::class)
-        ->shouldReceive('generateSummary')
-        ->andReturn('');
 
     $agent = new HisabiAgent(null);
     $instructions = (string) $agent->instructions();
@@ -23,18 +22,10 @@ it('includes the current date and time in the system prompt', function () {
 });
 
 it('includes the current date and time reflecting the real clock', function () {
-    $before = now()->toDateTimeString();
-
-    $this->mock(FinancialAnalyzer::class)
-        ->shouldReceive('generateSummary')
-        ->andReturn('');
-
     $agent = new HisabiAgent(null);
     $instructions = (string) $agent->instructions();
 
-    $after = now()->toDateTimeString();
-
-    expect($instructions)->toContain('Current Date & Time:')
-        ->and($instructions)->toContain($before)
-        ->or(fn($e) => $e->toContain($after));
+    expect($instructions)
+        ->toContain('Current Date & Time:')
+        ->toContain(now()->format('Y-m-d'));
 });

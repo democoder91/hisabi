@@ -428,4 +428,157 @@ class AccountControllerTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_it_creates_an_account_with_a_specified_type(): void
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
+            'name' => ['en' => 'Income Account'],
+            'balance' => 0,
+            'currency' => 'usd',
+            'type' => 'income',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('account.type', 'income');
+
+        $this->assertDatabaseHas('accounts', [
+            'user_id' => $this->user->id,
+            'type' => 'income',
+        ]);
+    }
+
+    public function test_it_defaults_to_asset_type_when_type_is_omitted(): void
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
+            'name' => ['en' => 'My Wallet'],
+            'balance' => 100,
+            'currency' => 'usd',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('account.type', 'asset');
+    }
+
+    public function test_it_rejects_an_invalid_account_type(): void
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
+            'name' => ['en' => 'Bad Type'],
+            'balance' => 0,
+            'currency' => 'usd',
+            'type' => 'invalid_type',
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['type']);
+    }
+
+    public function test_it_updates_an_account_type(): void
+    {
+        $account = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_ASSET,
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
+            'name' => ['en' => $account->getTranslation('name', 'en')],
+            'balance' => $account->balance,
+            'currency' => $account->currency,
+            'type' => 'expense',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('account.type', 'expense');
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+            'type' => 'expense',
+        ]);
+    }
+
+    public function test_it_creates_an_account_with_a_parent(): void
+    {
+        $parent = Account::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
+            'name' => ['en' => 'Sub Account'],
+            'balance' => 0,
+            'currency' => 'usd',
+            'parent_id' => $parent->id,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('account.parentId', $parent->id);
+
+        $this->assertDatabaseHas('accounts', [
+            'user_id' => $this->user->id,
+            'parent_id' => $parent->id,
+        ]);
+    }
+
+    public function test_it_creates_an_account_without_a_parent_by_default(): void
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
+            'name' => ['en' => 'Root Account'],
+            'balance' => 0,
+            'currency' => 'usd',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('account.parentId', null);
+    }
+
+    public function test_it_rejects_a_nonexistent_parent_id(): void
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/accounts', [
+            'name' => ['en' => 'Bad Parent'],
+            'balance' => 0,
+            'currency' => 'usd',
+            'parent_id' => 999999,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['parent_id']);
+    }
+
+    public function test_it_updates_a_parent_account(): void
+    {
+        $parent = Account::factory()->create(['user_id' => $this->user->id]);
+        $account = Account::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
+            'name' => ['en' => $account->getTranslation('name', 'en')],
+            'balance' => $account->balance,
+            'currency' => $account->currency,
+            'parent_id' => $parent->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('account.parentId', $parent->id);
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+            'parent_id' => $parent->id,
+        ]);
+    }
+
+    public function test_it_clears_the_parent_when_parent_id_is_null(): void
+    {
+        $parent = Account::factory()->create(['user_id' => $this->user->id]);
+        $account = Account::factory()->create(['user_id' => $this->user->id, 'parent_id' => $parent->id]);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/accounts/{$account->id}", [
+            'name' => ['en' => $account->getTranslation('name', 'en')],
+            'balance' => $account->balance,
+            'currency' => $account->currency,
+            'parent_id' => null,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('account.parentId', null);
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+            'parent_id' => null,
+        ]);
+    }
 }

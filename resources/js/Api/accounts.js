@@ -78,13 +78,13 @@ export const getAccountAudits = async (accountId, page = 1) => {
     };
 };
 
-export const createAccount = async ({ name, balance, currency }) => {
+export const createAccount = async ({ name, balance, currency, type, parentId = null }) => {
     const response = await apiFetch('/api/v1/accounts', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, balance, currency }),
+        body: JSON.stringify({ name, balance, currency, type, parent_id: parentId }),
     });
 
     if (!response.ok) {
@@ -100,13 +100,13 @@ export const createAccount = async ({ name, balance, currency }) => {
     };
 };
 
-export const updateAccount = async ({ id, name, balance, currency }) => {
+export const updateAccount = async ({ id, name, balance, currency, type, parentId = null }) => {
     const response = await apiFetch(`/api/v1/accounts/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, balance, currency }),
+        body: JSON.stringify({ name, balance, currency, type, parent_id: parentId }),
     });
 
     if (!response.ok) {

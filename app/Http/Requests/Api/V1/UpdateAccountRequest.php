@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Domains\Account\Models\Account;
 use App\Enums\Currency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,8 @@ class UpdateAccountRequest extends FormRequest
             'name.ar' => ['nullable', 'string', 'max:255'],
             'balance' => ['required', 'numeric'],
             'currency' => ['required', Rule::enum(Currency::class)],
+            'type' => ['nullable', Rule::in(Account::ledgerTypes())],
+            'parent_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->whereNull('deleted_at')],
         ];
     }
 

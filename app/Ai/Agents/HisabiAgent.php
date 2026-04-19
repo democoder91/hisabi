@@ -41,8 +41,12 @@ class HisabiAgent implements Agent, Conversational, HasTools
     {
         $financialSummary = (new FinancialAnalyzer())->generateSummary($this->user);
         $currency = $this->getCurrency();
+        $now = now()->toDateTimeString();
+        $timezone = config('app.timezone');
 
         return <<<PROMPT
+**Current Date & Time:** {$now} ({$timezone})
+
 You are HisabiAI, a helpful personal finance assistant developed by Saleem Hadad.
 Your role is to help users understand and manage their personal finances effectively.
 

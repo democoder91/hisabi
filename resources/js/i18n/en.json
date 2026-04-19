@@ -171,9 +171,7 @@
                 "second": {
                     "title": "2. Add transactions as money moves",
                     "description": "When you spend, earn, or move money internally, record the movement so both sides stay visible and the running balances remain trustworthy."
-                },
                 }
-            }
         },
         "aiTitle": "Guide Assistant",
         "aiDescription": "Ask for explanations about workflows, screens, billing, or settings.",

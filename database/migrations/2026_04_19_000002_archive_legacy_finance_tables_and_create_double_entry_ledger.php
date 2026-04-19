@@ -31,7 +31,7 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        $categoryRows = DB::table('categories')->orderBy('id')->get()->map(fn (object $row) => (array) $row)->all();
+        $categoryRows = DB::table('categories')->orderBy('id')->get()->map(fn(object $row) => (array) $row)->all();
 
         if ($categoryRows !== []) {
             DB::table('legacy_categories')->insert($categoryRows);

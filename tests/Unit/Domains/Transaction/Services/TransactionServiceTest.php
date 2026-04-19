@@ -47,7 +47,7 @@ class TransactionServiceTest extends TestCase
 
         // Act
         $page1 = $this->service->getPaginated(perPage: 10);
-        
+
         // Simulate page 2 request
         request()->merge(['page' => 2]);
         $page2 = $this->service->getPaginated(perPage: 10);
@@ -56,7 +56,7 @@ class TransactionServiceTest extends TestCase
         $this->assertCount(10, $page1->items());
         $this->assertTrue($page1->hasMorePages());
         $this->assertEquals(1, $page1->currentPage());
-        
+
         $this->assertCount(5, $page2->items());
         $this->assertFalse($page2->hasMorePages());
         $this->assertEquals(2, $page2->currentPage());
@@ -130,7 +130,7 @@ class TransactionServiceTest extends TestCase
         // Arrange
         $starbucks = Category::factory()->create(['name' => 'Starbucks']);
         $mcdonalds = Category::factory()->create(['name' => 'McDonalds']);
-        
+
         Transaction::factory()->create(['category_id' => $mcdonalds->id]);
         $matchingTransaction = Transaction::factory()->create(['category_id' => $starbucks->id]);
 
@@ -150,19 +150,19 @@ class TransactionServiceTest extends TestCase
         $coffee = Category::factory()->create(['name' => 'Coffee Shop']);
         $groceries = Category::factory()->create(['name' => 'Groceries']);
         $travel = Category::factory()->create(['name' => 'Travel']);
-        
+
         $t1 = Transaction::factory()->create([
             'category_id' => $coffee->id,
             'amount' => 100,
             'note' => 'Regular purchase'
         ]);
-        
+
         $t2 = Transaction::factory()->create([
             'category_id' => $groceries->id,
             'amount' => 200,
             'note' => 'Coffee beans'
         ]);
-        
+
         $t3 = Transaction::factory()->create([
             'category_id' => $travel->id,
             'amount' => 300,
@@ -263,4 +263,3 @@ class TransactionServiceTest extends TestCase
         $this->assertTrue($result->hasMorePages());
     }
 }
-

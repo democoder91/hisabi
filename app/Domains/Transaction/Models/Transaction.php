@@ -435,4 +435,3 @@ class Transaction extends Model
         return $snapshot;
     }
 }
-

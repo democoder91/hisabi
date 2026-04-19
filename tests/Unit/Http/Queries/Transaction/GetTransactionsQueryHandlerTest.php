@@ -75,14 +75,14 @@ class GetTransactionsQueryHandlerTest extends TestCase
         // Assert
         $this->assertArrayHasKey('data', $data);
         $this->assertArrayHasKey('paginatorInfo', $data);
-        
+
         // Check data structure
         $this->assertIsArray($data['data']);
         $this->assertCount(1, $data['data']);
         $this->assertEquals($transaction->id, $data['data'][0]['id']);
         $this->assertEquals(100.50, $data['data'][0]['amount']);
         $this->assertEquals('Test note', $data['data'][0]['note']);
-        
+
         // Check paginator info structure
         $this->assertArrayHasKey('hasMorePages', $data['paginatorInfo']);
         $this->assertArrayHasKey('currentPage', $data['paginatorInfo']);
@@ -204,7 +204,7 @@ class GetTransactionsQueryHandlerTest extends TestCase
         // Arrange
         Transaction::factory()->create(['note' => 'Coffee purchase']);
         Transaction::factory()->create(['note' => 'Grocery shopping']);
-        
+
         request()->merge(['filter' => ['search' => 'coffee']]);
         $query = new GetTransactionsQuery(perPage: 50);
 
@@ -218,4 +218,3 @@ class GetTransactionsQueryHandlerTest extends TestCase
         $this->assertStringContainsString('Coffee', $data['data'][0]['note']);
     }
 }
-

@@ -45,8 +45,8 @@ class AuthControllerTest extends TestCase
 
         $this->assertCount(2, $accounts);
 
-        $defaultAccount = $accounts->firstWhere(fn (Account $account) => $account->getTranslation('name', 'en') === Account::DEFAULT_NAME);
-        $startingBalanceAccount = $accounts->firstWhere(fn (Account $account) => $account->getTranslation('name', 'en') === Account::STARTING_BALANCE_NAME);
+        $defaultAccount = $accounts->firstWhere(fn(Account $account) => $account->getTranslation('name', 'en') === Account::DEFAULT_NAME);
+        $startingBalanceAccount = $accounts->firstWhere(fn(Account $account) => $account->getTranslation('name', 'en') === Account::STARTING_BALANCE_NAME);
 
         $this->assertNotNull($defaultAccount);
         $this->assertNotNull($startingBalanceAccount);

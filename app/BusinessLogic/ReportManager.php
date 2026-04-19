@@ -38,8 +38,8 @@ class ReportManager implements ReportManagerContract
             ->with('compatibilityCategory')
             ->whereHas('compatibilityCategory')
             ->get()
-            ->filter(fn (Account $account) => $account->compatibilityCategory !== null)
-            ->groupBy(fn (Account $account) => $account->compatibilityCategory?->type);
+            ->filter(fn(Account $account) => $account->compatibilityCategory !== null)
+            ->groupBy(fn(Account $account) => $account->compatibilityCategory?->type);
 
         foreach ($ledgerCategories as $type => $accounts) {
             $categoriesData = [];
@@ -90,11 +90,11 @@ class ReportManager implements ReportManagerContract
 
     protected function getChangeColor($change, $type)
     {
-        if($change == '-') {
+        if ($change == '-') {
             return 'gray';
         }
 
-        if($type == Category::INCOME) {
+        if ($type == Category::INCOME) {
             return $change >= 0 ? 'green' : 'red';
         }
 
@@ -246,20 +246,20 @@ class ReportManager implements ReportManagerContract
     {
         return Transaction::query()->where(function (Builder $query) use ($type) {
             if ($type === Category::INCOME) {
-                $query->whereHas('fromAccount', fn (Builder $builder) => $builder->where('type', Account::TYPE_INCOME))
-                    ->orWhereHas('category', fn (Builder $builder) => $builder->where('type', Category::INCOME));
+                $query->whereHas('fromAccount', fn(Builder $builder) => $builder->where('type', Account::TYPE_INCOME))
+                    ->orWhereHas('category', fn(Builder $builder) => $builder->where('type', Category::INCOME));
 
                 return;
             }
 
             if ($type === Category::EXPENSES) {
-                $query->whereHas('toAccount', fn (Builder $builder) => $builder->where('type', Account::TYPE_EXPENSE))
-                    ->orWhereHas('category', fn (Builder $builder) => $builder->where('type', Category::EXPENSES));
+                $query->whereHas('toAccount', fn(Builder $builder) => $builder->where('type', Account::TYPE_EXPENSE))
+                    ->orWhereHas('category', fn(Builder $builder) => $builder->where('type', Category::EXPENSES));
 
                 return;
             }
 
-            $query->whereHas('category', fn (Builder $builder) => $builder->where('type', $type));
+            $query->whereHas('category', fn(Builder $builder) => $builder->where('type', $type));
         });
     }
 

@@ -221,13 +221,13 @@ abstract class FinancialTool implements Tool
         $categoryService = app(CategoryService::class);
 
         $categories = collect($normalized)
-            ->map(fn (int $categoryId) => $categoryService->findLedgerCategoryOrFail($categoryId));
+            ->map(fn(int $categoryId) => $categoryService->findLedgerCategoryOrFail($categoryId));
 
-        if ($categories->contains(fn (Category $category) => (int) $category->user_id !== (int) $user->id)) {
+        if ($categories->contains(fn(Category $category) => (int) $category->user_id !== (int) $user->id)) {
             throw new RuntimeException('One or more category_ids are invalid for the authenticated user.');
         }
 
-        return $categories->pluck('id')->map(fn (mixed $id) => (int) $id)->all();
+        return $categories->pluck('id')->map(fn(mixed $id) => (int) $id)->all();
     }
 
     protected function accessibleAccount(int $accountId, User $user, bool $requireEditable = false): Account

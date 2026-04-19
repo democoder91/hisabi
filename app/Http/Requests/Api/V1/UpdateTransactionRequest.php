@@ -22,13 +22,13 @@ class UpdateTransactionRequest extends FormRequest
         return [
             'amount' => 'required|numeric|min:0',
             'account_id' => [
-                Rule::requiredIf(fn () => ! $this->isLedgerTransferRequest()),
+                Rule::requiredIf(fn() => ! $this->isLedgerTransferRequest()),
                 'nullable',
                 'integer',
                 Rule::exists('accounts', 'id'),
             ],
             'category_id' => [
-                Rule::requiredIf(fn () => ! $this->isLedgerTransferRequest()),
+                Rule::requiredIf(fn() => ! $this->isLedgerTransferRequest()),
                 'nullable',
                 'integer',
                 Rule::exists('categories', 'id'),
@@ -40,7 +40,7 @@ class UpdateTransactionRequest extends FormRequest
                 },
             ],
             'from_account_id' => [
-                Rule::requiredIf(fn () => $this->filled('to_account_id')),
+                Rule::requiredIf(fn() => $this->filled('to_account_id')),
                 'nullable',
                 'integer',
                 'different:to_account_id',
@@ -50,7 +50,7 @@ class UpdateTransactionRequest extends FormRequest
                 },
             ],
             'to_account_id' => [
-                Rule::requiredIf(fn () => $this->filled('from_account_id')),
+                Rule::requiredIf(fn() => $this->filled('from_account_id')),
                 'nullable',
                 'integer',
                 'different:from_account_id',
@@ -105,7 +105,7 @@ class UpdateTransactionRequest extends FormRequest
                 return $account ? $account->user_id : null;
             })
             ->filter()
-            ->map(fn (mixed $ownerId) => (int) $ownerId)
+            ->map(fn(mixed $ownerId) => (int) $ownerId)
             ->unique()
             ->values();
 

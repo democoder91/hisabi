@@ -168,9 +168,9 @@ class TransactionController extends Controller
                     ->user_id,
             ])
             : Account::query()
-                ->accessibleTo($request->user())
-                ->pluck('user_id')
-                ->map(fn (mixed $userId) => (int) $userId)
+            ->accessibleTo($request->user())
+            ->pluck('user_id')
+            ->map(fn(mixed $userId) => (int) $userId)
             ->unique()
             ->values();
 
@@ -189,4 +189,3 @@ class TransactionController extends Controller
         ]);
     }
 }
-

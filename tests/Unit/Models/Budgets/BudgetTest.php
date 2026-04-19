@@ -36,8 +36,8 @@ class BudgetTest extends TestCase
         $category = Category::factory()->create(['user_id' => $user->id]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
-            'start_at' => now()->subDays(1), 
-            'end_at' => now()->addDays(1), 
+            'start_at' => now()->subDays(1),
+            'end_at' => now()->addDays(1),
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
@@ -62,19 +62,19 @@ class BudgetTest extends TestCase
         // Freeze time to control the calculation precisely  
         $fixedNow = now()->setTime(12, 0, 0); // Noon today
         \Carbon\Carbon::setTestNow($fixedNow);
-        
+
         // Create budget that ended this morning (past end date, so days < 0)
         $sut = Budget::factory()->create([
-            'start_at' => $fixedNow->copy()->subDays(3), 
+            'start_at' => $fixedNow->copy()->subDays(3),
             'end_at' => $fixedNow->copy()->subHours(2), // ended 2 hours ago
-            'amount' => 700, 
+            'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
         $sut->categories()->attach(Category::factory()->create());
 
         // When budget has ended (days < 0), should return 0
         $this->assertEquals(0, $sut->totalMarginPerDay);
-        
+
         \Carbon\Carbon::setTestNow(); // Reset time
     }
 
@@ -84,9 +84,9 @@ class BudgetTest extends TestCase
         $category = Category::factory()->create(['user_id' => $user->id]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
-            'start_at' => now()->subDays(1), 
-            'end_at' => now()->addDays(1), 
-            'amount' => 700, 
+            'start_at' => now()->subDays(1),
+            'end_at' => now()->addDays(1),
+            'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
         $sut->categories()->attach($category);
@@ -104,7 +104,7 @@ class BudgetTest extends TestCase
         // Create budget that ends exactly 2 full days from now to get predictable division
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
-            'start_at' => now()->subDay(), 
+            'start_at' => now()->subDay(),
             'end_at' => now()->addDays(2)->startOfDay(),
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
@@ -117,7 +117,7 @@ class BudgetTest extends TestCase
         $remainingAmount = 700 - 600; // 100
         $daysRemaining = now()->diffInDays($sut->endAtDate);
         $expectedMargin = number_format($remainingAmount / $daysRemaining, 2);
-        
+
         $this->assertEquals($expectedMargin, $sut->totalMarginPerDay);
     }
 
@@ -134,18 +134,18 @@ class BudgetTest extends TestCase
         // Freeze time to control the calculation precisely
         $fixedNow = now()->setTime(12, 0, 0); // Noon  
         \Carbon\Carbon::setTestNow($fixedNow);
-        
+
         // Create budget ending tomorrow at start of day  
         $endDate = $fixedNow->copy()->addDay()->startOfDay();
         $sut = Budget::factory()->create([
-            'start_at' => $fixedNow->copy()->subDay()->startOfDay(), 
-            'end_at' => $endDate, 
+            'start_at' => $fixedNow->copy()->subDay()->startOfDay(),
+            'end_at' => $endDate,
             'reoccurrence' => Budget::CUSTOM
         ]);
 
         // Should be exactly 0.5 days from noon today to start of tomorrow
         $this->assertEquals(0.5, $sut->remainingDays);
-        
+
         \Carbon\Carbon::setTestNow(); // Reset time
     }
 
@@ -155,8 +155,8 @@ class BudgetTest extends TestCase
         $category = Category::factory()->create(['user_id' => $user->id]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
-            'start_at' => now()->subDays(1), 
-            'end_at' => now()->addDays(1), 
+            'start_at' => now()->subDays(1),
+            'end_at' => now()->addDays(1),
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);

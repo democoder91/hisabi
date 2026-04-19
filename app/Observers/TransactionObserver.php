@@ -209,7 +209,7 @@ class TransactionObserver
             $newValues['account_id'] ?? null,
             $newValues['from_account_id'] ?? null,
             $newValues['to_account_id'] ?? null,
-        ])->filter()->map(fn (mixed $accountId) => (int) $accountId)->unique()->values();
+        ])->filter()->map(fn(mixed $accountId) => (int) $accountId)->unique()->values();
 
         $primaryAccountId = $newValues['account_id'] ?? $oldValues['account_id'] ?? null;
 
@@ -218,7 +218,7 @@ class TransactionObserver
         }
 
         return $accountIds
-            ->reject(fn (int $accountId) => $accountId === (int) $primaryAccountId)
+            ->reject(fn(int $accountId) => $accountId === (int) $primaryAccountId)
             ->push((int) $primaryAccountId)
             ->values()
             ->all();

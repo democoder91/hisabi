@@ -58,7 +58,7 @@ class ListCategoriesTool extends FinancialTool
             return 'No categories found for the current filters.';
         }
 
-        return "Categories:\n" . $categories->map(fn (Category $category) => $this->formatCategory($category))->implode("\n");
+        return "Categories:\n" . $categories->map(fn(Category $category) => $this->formatCategory($category))->implode("\n");
     }
 
     public function schema(JsonSchema $schema): array

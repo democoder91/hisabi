@@ -68,6 +68,6 @@ class AiMigrationPromptBuilder
         return Arr::first([
             $value['en'] ?? null,
             reset($value) ?: null,
-        ], fn (mixed $item) => is_string($item) && trim($item) !== '');
+        ], fn(mixed $item) => is_string($item) && trim($item) !== '');
     }
 }

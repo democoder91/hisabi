@@ -81,11 +81,11 @@ class BudgetService
     private function syncCategories(Budget $budget, array $categoryIds): void
     {
         $normalizedCategoryIds = collect($categoryIds)
-            ->map(fn ($categoryId) => (int) $categoryId)
+            ->map(fn($categoryId) => (int) $categoryId)
             ->unique()
             ->values();
         $accountIds = collect($this->categoryService->accountIdsForCategoryIds($categoryIds))
-            ->map(fn ($accountId) => (int) $accountId)
+            ->map(fn($accountId) => (int) $accountId)
             ->unique()
             ->values();
 

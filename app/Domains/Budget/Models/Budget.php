@@ -166,7 +166,7 @@ class Budget extends Model
             return $transactions->sum('amount');
         }
 
-        return round($transactions->sum(fn ($transaction) => $currencyRateService->convert(
+        return round($transactions->sum(fn($transaction) => $currencyRateService->convert(
             $user,
             (float) $transaction->amount,
             $transaction->currency,

@@ -164,9 +164,9 @@ class CategoryService
     public function accountIdsForCategoryIds(array $categoryIds): array
     {
         return collect($categoryIds)
-            ->map(fn (mixed $categoryId) => $this->findLedgerCategoryOrFail((int) $categoryId))
+            ->map(fn(mixed $categoryId) => $this->findLedgerCategoryOrFail((int) $categoryId))
             ->pluck('account_id')
-            ->map(fn (mixed $accountId) => (int) $accountId)
+            ->map(fn(mixed $accountId) => (int) $accountId)
             ->unique()
             ->values()
             ->all();

@@ -164,14 +164,14 @@
         "commonTasksTitle": "How normal users usually work",
         "commonTasksDescription": "These are the paths most people follow when starting fresh or checking their finances during the week.",
         "commonTasks": {
-                "first": {
-                    "title": "1. Create your base accounts first",
-                    "description": "Start with the accounts you actually use. A simple setup might include cash, bank, salary, groceries, transport, and savings."
-                },
-                "second": {
-                    "title": "2. Add transactions as money moves",
-                    "description": "When you spend, earn, or move money internally, record the movement so both sides stay visible and the running balances remain trustworthy."
-                }
+            "first": {
+                "title": "1. Create your base accounts first",
+                "description": "Start with the accounts you actually use. A simple setup might include cash, bank, salary, groceries, transport, and savings."
+            },
+            "second": {
+                "title": "2. Add transactions as money moves",
+                "description": "When you spend, earn, or move money internally, record the movement so both sides stay visible and the running balances remain trustworthy."
+            }
         },
         "aiTitle": "Guide Assistant",
         "aiDescription": "Ask for explanations about workflows, screens, billing, or settings.",

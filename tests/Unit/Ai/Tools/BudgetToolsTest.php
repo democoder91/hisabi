@@ -2,8 +2,8 @@
 
 use App\Ai\Tools\CreateBudgetTool;
 use App\Ai\Tools\EditBudgetTool;
+use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
-use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -29,12 +29,11 @@ function createAiBudgetTestUser(string $email, string $defaultCurrency): User
 it('creates a budget with the authenticated user default currency when the AI omits currency', function () {
     $user = createAiBudgetTestUser('budget-create@example.com', 'EGP');
 
-    $category = Category::query()->create([
+    $account = Account::factory()->create([
         'user_id' => $user->id,
-        'type' => Category::EXPENSES,
+        'type' => Account::TYPE_EXPENSE,
         'name' => ['en' => 'Groceries', 'ar' => null],
-        'color' => 'green',
-        'icon' => 'shopping-cart',
+        'currency' => 'EGP',
     ]);
 
     $this->actingAs($user);
@@ -45,25 +44,40 @@ it('creates a budget with the authenticated user default currency when the AI om
         'start_at' => '2026-04-13',
         'period' => 1,
         'reoccurrence' => Budget::MONTHLY,
-        'category_ids' => [$category->id],
+        'account_ids' => [$account->id],
     ]));
 
-    $budget = Budget::query()->latest('id')->first();
+    $budget = Budget::query()->with('accounts')->latest('id')->first();
 
     expect($budget)->not->toBeNull();
     expect($budget->currency)->toBe('EGP');
+    expect($budget->accounts->pluck('id')->all())->toBe([$account->id]);
     expect($result)->toContain('Budget created successfully');
+});
+
+it('requires account ids when the ai creates a budget', function () {
+    $user = createAiBudgetTestUser('budget-create-validation@example.com', 'EGP');
+
+    $this->actingAs($user);
+
+    expect(fn() => app(CreateBudgetTool::class)->handle(new Request([
+        'name_en' => 'Groceries Budget',
+        'amount' => 2000,
+        'start_at' => '2026-04-13',
+        'period' => 1,
+        'reoccurrence' => Budget::MONTHLY,
+        'category_ids' => [99],
+    ])))->toThrow(RuntimeException::class, 'The account ids field is required.');
 });
 
 it('keeps the existing budget currency when the AI edits a budget without sending currency', function () {
     $user = createAiBudgetTestUser('budget-edit@example.com', 'USD');
 
-    $category = Category::query()->create([
+    $account = Account::factory()->create([
         'user_id' => $user->id,
-        'type' => Category::EXPENSES,
+        'type' => Account::TYPE_EXPENSE,
         'name' => ['en' => 'Groceries', 'ar' => null],
-        'color' => 'green',
-        'icon' => 'shopping-cart',
+        'currency' => 'EGP',
     ]);
 
     $budget = Budget::query()->create([
@@ -77,7 +91,7 @@ it('keeps the existing budget currency when the AI edits a budget without sendin
         'reoccurrence' => Budget::MONTHLY,
         'saving' => false,
     ]);
-    $budget->categories()->attach($category->id);
+    $budget->accounts()->attach($account->id);
 
     $this->actingAs($user);
 
@@ -88,5 +102,6 @@ it('keeps the existing budget currency when the AI edits a budget without sendin
 
     expect($budget->fresh()->currency)->toBe('EGP');
     expect($budget->fresh()->amount)->toBe(2000.0);
+    expect($budget->fresh()->accounts()->pluck('accounts.id')->all())->toBe([$account->id]);
     expect($result)->toContain('Budget updated successfully');
 });

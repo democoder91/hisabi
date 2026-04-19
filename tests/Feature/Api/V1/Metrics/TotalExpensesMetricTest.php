@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Transaction\Models\Transaction;
+use App\Domains\Account\Models\Account;
 
 class TotalExpensesMetricTest extends MetricsTestCase
 {
@@ -16,10 +16,16 @@ class TotalExpensesMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses?range=current-year');
+        $this->createLedgerTransaction($checking, $food, 500);
+        $this->createLedgerTransaction($checking, $food, 300);
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/total-expenses?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertEquals(800, $response->json('data.value'));
@@ -29,10 +35,17 @@ class TotalExpensesMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
-        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses?range=current-year');
+        $this->createLedgerTransaction($checking, $food, 500);
+        $this->createLedgerTransaction($salary, $checking, 5000);
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/total-expenses?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertEquals(500, $response->json('data.value'));
@@ -42,7 +55,10 @@ class TotalExpensesMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses?range=current-year');
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/total-expenses?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertEquals(0, $response->json('data.value'));

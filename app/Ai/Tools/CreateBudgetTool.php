@@ -14,7 +14,7 @@ class CreateBudgetTool extends FinancialTool
 {
     public function description(): Stringable|string
     {
-        return 'Create a budget for the authenticated user. Use this when the user wants to cap spending or set a savings target for specific categories.';
+        return 'Create a budget for the authenticated user. Use this when the user wants to cap spending or set a savings target for specific accounts.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -44,11 +44,11 @@ class CreateBudgetTool extends FinancialTool
                 Budget::MONTHLY,
                 Budget::YEARLY,
             ])],
-            'category_ids' => ['required', 'array', 'min:1'],
-            'category_ids.*' => ['integer'],
+            'account_ids' => ['required', 'array', 'min:1'],
+            'account_ids.*' => ['integer'],
         ]);
 
-        $categoryIds = $this->ownedCategoryIds($validated['category_ids'], $user);
+        $accountIds = $this->accessibleAccountIds($validated['account_ids'], $user);
 
         $budget = app(BudgetService::class)->create([
             'name' => [
@@ -62,7 +62,7 @@ class CreateBudgetTool extends FinancialTool
             'saving' => (bool) ($validated['saving'] ?? false),
             'period' => (int) $validated['period'],
             'reoccurrence' => $validated['reoccurrence'],
-            'category_ids' => $categoryIds,
+            'account_ids' => $accountIds,
         ]);
 
         return 'Budget created successfully: ' . $this->formatBudget($budget);
@@ -100,8 +100,8 @@ class CreateBudgetTool extends FinancialTool
                 ->description('The recurrence type for the budget.')
                 ->enum([Budget::CUSTOM, Budget::DAILY, Budget::WEEKLY, Budget::MONTHLY, Budget::YEARLY])
                 ->required(),
-            'category_ids' => $schema->array()
-                ->description('The IDs of categories included in this budget. At least one is required.')
+            'account_ids' => $schema->array()
+                ->description('The IDs of accounts included in this budget. At least one is required.')
                 ->items($schema->integer())
                 ->min(1)
                 ->required(),

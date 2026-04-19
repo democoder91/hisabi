@@ -6,19 +6,19 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
         page: page.toString(),
         perPage: '100'
     });
-    
+
     if (searchQuery) {
         params.append('filter[search]', searchQuery);
     }
 
-    if (filters.categoryId) {
-        params.append('filter[category_id]', filters.categoryId);
-    }
     if (filters.accountId) {
         params.append('filter[account_id]', filters.accountId);
     }
-    if (filters.transactionType) {
-        params.append('filter[transaction_type]', filters.transactionType);
+    if (filters.fromAccountId) {
+        params.append('filter[from_account_id]', filters.fromAccountId);
+    }
+    if (filters.toAccountId) {
+        params.append('filter[to_account_id]', filters.toAccountId);
     }
     if (filters.dateFrom) {
         params.append('filter[date_from]', filters.dateFrom);
@@ -36,7 +36,7 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     }
 
     const data = await response.json();
-    
+
     return {
         data: {
             transactions: data
@@ -44,32 +44,7 @@ export const getTransactions = async (page, searchQuery, filters = {}) => {
     };
 }
 
-export const getTransactionFormOptions = async (accountId = null) => {
-    const params = new URLSearchParams();
-
-    if (accountId !== null && accountId !== undefined) {
-        params.append('account_id', accountId.toString());
-    }
-
-    const queryString = params.toString();
-    const response = await apiFetch(`/api/v1/transactions/form-options${queryString ? `?${queryString}` : ''}`, {
-        method: 'GET',
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    return {
-        data: {
-            categories: data.categories,
-        },
-    };
-};
-
-export const createTransaction = async ({amount, accountId, categoryId, createdAt, note, transactionType, createReverseTransaction, reverseAccountId}) => {
+export const createTransaction = async ({ amount, fromAccountId, toAccountId, createdAt, note }) => {
     const response = await apiFetch('/api/v1/transactions', {
         method: 'POST',
         headers: {
@@ -77,13 +52,10 @@ export const createTransaction = async ({amount, accountId, categoryId, createdA
         },
         body: JSON.stringify({
             amount,
-            account_id: accountId,
-            category_id: categoryId,
-            transaction_type: transactionType || null,
+            from_account_id: fromAccountId,
+            to_account_id: toAccountId,
             created_at: createdAt,
             note,
-            create_reverse_transaction: createReverseTransaction || false,
-            reverse_account_id: reverseAccountId || null,
         })
     });
 
@@ -98,7 +70,7 @@ export const createTransaction = async ({amount, accountId, categoryId, createdA
     };
 }
 
-export const updateTransaction = async ({id, amount, accountId, categoryId, createdAt, note, transactionType}) => {
+export const updateTransaction = async ({ id, amount, fromAccountId, toAccountId, createdAt, note }) => {
     const response = await apiFetch(`/api/v1/transactions/${id}`, {
         method: 'PUT',
         headers: {
@@ -106,9 +78,8 @@ export const updateTransaction = async ({id, amount, accountId, categoryId, crea
         },
         body: JSON.stringify({
             amount,
-            account_id: accountId,
-            category_id: categoryId,
-            transaction_type: transactionType || null,
+            from_account_id: fromAccountId,
+            to_account_id: toAccountId,
             created_at: createdAt,
             note
         })
@@ -131,7 +102,7 @@ export const deleteTransaction = async (id) => {
         headers: {
             'Content-Type': 'application/json',
         },
-        
+
     });
 
     if (!response.ok) {

@@ -4,13 +4,12 @@ import { Button } from '@/components/ui/button';
 import CreateTransaction from '@/components/Domain/CreateTransaction';
 
 interface RecordTransactionButtonProps {
-    categories: any[];
     accounts: any[];
     onSuccess?: (transaction: any) => void;
     className?: string;
 }
 
-export default function RecordTransactionButton({ categories, accounts, onSuccess, className }: RecordTransactionButtonProps) {
+export default function RecordTransactionButton({ accounts, onSuccess, className }: RecordTransactionButtonProps) {
     const { t } = useTranslation();
     const [showCreate, setShowCreate] = useState(false);
     const editableAccounts = accounts.filter((account) => account.canEditTransactions);
@@ -31,7 +30,6 @@ export default function RecordTransactionButton({ categories, accounts, onSucces
             <CreateTransaction
                 showCreate={showCreate}
                 accounts={accounts}
-                categories={categories}
                 onCreate={handleCreate}
                 onClose={() => setShowCreate(false)}
             />

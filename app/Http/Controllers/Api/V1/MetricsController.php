@@ -5,24 +5,22 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Domains\Metrics\Metrics\TotalIncomeMetric;
 use App\Domains\Metrics\Metrics\TotalExpensesMetric;
-use App\Domains\Metrics\Metrics\TotalSavingsMetric;
-use App\Domains\Metrics\Metrics\TotalInvestmentMetric;
-use App\Domains\Metrics\Metrics\TotalCashMetric;
+use App\Domains\Metrics\Metrics\TotalAssetsMetric;
+use App\Domains\Metrics\Metrics\TotalLiabilitiesMetric;
+use App\Domains\Metrics\Metrics\TotalEquityMetric;
 use App\Domains\Metrics\Metrics\NetWorthMetric;
 use App\Domains\Metrics\Metrics\NetWorthTrendMetric;
 use App\Domains\Metrics\Metrics\TotalIncomeTrendMetric;
 use App\Domains\Metrics\Metrics\TotalExpensesTrendMetric;
-use App\Domains\Metrics\Metrics\CategoryTrendMetric;
-use App\Domains\Metrics\Metrics\CategoryDailyTrendMetric;
-use App\Domains\Metrics\Metrics\ExpensesByCategoryMetric;
-use App\Domains\Metrics\Metrics\IncomeByCategoryMetric;
+use App\Domains\Metrics\Metrics\AccountTrendMetric;
+use App\Domains\Metrics\Metrics\AccountDailyTrendMetric;
+use App\Domains\Metrics\Metrics\ExpensesByAccountMetric;
+use App\Domains\Metrics\Metrics\IncomeByAccountMetric;
 use App\Domains\Metrics\Metrics\TransactionsCountMetric;
-use App\Domains\Metrics\Metrics\TransactionsByCategoryMetric;
 use App\Domains\Metrics\Metrics\HighestTransactionMetric;
 use App\Domains\Metrics\Metrics\LowestTransactionMetric;
 use App\Domains\Metrics\Metrics\AverageTransactionMetric;
-use App\Domains\Metrics\Metrics\TransactionsStdDevMetric;
-use App\Domains\Metrics\Metrics\CategoryStatsMetric;
+use App\Domains\Metrics\Metrics\AccountStatsMetric;
 use App\Domains\Metrics\Metrics\CirclePackMetric;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,21 +39,21 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function totalSavings(): JsonResponse
+    public function totalAssets(Request $request): JsonResponse
     {
-        $metric = new TotalSavingsMetric();
+        $metric = new TotalAssetsMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function totalInvestment(): JsonResponse
+    public function totalLiabilities(Request $request): JsonResponse
     {
-        $metric = new TotalInvestmentMetric();
+        $metric = new TotalLiabilitiesMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function totalCash(): JsonResponse
+    public function totalEquity(Request $request): JsonResponse
     {
-        $metric = new TotalCashMetric();
+        $metric = new TotalEquityMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 
@@ -83,9 +81,9 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function categoryTrend(Request $request): JsonResponse
+    public function accountTrend(Request $request): JsonResponse
     {
-        $metric = new CategoryTrendMetric(
+        $metric = new AccountTrendMetric(
             $request->query('from'),
             $request->query('to'),
             (int) $request->query('id')
@@ -93,9 +91,9 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function categoryDailyTrend(Request $request): JsonResponse
+    public function accountDailyTrend(Request $request): JsonResponse
     {
-        $metric = new CategoryDailyTrendMetric(
+        $metric = new AccountDailyTrendMetric(
             $request->query('from'),
             $request->query('to'),
             (int) $request->query('id')
@@ -103,27 +101,21 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function expensesByCategory(Request $request): JsonResponse
+    public function expensesByAccount(Request $request): JsonResponse
     {
-        $metric = new ExpensesByCategoryMetric($request->query('from'), $request->query('to'));
+        $metric = new ExpensesByAccountMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function incomeByCategory(Request $request): JsonResponse
+    public function incomeByAccount(Request $request): JsonResponse
     {
-        $metric = new IncomeByCategoryMetric($request->query('from'), $request->query('to'));
+        $metric = new IncomeByAccountMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 
     public function transactionsCount(Request $request): JsonResponse
     {
         $metric = new TransactionsCountMetric($request->query('from'), $request->query('to'));
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
-    public function transactionsByCategory(Request $request): JsonResponse
-    {
-        $metric = new TransactionsByCategoryMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 
@@ -145,19 +137,9 @@ class MetricsController extends Controller
         return response()->json(['data' => $metric->calculate()]);
     }
 
-    public function transactionsStdDev(Request $request): JsonResponse
+    public function accountStats(Request $request): JsonResponse
     {
-        $metric = new TransactionsStdDevMetric(
-            $request->query('from'),
-            $request->query('to'),
-            (int) $request->query('id')
-        );
-        return response()->json(['data' => $metric->calculate()]);
-    }
-
-    public function categoryStats(Request $request): JsonResponse
-    {
-        $metric = new CategoryStatsMetric($request->query('from'), $request->query('to'));
+        $metric = new AccountStatsMetric($request->query('from'), $request->query('to'));
         return response()->json(['data' => $metric->calculate()]);
     }
 

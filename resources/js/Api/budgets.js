@@ -18,13 +18,13 @@ export const getBudgets = async () => {
     };
 };
 
-export const createBudget = async ({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
+export const createBudget = async ({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, account_ids }) => {
     const response = await apiFetch('/api/v1/budgets', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }),
+        body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, account_ids }),
     });
 
     if (!response.ok) {
@@ -41,13 +41,13 @@ export const createBudget = async ({ name, amount, currency, start_at, end_at, s
     };
 };
 
-export const updateBudget = async ({ id, name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }) => {
+export const updateBudget = async ({ id, name, amount, currency, start_at, end_at, saving, period, reoccurrence, account_ids }) => {
     const response = await apiFetch(`/api/v1/budgets/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, category_ids }),
+        body: JSON.stringify({ name, amount, currency, start_at, end_at, saving, period, reoccurrence, account_ids }),
     });
 
     if (!response.ok) {

@@ -4,5 +4,5 @@ namespace App\Contracts;
 
 interface ReportManager 
 {
-    public function generate();
+    public function generate($startDate = null, $endDate = null, $user = null);
 }

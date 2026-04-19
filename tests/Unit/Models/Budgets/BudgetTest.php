@@ -5,7 +5,7 @@ namespace Tests\Unit\Models\Budgets;
 use Tests\TestCase;
 use App\Models\User;
 use App\Domains\Budget\Models\Budget;
-use App\Domains\Category\Models\Category;
+use App\Domains\Account\Models\Account;
 use App\Domains\Transaction\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -21,19 +21,26 @@ class BudgetTest extends TestCase
         $this->assertEquals('اختبار', $sut->getTranslation('name', 'ar'));
     }
 
-    public function test_it_belongs_to_categories()
+    public function test_it_belongs_to_accounts()
     {
-        $categories = Category::factory()->createMany(3);
+        $accounts = Account::factory()->createMany(3);
         $sut = Budget::factory()->create();
-        $sut->categories()->attach($categories);
+        $sut->accounts()->attach($accounts);
 
-        $this->assertCount(3, $sut->categories);
+        $this->assertCount(3, $sut->accounts);
     }
 
     public function test_it_has_total_transactions_amount()
     {
         $user = User::factory()->create();
-        $category = Category::factory()->create(['user_id' => $user->id]);
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_ASSET,
+        ]);
+        $trackingAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_EXPENSE,
+        ]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
             'start_at' => now()->subDays(1),
@@ -41,11 +48,33 @@ class BudgetTest extends TestCase
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
-        $sut->categories()->attach($category);
+        $sut->accounts()->attach($trackingAccount);
 
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 100]);
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 200]);
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 200, 'created_at' => now()->addDays(2)]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 100,
+        ]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 200,
+        ]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 200,
+            'created_at' => now()->addDays(2),
+        ]);
 
         $this->assertEquals(300, $sut->totalTransactionsAmount);
         $this->assertEquals(42, $sut->totalSpentPercentage);
@@ -70,7 +99,7 @@ class BudgetTest extends TestCase
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
-        $sut->categories()->attach(Category::factory()->create());
+        $sut->accounts()->attach(Account::factory()->create());
 
         // When budget has ended (days < 0), should return 0
         $this->assertEquals(0, $sut->totalMarginPerDay);
@@ -81,7 +110,14 @@ class BudgetTest extends TestCase
     public function test_it_has_totalMarginPerDay_should_return_zero_if_over_budget()
     {
         $user = User::factory()->create();
-        $category = Category::factory()->create(['user_id' => $user->id]);
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_ASSET,
+        ]);
+        $trackingAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_EXPENSE,
+        ]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
             'start_at' => now()->subDays(1),
@@ -89,9 +125,16 @@ class BudgetTest extends TestCase
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
-        $sut->categories()->attach($category);
+        $sut->accounts()->attach($trackingAccount);
 
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 700]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 700,
+        ]);
 
         // Should return 0 when over budget (method returns 0, not string)
         $this->assertEquals(0, $sut->totalMarginPerDay);
@@ -100,7 +143,14 @@ class BudgetTest extends TestCase
     public function test_it_has_totalMarginPerDay_should_return_correct_value()
     {
         $user = User::factory()->create();
-        $category = Category::factory()->create(['user_id' => $user->id]);
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_ASSET,
+        ]);
+        $trackingAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_EXPENSE,
+        ]);
         // Create budget that ends exactly 2 full days from now to get predictable division
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
@@ -109,9 +159,16 @@ class BudgetTest extends TestCase
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
-        $sut->categories()->attach($category);
+        $sut->accounts()->attach($trackingAccount);
 
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 600]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 600,
+        ]);
 
         // Calculate expected value: remaining amount divided by actual days remaining
         $remainingAmount = 700 - 600; // 100
@@ -152,7 +209,14 @@ class BudgetTest extends TestCase
     public function test_it_has_remaining_to_spend()
     {
         $user = User::factory()->create();
-        $category = Category::factory()->create(['user_id' => $user->id]);
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_ASSET,
+        ]);
+        $trackingAccount = Account::factory()->create([
+            'user_id' => $user->id,
+            'type' => Account::TYPE_EXPENSE,
+        ]);
         $sut = Budget::factory()->create([
             'user_id' => $user->id,
             'start_at' => now()->subDays(1),
@@ -160,12 +224,26 @@ class BudgetTest extends TestCase
             'amount' => 700,
             'reoccurrence' => Budget::CUSTOM
         ]);
-        $sut->categories()->attach($category);
+        $sut->accounts()->attach($trackingAccount);
 
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 100]);
-        Transaction::factory()->create(['category_id' => $category->id, 'amount' => 200]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 100,
+        ]);
+        Transaction::factory()->create([
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'amount' => 200,
+        ]);
 
-        $this->assertEquals('400', $sut->remainingToSpend);
+        $this->assertEquals(400, $sut->remainingToSpend);
     }
 
     public function test_it_has_start_and_end_dates_window()

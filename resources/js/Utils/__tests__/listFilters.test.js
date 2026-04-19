@@ -1,6 +1,6 @@
 import { filterBudgets, filterCategories } from '../listFilters'
 
-it('filters budgets by text, type, currency, recurrence, and category', () => {
+it('filters budgets by text, type, currency, recurrence, and account', () => {
   const budgets = [
     {
       id: 1,
@@ -9,7 +9,7 @@ it('filters budgets by text, type, currency, recurrence, and category', () => {
       saving: false,
       reoccurrence: 'MONTHLY',
       currency: 'USD',
-      categories: [{ id: 10, name: 'Housing' }],
+      accounts: [{ id: 10, name: 'Housing' }],
     },
     {
       id: 2,
@@ -18,7 +18,7 @@ it('filters budgets by text, type, currency, recurrence, and category', () => {
       saving: true,
       reoccurrence: 'YEARLY',
       currency: 'EUR',
-      categories: [{ id: 20, name: 'Savings' }],
+      accounts: [{ id: 20, name: 'Savings' }],
     },
   ]
 
@@ -27,7 +27,7 @@ it('filters budgets by text, type, currency, recurrence, and category', () => {
     budgetType: 'spending',
     recurrence: 'MONTHLY',
     currency: 'USD',
-    categoryId: '10',
+    accountId: '10',
   }).map((budget) => budget.id)).toEqual([1])
 })
 

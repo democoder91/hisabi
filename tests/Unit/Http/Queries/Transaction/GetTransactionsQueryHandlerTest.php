@@ -143,10 +143,10 @@ class GetTransactionsQueryHandlerTest extends TestCase
         $this->assertFalse($data['paginatorInfo']['hasMorePages']);
     }
 
-    public function test_it_includes_category_in_response(): void
+    public function test_it_does_not_expose_category_in_response(): void
     {
         // Arrange
-        $transaction = Transaction::factory()->create();
+        Transaction::factory()->create();
         $query = new GetTransactionsQuery(perPage: 50);
 
         // Act
@@ -155,8 +155,7 @@ class GetTransactionsQueryHandlerTest extends TestCase
         $data = json_decode($jsonResponse->getContent(), true);
 
         // Assert
-        $this->assertArrayHasKey('category', $data['data'][0]);
-        $this->assertEquals($transaction->category->name, $data['data'][0]['category']['name']);
+        $this->assertArrayNotHasKey('category', $data['data'][0]);
     }
 
     public function test_it_respects_different_per_page_values(): void

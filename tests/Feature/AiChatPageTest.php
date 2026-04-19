@@ -1,6 +1,6 @@
 <?php
 
-use App\Domains\Category\Models\Category;
+use App\Domains\Account\Models\Account;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -123,17 +123,17 @@ it('returns not found when a user opens another users conversation', function ()
     get(route('ai.chat', ['conversation_id' => $conversationId]))->assertNotFound();
 });
 
-it('refreshes stale pending category options when reopening a conversation', function () {
+it('refreshes stale pending account options when reopening a conversation', function () {
     config()->set('inertia.testing.ensure_pages_exist', false);
 
     /** @var User $user */
     $user = User::factory()->create();
 
-    $category = Category::factory()->create([
+    $account = Account::factory()->create([
         'user_id' => $user->id,
-        'type' => Category::EXPENSES,
+        'type' => Account::TYPE_ASSET,
         'name' => [
-            'en' => 'Dining',
+            'en' => 'Checking',
             'ar' => null,
         ],
     ]);
@@ -168,11 +168,11 @@ it('refreshes stale pending category options when reopening a conversation', fun
                 'tool_call_id' => $toolCallId,
                 'questions' => [
                     [
-                        'id' => 'category',
-                        'label' => 'Select a category',
+                        'id' => 'account',
+                        'label' => 'Select an account',
                         'type' => 'select',
                         'options' => [
-                            ['label' => 'Dining', 'value' => '5'],
+                            ['label' => 'Checking', 'value' => '5'],
                         ],
                     ],
                 ],
@@ -189,7 +189,9 @@ it('refreshes stale pending category options when reopening a conversation', fun
         ->assertInertia(fn(AssertableInertia $page) => $page
             ->component('Ai/Index')
             ->where('activeConversation.id', $conversationId)
-            ->where('activeConversation.messages.0.interaction.questions.0.id', 'category_id')
-            ->where('activeConversation.messages.0.interaction.questions.0.options.0.value', (string) $category->id)
+            ->where('activeConversation.messages.0.interaction.questions.0.id', 'account_id')
+            ->where('activeConversation.messages.0.interaction.questions.0.options.0.value', (string) $account->id)
+            ->where('activeConversation.messages.0.interaction.questions.0.options.0.meta.account_type', Account::TYPE_ASSET)
+            ->where('activeConversation.messages.0.interaction.questions.0.options.0.meta.owner_id', (string) $user->id)
             ->where('activeConversation.messages.0.interaction.questions.0.options.0.meta.legacy_values.0', '5'));
 });

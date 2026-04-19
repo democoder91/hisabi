@@ -1,0 +1,14 @@
+<?php
+
+namespace App\Domains\Metrics\Metrics;
+
+use App\Domains\Account\Models\Account;
+use App\Domains\Metrics\Metric;
+
+class TotalEquityMetric extends Metric
+{
+    public function calculate(): array
+    {
+        return $this->valuePayload($this->sumAccountTypeMovement(Account::TYPE_EQUITY));
+    }
+}

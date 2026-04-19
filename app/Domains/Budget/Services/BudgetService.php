@@ -4,8 +4,6 @@ namespace App\Domains\Budget\Services;
 
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Budget\Models\BudgetAccount;
-use App\Domains\Budget\Models\BudgetCategory;
-use App\Domains\Category\Services\CategoryService;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -13,24 +11,17 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class BudgetService
 {
-    private CategoryService $categoryService;
-
-    public function __construct(CategoryService $categoryService)
-    {
-        $this->categoryService = $categoryService;
-    }
-
     public function getAll(): Collection
     {
         return QueryBuilder::for(Budget::class)
-            ->with(['categories', 'accounts.compatibilityCategory'])
+            ->with($this->relations())
             ->allowedSorts(['id', 'amount', 'start_at'])
             ->get();
     }
 
     public function findOwnedOrFail(int $id): Budget
     {
-        return Budget::with(['categories', 'accounts.compatibilityCategory'])->findOrFail($id);
+        return Budget::with($this->relations())->findOrFail($id);
     }
 
     public function create(array $data): Budget
@@ -47,9 +38,9 @@ class BudgetService
             'reoccurrence' => $data['reoccurrence'],
         ]);
 
-        $this->syncCategories($budget, $data['category_ids']);
+        $this->syncAccounts($budget, $data['account_ids']);
 
-        return $budget->load(['categories', 'accounts.compatibilityCategory']);
+        return $budget->load($this->relations());
     }
 
     public function update(Budget $budget, array $data): Budget
@@ -65,76 +56,41 @@ class BudgetService
             'reoccurrence' => $data['reoccurrence'],
         ]);
 
-        $this->syncCategories($budget, $data['category_ids']);
+        $this->syncAccounts($budget, $data['account_ids']);
 
-        return $budget->load(['categories', 'accounts.compatibilityCategory']);
+        return $budget->load($this->relations());
     }
 
     public function delete(Budget $budget): Budget
     {
-        $budget->loadMissing(['categories', 'accounts.compatibilityCategory']);
+        $budget->loadMissing($this->relations());
         $budget->delete();
 
         return $budget;
     }
 
-    private function syncCategories(Budget $budget, array $categoryIds): void
+    private function syncAccounts(Budget $budget, array $accountIds): void
     {
-        $normalizedCategoryIds = collect($categoryIds)
-            ->map(fn($categoryId) => (int) $categoryId)
-            ->unique()
-            ->values();
-        $accountIds = collect($this->categoryService->accountIdsForCategoryIds($categoryIds))
+        $normalizedAccountIds = collect($accountIds)
             ->map(fn($accountId) => (int) $accountId)
             ->unique()
             ->values();
 
-        $categoryDetachQuery = BudgetCategory::query()->where('budget_id', $budget->id);
-
-        if ($normalizedCategoryIds->isNotEmpty()) {
-            $categoryDetachQuery->whereNotIn('category_id', $normalizedCategoryIds->all());
-        }
-
-        $categoryDetachQuery->delete();
-
-        $existingCategoryLinks = BudgetCategory::withTrashed()
-            ->where('budget_id', $budget->id)
-            ->whereIn('category_id', $normalizedCategoryIds->all())
-            ->get()
-            ->keyBy('category_id');
-
-        foreach ($normalizedCategoryIds as $categoryId) {
-            $existingCategoryLink = $existingCategoryLinks->get($categoryId);
-
-            if ($existingCategoryLink) {
-                if ($existingCategoryLink->trashed()) {
-                    $existingCategoryLink->restore();
-                }
-
-                continue;
-            }
-
-            BudgetCategory::create([
-                'budget_id' => $budget->id,
-                'category_id' => $categoryId,
-            ]);
-        }
-
         $detachQuery = BudgetAccount::query()->where('budget_id', $budget->id);
 
-        if ($accountIds->isNotEmpty()) {
-            $detachQuery->whereNotIn('account_id', $accountIds->all());
+        if ($normalizedAccountIds->isNotEmpty()) {
+            $detachQuery->whereNotIn('account_id', $normalizedAccountIds->all());
         }
 
         $detachQuery->delete();
 
         $existingLinks = BudgetAccount::withTrashed()
             ->where('budget_id', $budget->id)
-            ->whereIn('account_id', $accountIds->all())
+            ->whereIn('account_id', $normalizedAccountIds->all())
             ->get()
             ->keyBy('account_id');
 
-        foreach ($accountIds as $accountId) {
+        foreach ($normalizedAccountIds as $accountId) {
             $existingLink = $existingLinks->get($accountId);
 
             if ($existingLink) {
@@ -150,6 +106,11 @@ class BudgetService
                 'account_id' => $accountId,
             ]);
         }
+    }
+
+    private function relations(): array
+    {
+        return ['accounts.user:id,name', 'accounts.sharedUsers:id,name,email'];
     }
 
     private function resolveCurrency(?string $currency): string

@@ -4,7 +4,6 @@ namespace Tests\Unit\Ai\Tools;
 
 use App\Ai\Tools\CreateTransactionTool;
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,26 +28,28 @@ class CreateTransactionToolTest extends TestCase
         $this->tool = new CreateTransactionTool();
     }
 
-    public function test_it_creates_transaction_for_a_specific_account_and_category(): void
+    public function test_it_uses_the_source_account_currency_even_when_the_ai_sends_a_different_currency(): void
     {
-        $account = Account::factory()->create([
+        $sourceAccount = Account::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Wallet', 'ar' => null],
             'balance' => 200,
             'currency' => 'USD',
+            'type' => Account::TYPE_ASSET,
         ]);
-        $category = Category::factory()->create([
+        $destinationAccount = Account::factory()->create([
             'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => ['en' => 'Food', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
+            'name' => ['en' => 'Food Expense', 'ar' => null],
+            'currency' => 'EUR',
         ]);
 
         $result = $this->tool->handle(new Request([
             'amount' => 25.50,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $destinationAccount->id,
             'brand_name' => 'Starbucks',
-            'currency' => 'USD',
+            'currency' => 'EUR',
             'note' => 'Morning coffee',
             'date' => '2026-04-11',
         ]));
@@ -57,11 +58,13 @@ class CreateTransactionToolTest extends TestCase
         $this->assertStringContains('USD', $result);
         $this->assertStringContains('25.50', $result);
         $this->assertStringContains('Wallet', $result);
-        $this->assertStringContains('Food', $result);
+        $this->assertStringContains('Food Expense', $result);
 
         $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
-        $this->assertEquals($account->id, $transaction->account_id);
-        $this->assertEquals($category->id, $transaction->category_id);
+        $this->assertEquals($sourceAccount->id, $transaction->account_id);
+        $this->assertEquals($sourceAccount->id, $transaction->from_account_id);
+        $this->assertEquals($destinationAccount->id, $transaction->to_account_id);
+        $this->assertNull($transaction->category_id);
         $this->assertEquals(25.50, $transaction->amount);
         $this->assertEquals('USD', $transaction->currency);
         $this->assertEquals('Morning coffee | Merchant: Starbucks', $transaction->note);
@@ -69,59 +72,55 @@ class CreateTransactionToolTest extends TestCase
         $this->assertEquals('2026-04-11', $transaction->created_at->format('Y-m-d'));
     }
 
-    public function test_it_uses_default_account_and_fallback_category_when_only_category_type_is_provided(): void
+    public function test_it_uses_the_source_account_currency_when_the_ai_omits_currency(): void
     {
+        $incomeAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_INCOME,
+            'currency' => 'USD',
+            'name' => ['en' => 'Salary', 'ar' => null],
+        ]);
+        $destinationAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_ASSET,
+            'currency' => 'USD',
+            'name' => ['en' => 'Main Wallet', 'ar' => null],
+        ]);
+
         $result = $this->tool->handle(new Request([
             'amount' => 100,
-            'category_type' => 'expenses',
+            'from_account_id' => $incomeAccount->id,
+            'to_account_id' => $destinationAccount->id,
         ]));
 
-        $transaction = Transaction::withoutGlobalScopes()->latest('id')->with(['account', 'category'])->first();
-        $defaultAccount = $this->user->getOrCreateDefaultAccount();
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->with(['account', 'fromAccount', 'toAccount'])->first();
 
-        $this->assertEquals($defaultAccount->id, $transaction->account_id);
-        $this->assertEquals(Category::EXPENSES, $transaction->category->type);
-        $this->assertEquals('EUR', $transaction->currency);
+        $this->assertEquals($destinationAccount->id, $transaction->account_id);
+        $this->assertEquals($incomeAccount->id, $transaction->from_account_id);
+        $this->assertEquals($destinationAccount->id, $transaction->to_account_id);
+        $this->assertEquals(Transaction::TYPE_CREDIT, $transaction->transaction_type);
+        $this->assertEquals('USD', $transaction->currency);
         $this->assertStringContains('Transaction created successfully', $result);
-        $this->assertStringContains('EUR 100.00', $result);
-    }
-
-    public function test_it_prefers_category_id_when_the_ai_also_sends_a_mismatched_category_type(): void
-    {
-        $account = Account::factory()->create([
-            'user_id' => $this->user->id,
-            'name' => ['en' => 'Wallet', 'ar' => null],
-        ]);
-
-        $category = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => ['en' => 'Food', 'ar' => null],
-        ]);
-
-        $result = $this->tool->handle(new Request([
-            'amount' => 18,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
-            'category_type' => Category::INCOME,
-            'note' => 'Lunch',
-        ]));
-
-        $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
-
-        $this->assertEquals($account->id, $transaction->account_id);
-        $this->assertEquals($category->id, $transaction->category_id);
-        $this->assertEquals(Transaction::TYPE_DEBIT, $transaction->transaction_type);
-        $this->assertEquals('Lunch', $transaction->note);
-        $this->assertStringContains('Transaction created successfully', $result);
-        $this->assertStringContains('Food', $result);
+        $this->assertStringContains('USD 100.00', $result);
     }
 
     public function test_it_normalizes_structured_ai_text_fields_before_validation(): void
     {
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Wallet', 'ar' => null],
+            'type' => Account::TYPE_ASSET,
+        ]);
+        $destinationAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Food Expense', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
+        ]);
+
         $result = $this->tool->handle(new Request([
             'amount' => 150,
-            'category_type' => 'expenses',
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $destinationAccount->id,
             'brand_name' => ['name' => 'Fruit Market'],
             'note' => ['description' => 'Sweets and fruits'],
         ]));
@@ -133,38 +132,31 @@ class CreateTransactionToolTest extends TestCase
         $this->assertStringContains('Fruit Market', $result);
     }
 
-    public function test_it_requires_category_context(): void
+    public function test_it_requires_source_and_destination_accounts(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Provide either category_id or category_type to create a transaction.');
+        $this->expectExceptionMessage('The from account id field is required.');
 
         $this->tool->handle(new Request([
             'amount' => 40,
         ]));
     }
 
-    public function test_it_rejects_a_shared_users_own_category_for_an_account_owned_by_someone_else(): void
+    public function test_it_rejects_using_the_same_account_as_source_and_destination(): void
     {
-        $owner = User::factory()->create();
-        $sharedAccount = Account::factory()->create([
-            'user_id' => $owner->id,
-            'name' => ['en' => 'Joint Wallet', 'ar' => null],
-        ]);
-        $sharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
-
-        $viewerCategory = Category::factory()->create([
+        $account = Account::factory()->create([
             'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => ['en' => 'Viewer Food', 'ar' => null],
+            'type' => Account::TYPE_ASSET,
+            'name' => ['en' => 'Wallet', 'ar' => null],
         ]);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('The selected category is invalid for the chosen account.');
+        $this->expectExceptionMessage('The from account id and to account id must be different.');
 
         $this->tool->handle(new Request([
             'amount' => 12,
-            'account_id' => $sharedAccount->id,
-            'category_id' => $viewerCategory->id,
+            'from_account_id' => $account->id,
+            'to_account_id' => $account->id,
         ]));
     }
 

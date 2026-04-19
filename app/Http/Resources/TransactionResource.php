@@ -71,25 +71,6 @@ class TransactionResource extends JsonResource
                     'currency' => $this->toAccount->currency,
                 ];
             }),
-            'category' => $this->whenLoaded('category', function () {
-                if (! $this->category) {
-                    return null;
-                }
-
-                $owner = $this->category->relationLoaded('user') ? $this->category->user : null;
-
-                return [
-                    'id' => $this->category->id,
-                    'name' => $this->category->getLocalizedName(),
-                    'name_translations' => $this->category->getSafeNameTranslations(),
-                    'ownerUserId' => $this->category->user_id,
-                    'ownerName' => $owner ? $owner->name : null,
-                    'accountId' => $this->category->account_id,
-                    'type' => $this->category->type,
-                    'color' => $this->category->color,
-                    'icon' => $this->category->icon,
-                ];
-            }),
         ];
     }
 }

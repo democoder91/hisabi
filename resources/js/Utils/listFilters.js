@@ -39,8 +39,8 @@ export const filterBudgets = (budgets = [], filters = {}) => budgets.filter((bud
         return false
     }
 
-    if (filters.categoryId) {
-        return (budget.categories ?? []).some((category) => String(category.id) === String(filters.categoryId))
+    if (filters.accountId) {
+        return (budget.accounts ?? []).some((account) => String(account.id) === String(filters.accountId))
     }
 
     return true

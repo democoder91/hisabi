@@ -48,7 +48,7 @@ class CreateTransferTool extends FinancialTool
             'note' => $validated['note'] ?? null,
             'created_at' => $validated['date'] ?? now(),
             'currency' => $fromAccount->currency,
-        ])->load(['account', 'category', 'fromAccount', 'toAccount']);
+        ])->load(['account', 'fromAccount', 'toAccount']);
 
         return 'Transfer created successfully: ' . $this->formatTransaction($transaction);
     }

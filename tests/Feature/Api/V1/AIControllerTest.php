@@ -4,7 +4,6 @@ namespace Tests\Feature\Api\V1;
 
 use App\Ai\Agents\HisabiAgent;
 use App\Ai\Exceptions\PendingUserInputToolCall;
-use App\Domains\Category\Models\Category;
 use App\Http\Commands\AI\ChatCommand\ChatCommand;
 use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
 use App\Http\Commands\AI\ChatCommand\ChatCommandResponse;
@@ -460,33 +459,25 @@ class AIControllerTest extends TestCase
         $this->assertSame(5, $this->user->fresh()->available_credits);
     }
 
-    public function test_it_rejects_mismatched_category_and_transaction_type_answers_before_resuming_the_ai(): void
+    public function test_it_rejects_matching_source_and_destination_account_answers_before_resuming_the_ai(): void
     {
-        $incomeCategory = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::INCOME,
-            'name' => [
-                'en' => 'Family Support',
-                'ar' => null,
-            ],
-        ]);
-
         $conversationId = $this->seedPendingToolResponseConversation([
             [
-                'id' => 'transaction_type',
-                'label' => 'What type of transaction is this?',
+                'id' => 'from_account_id',
+                'label' => 'Which account should fund this transaction?',
                 'type' => 'select',
                 'options' => [
-                    ['label' => 'Expense (spending)', 'value' => Category::EXPENSES],
-                    ['label' => 'Income (earning)', 'value' => Category::INCOME],
+                    ['label' => 'Checking', 'value' => 'checking'],
+                    ['label' => 'Cash', 'value' => 'cash'],
                 ],
             ],
             [
-                'id' => 'category_id',
-                'label' => 'Select a category',
+                'id' => 'to_account_id',
+                'label' => 'Which account should receive this transaction?',
                 'type' => 'select',
                 'options' => [
-                    ['label' => 'Family Support', 'value' => (string) $incomeCategory->id],
+                    ['label' => 'Checking', 'value' => 'checking'],
+                    ['label' => 'Savings', 'value' => 'savings'],
                 ],
             ],
         ]);
@@ -499,13 +490,13 @@ class AIControllerTest extends TestCase
         $response = $this->actingAs($this->user)
             ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
                 'answers' => [
-                    'transaction_type' => Category::EXPENSES,
-                    'category_id' => (string) $incomeCategory->id,
+                    'from_account_id' => 'checking',
+                    'to_account_id' => 'checking',
                 ],
             ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['answers.category_id']);
+            ->assertJsonValidationErrors(['answers.to_account_id']);
 
         $assistantMessage = DB::table('agent_conversation_messages')
             ->where('conversation_id', $conversationId)
@@ -520,188 +511,6 @@ class AIControllerTest extends TestCase
         $this->assertSame([], json_decode($assistantMessage->tool_results, true));
         $this->assertSame('pending', $meta['interaction']['status']);
         $this->assertSame(5, $this->user->fresh()->available_credits);
-    }
-
-    public function test_it_accepts_legacy_category_answer_keys_and_persists_canonical_category_ids(): void
-    {
-        $expenseCategory = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => [
-                'en' => 'Dining',
-                'ar' => null,
-            ],
-        ]);
-
-        $conversationId = $this->seedPendingToolResponseConversation([
-            [
-                'id' => 'category',
-                'label' => 'Which category does this expense belong to?',
-                'type' => 'select',
-                'options' => [
-                    ['label' => 'Dining', 'value' => (string) $expenseCategory->id],
-                ],
-            ],
-        ]);
-
-        $handler = Mockery::mock(ChatCommandHandler::class);
-        $handler->shouldReceive('resumeAfterToolResponse')
-            ->once()
-            ->with($conversationId)
-            ->andReturn(new ChatCommandResponse([
-                'status' => 'completed',
-                'role' => 'assistant',
-                'content' => 'The transaction has been recorded.',
-                'conversation_id' => $conversationId,
-                'charts' => [],
-                'components' => [],
-                'suggestions' => [],
-                'interaction' => null,
-            ]));
-
-        $this->app->instance(ChatCommandHandler::class, $handler);
-
-        $response = $this->actingAs($this->user)
-            ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
-                'answers' => [
-                    'category' => (string) $expenseCategory->id,
-                ],
-            ]);
-
-        $response->assertOk()
-            ->assertJsonPath('status', 'completed')
-            ->assertJsonPath('content', 'The transaction has been recorded.')
-            ->assertJsonPath('available_credits', 5);
-
-        $assistantMessage = DB::table('agent_conversation_messages')
-            ->where('conversation_id', $conversationId)
-            ->where('role', 'assistant')
-            ->first([
-                'tool_results',
-                'meta',
-            ]);
-
-        $toolResults = json_decode($assistantMessage->tool_results, true);
-        $meta = json_decode($assistantMessage->meta, true);
-
-        $this->assertSame('category_id', $toolResults[0]['arguments']['questions'][0]['id']);
-        $this->assertSame([
-            'category_id' => (string) $expenseCategory->id,
-        ], $toolResults[0]['result']['answers']);
-        $this->assertSame('category_id', $meta['interaction']['questions'][0]['id']);
-        $this->assertSame([
-            'category_id' => (string) $expenseCategory->id,
-        ], $meta['interaction']['answers']);
-    }
-
-    public function test_it_maps_stale_category_option_values_to_current_category_ids_before_resuming(): void
-    {
-        $expenseCategory = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => [
-                'en' => 'Dining',
-                'ar' => null,
-            ],
-        ]);
-
-        $conversationId = $this->seedPendingToolResponseConversation([
-            [
-                'id' => 'category',
-                'label' => 'Which category does this expense belong to?',
-                'type' => 'select',
-                'options' => [
-                    ['label' => 'Dining', 'value' => '5'],
-                ],
-            ],
-        ]);
-
-        $handler = Mockery::mock(ChatCommandHandler::class);
-        $handler->shouldReceive('resumeAfterToolResponse')
-            ->once()
-            ->with($conversationId)
-            ->andReturn(new ChatCommandResponse([
-                'status' => 'completed',
-                'role' => 'assistant',
-                'content' => 'The transaction has been recorded.',
-                'conversation_id' => $conversationId,
-                'charts' => [],
-                'components' => [],
-                'suggestions' => [],
-                'interaction' => null,
-            ]));
-
-        $this->app->instance(ChatCommandHandler::class, $handler);
-
-        $response = $this->actingAs($this->user)
-            ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
-                'answers' => [
-                    'category_id' => '5',
-                ],
-            ]);
-
-        $response->assertOk()
-            ->assertJsonPath('status', 'completed')
-            ->assertJsonPath('content', 'The transaction has been recorded.')
-            ->assertJsonPath('available_credits', 5);
-
-        $assistantMessage = DB::table('agent_conversation_messages')
-            ->where('conversation_id', $conversationId)
-            ->where('role', 'assistant')
-            ->first([
-                'tool_results',
-                'meta',
-            ]);
-
-        $toolResults = json_decode($assistantMessage->tool_results, true);
-        $meta = json_decode($assistantMessage->meta, true);
-
-        $this->assertSame((string) $expenseCategory->id, $toolResults[0]['arguments']['questions'][0]['options'][0]['value']);
-        $this->assertSame(['5'], $toolResults[0]['arguments']['questions'][0]['options'][0]['meta']['legacy_values']);
-        $this->assertSame([
-            'category_id' => (string) $expenseCategory->id,
-        ], $toolResults[0]['result']['answers']);
-        $this->assertSame([
-            'category_id' => (string) $expenseCategory->id,
-        ], $meta['interaction']['answers']);
-    }
-
-    public function test_it_returns_validation_errors_for_stale_category_values_that_cannot_be_mapped(): void
-    {
-        Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => [
-                'en' => 'Dining',
-                'ar' => null,
-            ],
-        ]);
-
-        $conversationId = $this->seedPendingToolResponseConversation([
-            [
-                'id' => 'category_id',
-                'label' => 'Which category does this expense belong to?',
-                'type' => 'select',
-                'options' => [
-                    ['label' => 'Dairy', 'value' => '5'],
-                ],
-            ],
-        ]);
-
-        $handler = Mockery::mock(ChatCommandHandler::class);
-        $handler->shouldNotReceive('resumeAfterToolResponse');
-
-        $this->app->instance(ChatCommandHandler::class, $handler);
-
-        $response = $this->actingAs($this->user)
-            ->postJson("/api/v1/ai/chat/{$conversationId}/tool-response", [
-                'answers' => [
-                    'category_id' => '5',
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['answers.category_id']);
     }
 
     public function test_it_rolls_back_changes_and_preserves_credits_when_provider_is_rate_limited(): void

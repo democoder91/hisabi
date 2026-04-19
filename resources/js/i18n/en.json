@@ -6,6 +6,7 @@
         "budgets": "Budgets",
         "brands": "Brands",
         "categories": "Categories",
+        "guide": "Guide",
         "billing": "Billing",
         "nexoAi": "Nexo AI",
         "billingAdmin": "Billing Admin",
@@ -56,7 +57,7 @@
         "primaryCta": "Create your account",
         "secondaryCta": "Sign in",
         "previewTitle": "A clearer financial command center",
-        "previewBody": "Track balances, budgets, categories, and trends from one place.",
+        "previewBody": "Track balances, budgets, accounts, and trends from one place.",
         "previewBadge": "Live dashboard",
         "previewAlt": "Nexo dashboard preview",
         "featuresEyebrow": "Why teams and individuals start here",
@@ -88,7 +89,7 @@
             },
             "insights": {
                 "title": "See patterns early",
-                "description": "Watch totals, category behavior, trends, and budget performance without assembling reports by hand."
+                "description": "Watch totals, account behavior, trends, and budget performance without assembling reports by hand."
             },
             "control": {
                 "title": "Keep control of your data",
@@ -102,11 +103,11 @@
         "workflow": {
             "capture": {
                 "title": "Capture accounts and transactions",
-                "description": "Create your financial structure first, then add transactions as they happen across multiple accounts and categories."
+                "description": "Create your financial structure first, then add transactions as they happen across the accounts that reflect where money comes from and where it goes."
             },
             "review": {
-                "title": "Review budgets and categories",
-                "description": "Organize spending with clear categories and recurring or custom budgets that reflect how money is actually used."
+                "title": "Review budgets and accounts",
+                "description": "Organize spending with dedicated income and expense accounts plus recurring or custom budgets that reflect how money is actually used."
             },
             "understand": {
                 "title": "Understand what changed",
@@ -118,23 +119,73 @@
         "title": "Dashboard",
         "noData": "No enough data to show reports",
         "netWorthOverTime": "Net Worth Over Time",
-        "totalCash": "Total Cash",
-        "totalCashHelp": "The available cash = income - (expenses + savings + investments)",
-        "totalSavings": "Total Savings",
-        "totalInvestment": "Total Investment",
+        "totalAssets": "Total Assets",
+        "totalLiabilities": "Total Liabilities",
+        "totalEquity": "Total Equity",
         "totalIncome": "Total Income",
         "totalExpenses": "Total Expenses",
         "incomeOverTime": "Income Over Time",
         "spendingOverTime": "Spending Over Time",
-        "categoriesAnalytics": "Categories Analytics",
+        "accountsAnalytics": "Accounts Analytics",
         "incomeSources": "Income Sources",
-        "spendingByCategory": "Spending by Category",
-        "overallTrendByCategory": "Overall Trend by Category",
-        "dailyTrendByCategory": "Daily Trend by Category",
+        "highestIncomeSource": "Highest income source",
+        "highestExpenseDestination": "Highest expense destination",
+        "mostActiveAccount": "Most active account",
+        "transactionsLabel": "transactions",
+        "spendingByAccount": "Spending by Account",
+        "overallTrendByAccount": "Overall Trend by Account",
+        "dailyTrendByAccount": "Daily Trend by Account",
         "brandsAnalytics": "Brands Analytics",
         "spendingByBrand": "Spending by Brand",
         "overallTrendByBrand": "Overall Trend by Brand",
         "financeVisualization": "Finance Visualization"
+    },
+    "guide": {
+        "title": "Guide",
+        "description": "Common workflows and a built-in assistant for product questions.",
+        "eyebrow": "Start Here",
+        "heroTitle": "Learn the core workflows before you start recording data.",
+        "heroDescription": "This guide explains the most common tasks in plain language so a normal user can understand what to do first, what each screen is for, and when to ask the assistant for help.",
+        "quickStartTitle": "Most common use cases",
+        "useCases": {
+            "accounts": {
+                "title": "Set up your accounts",
+                "description": "Create the accounts that represent your cash, bank, expenses, income sources, and anything else you track regularly."
+            },
+            "transactions": {
+                "title": "Record money movement",
+                "description": "Use transactions whenever money moves from one account to another so your balances and history stay consistent."
+            },
+            "budgets": {
+                "title": "Track a focused budget",
+                "description": "Create budgets for the accounts you want to watch closely so you can measure progress against a target window."
+            }
+        },
+        "commonTasksTitle": "How normal users usually work",
+        "commonTasksDescription": "These are the paths most people follow when starting fresh or checking their finances during the week.",
+        "commonTasks": {
+                "first": {
+                    "title": "1. Create your base accounts first",
+                    "description": "Start with the accounts you actually use. A simple setup might include cash, bank, salary, groceries, transport, and savings."
+                },
+                "second": {
+                    "title": "2. Add transactions as money moves",
+                    "description": "When you spend, earn, or move money internally, record the movement so both sides stay visible and the running balances remain trustworthy."
+                },
+                }
+            }
+        },
+        "aiTitle": "Guide Assistant",
+        "aiDescription": "Ask for explanations about workflows, screens, billing, or settings.",
+        "aiEmptyTitle": "Ask how the application works.",
+        "aiEmptyDescription": "Try questions about accounts, transactions, budgets, billing, settings, or shared access.",
+        "aiPlaceholder": "Ask how to use the application...",
+        "aiLoading": "Preparing an explanation...",
+        "aiSuggestions": {
+            "first": "Explain how I should set up my accounts",
+            "second": "How do transactions work in this application?",
+            "third": "What should I use the budget page for?"
+        }
     },
     "aiToolLogs": {
         "title": "AI Tool Logs",
@@ -238,6 +289,7 @@
         "endDate": "End date",
         "period": "Period",
         "reoccurrence": "Recurrence",
+        "accounts": "Accounts",
         "categories": "Categories",
         "searchBudgets": "Search budgets..",
         "lang_en": "EN",
@@ -251,8 +303,10 @@
         "weekly": "Weekly",
         "monthly": "Monthly",
         "yearly": "Yearly",
+        "selectAccounts": "Select accounts",
         "selectCategories": "Select categories",
         "allRecurrences": "All recurrences",
+        "allAccounts": "All accounts",
         "allCategories": "All categories",
         "allCurrencies": "All currencies",
         "noBudgets": "No budgets yet.",
@@ -288,6 +342,8 @@
         "filters": "Filters",
         "search": "Search transactions..",
         "account": "Account",
+        "sourceAccount": "Source account",
+        "destinationAccount": "Destination account",
         "allAccounts": "All accounts",
         "brand": "Brand",
         "category": "Category",

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Transaction\Models\Transaction;
+use App\Domains\Account\Models\Account;
 use Carbon\Carbon;
 
 class TotalIncomeMetricTest extends MetricsTestCase
@@ -17,8 +17,11 @@ class TotalIncomeMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
-        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 3000]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+
+        $this->createLedgerTransaction($salary, $checking, 5000);
+        $this->createLedgerTransaction($salary, $checking, 3000);
 
         $from = Carbon::now()->startOfYear()->format('Y-m-d');
         $to = Carbon::now()->endOfYear()->format('Y-m-d');
@@ -33,8 +36,12 @@ class TotalIncomeMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 1000]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
+
+        $this->createLedgerTransaction($salary, $checking, 5000);
+        $this->createLedgerTransaction($checking, $food, 1000);
 
         $from = Carbon::now()->startOfYear()->format('Y-m-d');
         $to = Carbon::now()->endOfYear()->format('Y-m-d');
@@ -51,20 +58,11 @@ class TotalIncomeMetricTest extends MetricsTestCase
 
         $currentMonthDate = Carbon::now()->startOfMonth()->addDays(5);
         $lastMonthDate = Carbon::now()->subMonth()->startOfMonth()->addDays(5);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
 
-        $currentTransaction = Transaction::factory()->create([
-            'category_id' => $this->incomeCategory->id,
-            'amount' => 5000,
-        ]);
-        $currentTransaction->created_at = $currentMonthDate;
-        $currentTransaction->save();
-
-        $previousTransaction = Transaction::factory()->create([
-            'category_id' => $this->incomeCategory->id,
-            'amount' => 4000,
-        ]);
-        $previousTransaction->created_at = $lastMonthDate;
-        $previousTransaction->save();
+        $this->createLedgerTransaction($salary, $checking, 5000, ['created_at' => $currentMonthDate]);
+        $this->createLedgerTransaction($salary, $checking, 4000, ['created_at' => $lastMonthDate]);
 
         $from = Carbon::now()->startOfMonth()->format('Y-m-d');
         $to = Carbon::now()->endOfMonth()->format('Y-m-d');
@@ -95,20 +93,11 @@ class TotalIncomeMetricTest extends MetricsTestCase
 
         $currentMonthDate = Carbon::now()->startOfMonth()->addDays(5);
         $twoMonthsAgoDate = Carbon::now()->subMonths(2)->startOfMonth()->addDays(5);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
 
-        $currentTransaction = Transaction::factory()->create([
-            'category_id' => $this->incomeCategory->id,
-            'amount' => 5000,
-        ]);
-        $currentTransaction->created_at = $currentMonthDate;
-        $currentTransaction->save();
-
-        $oldTransaction = Transaction::factory()->create([
-            'category_id' => $this->incomeCategory->id,
-            'amount' => 3000,
-        ]);
-        $oldTransaction->created_at = $twoMonthsAgoDate;
-        $oldTransaction->save();
+        $this->createLedgerTransaction($salary, $checking, 5000, ['created_at' => $currentMonthDate]);
+        $this->createLedgerTransaction($salary, $checking, 3000, ['created_at' => $twoMonthsAgoDate]);
 
         $from = Carbon::now()->startOfMonth()->format('Y-m-d');
         $to = Carbon::now()->endOfMonth()->format('Y-m-d');

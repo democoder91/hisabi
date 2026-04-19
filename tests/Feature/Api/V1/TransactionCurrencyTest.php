@@ -3,7 +3,6 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\ExchangeRate;
 use App\Models\User;
@@ -19,7 +18,7 @@ class TransactionCurrencyTest extends TestCase
 
     private Account $account;
 
-    private Category $expenseCategory;
+    private Account $expenseAccount;
 
     protected function setUp(): void
     {
@@ -30,18 +29,19 @@ class TransactionCurrencyTest extends TestCase
             'user_id' => $this->user->id,
             'currency' => 'EUR',
         ]);
-        $this->expenseCategory = Category::factory()->create([
+        $this->expenseAccount = Account::factory()->create([
             'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
+            'currency' => 'USD',
+            'type' => Account::TYPE_EXPENSE,
         ]);
     }
 
-    public function test_it_creates_transaction_with_the_selected_account_currency_even_when_currency_is_sent(): void
+    public function test_it_creates_transaction_with_the_selected_source_account_currency_even_when_currency_is_sent(): void
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
-                'account_id' => $this->account->id,
-                'category_id' => $this->expenseCategory->id,
+                'from_account_id' => $this->account->id,
+                'to_account_id' => $this->expenseAccount->id,
                 'amount' => 100,
                 'created_at' => now()->toDateString(),
                 'currency' => 'USD',
@@ -52,14 +52,14 @@ class TransactionCurrencyTest extends TestCase
         $this->assertSame('EUR', $transaction->currency);
     }
 
-    public function test_it_creates_transaction_with_the_selected_account_currency_when_currency_is_not_sent(): void
+    public function test_it_creates_transaction_with_the_selected_source_account_currency_when_currency_is_not_sent(): void
     {
         $this->account->update(['currency' => 'AED']);
 
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
-                'account_id' => $this->account->id,
-                'category_id' => $this->expenseCategory->id,
+                'from_account_id' => $this->account->id,
+                'to_account_id' => $this->expenseAccount->id,
                 'amount' => 100,
                 'created_at' => now()->toDateString(),
             ]);
@@ -73,8 +73,8 @@ class TransactionCurrencyTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/transactions', [
-                'account_id' => $this->account->id,
-                'category_id' => $this->expenseCategory->id,
+                'from_account_id' => $this->account->id,
+                'to_account_id' => $this->expenseAccount->id,
                 'amount' => 100,
                 'created_at' => now()->toDateString(),
                 'currency' => 'ABCD',
@@ -84,23 +84,27 @@ class TransactionCurrencyTest extends TestCase
             ->assertJsonValidationErrors(['currency']);
     }
 
-    public function test_transaction_update_syncs_currency_to_the_updated_account(): void
+    public function test_transaction_update_syncs_currency_to_the_updated_source_account(): void
     {
         $secondAccount = Account::factory()->create([
             'user_id' => $this->user->id,
             'currency' => 'GBP',
         ]);
 
-        $transaction = Transaction::factory()->create([
+        $transaction = Transaction::withoutGlobalScopes()->create([
             'account_id' => $this->account->id,
-            'category_id' => $this->expenseCategory->id,
+            'category_id' => null,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
+            'amount' => 100,
+            'transaction_type' => Transaction::TYPE_DEBIT,
             'currency' => 'EUR',
         ]);
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/transactions/{$transaction->id}", [
-                'account_id' => $secondAccount->id,
-                'category_id' => $this->expenseCategory->id,
+                'from_account_id' => $secondAccount->id,
+                'to_account_id' => $this->expenseAccount->id,
                 'amount' => 200,
                 'created_at' => now()->toDateString(),
                 'currency' => 'CAD',

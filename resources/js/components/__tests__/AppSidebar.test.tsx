@@ -19,7 +19,7 @@ jest.mock('react-i18next', () => ({
             'navigation.accounts': 'Accounts',
             'navigation.transactions': 'Transactions',
             'navigation.budgets': 'Budgets',
-            'navigation.categories': 'Categories',
+            'navigation.guide': 'Guide',
             'navigation.billing': 'Billing',
             'navigation.billingAdmin': 'Billing Admin',
             'navigation.billingUserAccess': 'User Access',
@@ -51,7 +51,7 @@ const createRouteMock = (currentRoute: string | null = null) => (name?: string) 
         accounts: '/accounts',
         transactions: '/transactions',
         budgets: '/budgets',
-        categories: '/categories',
+        guide: '/guide',
         'billing.index': '/billing',
         'billing.manage': '/billing/manage',
         'billing.manage.users': '/billing/manage/users',
@@ -80,4 +80,5 @@ it('renders the Nexo AI item in the main application sidebar', () => {
 
     expect(screen.getByRole('link', { name: /nexo ai/i })).toHaveAttribute('href', '/ai');
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+    expect(screen.queryByRole('link', { name: /categories/i })).not.toBeInTheDocument();
 });

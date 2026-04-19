@@ -15,7 +15,7 @@ class EditBudgetTool extends FinancialTool
 {
     public function description(): Stringable|string
     {
-        return 'Edit a budget owned by the authenticated user. Use this to adjust the amount, categories, dates, recurrence, or name. If the user does not know the budget ID, list budgets first.';
+        return 'Edit a budget owned by the authenticated user. Use this to adjust the amount, accounts, dates, recurrence, or name. If the user does not know the budget ID, list budgets first.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -26,7 +26,7 @@ class EditBudgetTool extends FinancialTool
 
         $this->ensureAnyProvided(
             $input,
-            ['name_en', 'name_ar', 'amount', 'currency', 'start_at', 'end_at', 'saving', 'period', 'reoccurrence', 'category_ids'],
+            ['name_en', 'name_ar', 'amount', 'currency', 'start_at', 'end_at', 'saving', 'period', 'reoccurrence', 'account_ids'],
             'Provide at least one field to update on the budget.'
         );
 
@@ -47,11 +47,11 @@ class EditBudgetTool extends FinancialTool
                 Budget::MONTHLY,
                 Budget::YEARLY,
             ])],
-            'category_ids' => ['nullable', 'array', 'min:1'],
-            'category_ids.*' => ['integer'],
+            'account_ids' => ['nullable', 'array', 'min:1'],
+            'account_ids.*' => ['integer'],
         ]);
 
-        $budget = Budget::query()->with('categories')->find($validated['budget_id']);
+        $budget = Budget::query()->with('accounts')->find($validated['budget_id']);
 
         if (! $budget) {
             throw new \RuntimeException('The specified budget was not found for the authenticated user.');
@@ -67,9 +67,9 @@ class EditBudgetTool extends FinancialTool
             'saving' => Arr::exists($validated, 'saving') ? (bool) $validated['saving'] : (bool) $budget->saving,
             'period' => Arr::exists($validated, 'period') ? (int) $validated['period'] : (int) $budget->period,
             'reoccurrence' => Arr::exists($validated, 'reoccurrence') ? $validated['reoccurrence'] : $budget->reoccurrence,
-            'category_ids' => Arr::exists($validated, 'category_ids')
-                ? $this->ownedCategoryIds($validated['category_ids'], $user)
-                : $budget->categories->pluck('id')->map(fn(mixed $id) => (int) $id)->all(),
+            'account_ids' => Arr::exists($validated, 'account_ids')
+                ? $this->accessibleAccountIds($validated['account_ids'], $user)
+                : $budget->accounts->pluck('id')->map(fn(mixed $id) => (int) $id)->all(),
         ];
 
         $this->validateInput([
@@ -82,7 +82,7 @@ class EditBudgetTool extends FinancialTool
             'saving' => $merged['saving'],
             'period' => $merged['period'],
             'reoccurrence' => $merged['reoccurrence'],
-            'category_ids' => $merged['category_ids'],
+            'account_ids' => $merged['account_ids'],
         ], [
             'name_en' => ['required', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
@@ -104,8 +104,8 @@ class EditBudgetTool extends FinancialTool
                 Budget::MONTHLY,
                 Budget::YEARLY,
             ])],
-            'category_ids' => ['required', 'array', 'min:1'],
-            'category_ids.*' => ['integer'],
+            'account_ids' => ['required', 'array', 'min:1'],
+            'account_ids.*' => ['integer'],
         ]);
 
         $updated = app(BudgetService::class)->update($budget, [
@@ -117,7 +117,7 @@ class EditBudgetTool extends FinancialTool
             'saving' => $merged['saving'],
             'period' => $merged['period'],
             'reoccurrence' => $merged['reoccurrence'],
-            'category_ids' => $merged['category_ids'],
+            'account_ids' => $merged['account_ids'],
         ]);
 
         return 'Budget updated successfully: ' . $this->formatBudget($updated);
@@ -158,8 +158,8 @@ class EditBudgetTool extends FinancialTool
                 ->description('Optional updated recurrence type.')
                 ->enum([Budget::CUSTOM, Budget::DAILY, Budget::WEEKLY, Budget::MONTHLY, Budget::YEARLY])
                 ->nullable(),
-            'category_ids' => $schema->array()
-                ->description('Optional replacement list of category IDs for the budget.')
+            'account_ids' => $schema->array()
+                ->description('Optional replacement list of account IDs for the budget.')
                 ->items($schema->integer())
                 ->min(1)
                 ->nullable(),

@@ -130,6 +130,10 @@ export default function Audit({ auth, account }) {
             header: t('account.transactionDetails'),
             cell: ({ row }) => {
                 const audit = row.original;
+                const accountSummary = [
+                    audit.subject?.from_account_name ?? audit.subject?.account_name,
+                    audit.subject?.to_account_name,
+                ].filter(Boolean).join(' -> ');
 
                 return (
                     <div className="space-y-1 text-sm">
@@ -137,7 +141,7 @@ export default function Audit({ auth, account }) {
                             {audit.subject?.transaction_type ?? 'N/A'} · {formatAuditValue('amount', audit.subject?.amount)}
                         </p>
                         <p className="text-muted-foreground">
-                            {audit.subject?.category_name ?? t('account.emptyValue')}
+                            {accountSummary || t('account.emptyValue')}
                         </p>
                         <p className="text-muted-foreground">
                             {audit.subject?.note || t('account.emptyValue')}

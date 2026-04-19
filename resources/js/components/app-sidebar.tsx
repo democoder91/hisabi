@@ -3,9 +3,9 @@ import { Link, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import {
   BankIcon,
+  BookOpenIcon,
   CreditCardIcon,
   Receipt,
-  CirclesThreeIcon,
   ChartDonutIcon,
   ChartLineIcon,
   SparkleIcon,
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/sidebar"
 import ApplicationLogo from "@/components/Global/ApplicationLogo"
 import { UserNav } from "@/components/user-nav"
+
+declare const route: any;
 
 interface AppSidebarProps {
   auth?: {
@@ -66,9 +68,9 @@ export function AppSidebar({ auth }: AppSidebarProps) {
       icon: ChartLineIcon,
     },
     {
-      title: t('navigation.categories'),
-      url: "categories",
-      icon: CirclesThreeIcon,
+      title: t('navigation.guide'),
+      url: 'guide',
+      icon: BookOpenIcon,
     },
     {
       title: t('navigation.billing'),

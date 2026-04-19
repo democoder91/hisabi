@@ -9,7 +9,7 @@ class AverageTransactionMetric extends Metric
     public function calculate(): array
     {
         $items = $this->transactions()
-            ->groupBy(fn ($transaction) => $this->categoryLabel($transaction->category))
+            ->groupBy(fn ($transaction) => $this->reportingAccountLabel($transaction))
             ->map(function ($transactions, $label) {
                 $converted = $transactions->map(fn ($transaction) => $this->convertedTransactionAmount($transaction));
 

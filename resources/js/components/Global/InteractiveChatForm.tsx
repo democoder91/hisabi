@@ -45,38 +45,34 @@ const buildInitialValues = (questions: InteractiveQuestion[]): FormValues => que
     return carry;
 }, {} as FormValues);
 
-const resolveSelectedTransactionType = (values: FormValues): string | null => {
-    for (const key of ['category_type', 'transaction_type']) {
-        const value = values[key];
+const resolveExcludedAccountValue = (questionId: string, values: FormValues): string | null => {
+    const counterpartKey = questionId === 'from_account_id'
+        ? 'to_account_id'
+        : questionId === 'to_account_id'
+            ? 'from_account_id'
+            : null;
 
-        if (typeof value === 'string' && value.trim() !== '') {
-            return value.trim().toUpperCase();
-        }
+    if (counterpartKey === null) {
+        return null;
     }
 
-    return null;
+    const counterpartValue = values[counterpartKey];
+
+    return typeof counterpartValue === 'string' && counterpartValue.trim() !== ''
+        ? counterpartValue.trim()
+        : null;
 };
 
 const resolveVisibleOptions = (question: InteractiveQuestion, values: FormValues): InteractiveQuestionOption[] => {
     const options = question.options ?? [];
 
-    if (question.id !== 'category_id') {
+    const excludedAccountValue = resolveExcludedAccountValue(question.id, values);
+
+    if (excludedAccountValue === null) {
         return options;
     }
 
-    const selectedTransactionType = resolveSelectedTransactionType(values);
-
-    if (selectedTransactionType === null) {
-        return options;
-    }
-
-    return options.filter((option) => {
-        const optionCategoryType = typeof option.meta?.category_type === 'string'
-            ? option.meta.category_type.toUpperCase()
-            : null;
-
-        return optionCategoryType === null || optionCategoryType === selectedTransactionType;
-    });
+    return options.filter((option) => option.value !== excludedAccountValue);
 };
 
 export default function InteractiveChatForm({ interaction, disabled = false, errorMessage = null, onSubmit }: InteractiveChatFormProps) {
@@ -90,24 +86,28 @@ export default function InteractiveChatForm({ interaction, disabled = false, err
     }, [interaction]);
 
     useEffect(() => {
-        const categoryQuestion = interaction.questions.find((question) => question.id === 'category_id');
+        for (const questionId of ['from_account_id', 'to_account_id']) {
+            const accountQuestion = interaction.questions.find((question) => question.id === questionId);
 
-        if (!categoryQuestion) {
+            if (! accountQuestion) {
+                continue;
+            }
+
+            const allowedValues = new Set(resolveVisibleOptions(accountQuestion, values).map((option) => option.value));
+            const selectedAccountValue = values[questionId];
+
+            if (typeof selectedAccountValue !== 'string' || selectedAccountValue === '' || allowedValues.has(selectedAccountValue)) {
+                continue;
+            }
+
+            setValues((currentValues) => ({
+                ...currentValues,
+                [questionId]: '',
+            }));
+
             return;
         }
-
-        const allowedValues = new Set(resolveVisibleOptions(categoryQuestion, values).map((option) => option.value));
-        const selectedCategoryId = values.category_id;
-
-        if (typeof selectedCategoryId !== 'string' || selectedCategoryId === '' || allowedValues.has(selectedCategoryId)) {
-            return;
-        }
-
-        setValues((currentValues) => ({
-            ...currentValues,
-            category_id: '',
-        }));
-    }, [interaction, values.category_type, values.transaction_type, values.category_id]);
+    }, [interaction, values.from_account_id, values.to_account_id]);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();

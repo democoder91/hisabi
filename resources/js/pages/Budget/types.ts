@@ -3,12 +3,14 @@ export type BudgetTranslations = {
     ar?: string;
 };
 
-export type BudgetCategory = {
+export type BudgetAccount = {
     id: number;
     name: string;
     name_translations?: BudgetTranslations;
-    color?: string;
-    icon?: string;
+    type?: string;
+    currency?: string;
+    ownerUserId?: number;
+    ownerName?: string | null;
 };
 
 export type BudgetRecord = {
@@ -32,7 +34,7 @@ export type BudgetRecord = {
     elapsed_days_percentage: number;
     is_saving: boolean;
     total_transactions_amount: number;
-    categories: BudgetCategory[];
+    accounts: BudgetAccount[];
 };
 
 export const budgetRecurrenceOptions: BudgetRecord['reoccurrence'][] = ['CUSTOM', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];

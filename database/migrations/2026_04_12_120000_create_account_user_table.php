@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignIdFor(User::class)->constrained()->cascadeOnDelete();
             $table->string('permission_level');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['account_id', 'user_id']);
         });

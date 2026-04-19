@@ -2,58 +2,40 @@
 
 namespace App\Ai\Tools;
 
-use App\Domains\Category\Models\Category;
-use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Services\TransactionService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Arr;
-use Illuminate\Validation\Rule;
 use Laravel\Ai\Tools\Request;
+use RuntimeException;
 use Stringable;
 
 class CreateTransactionTool extends FinancialTool
 {
     public function description(): Stringable|string
     {
-        return 'Create a new financial transaction. Use this when the user wants to record spending, income, savings, or investment activity. You need the amount and either category_id or category_type. account_id is optional and defaults to the user\'s default account.';
+        return 'Create a new financial transaction between a source account and a destination account. Use this when the user wants to record spending, income, savings, or investment activity as a single ledger entry. Prefer create_transfer for simple internal moves between editable accounts that already share a currency.';
     }
 
     public function handle(Request $request): Stringable|string
     {
         $user = $this->authenticatedUser();
         $input = $request->all();
-        $this->uppercaseIfPresent($input, ['category_type', 'currency']);
         $this->normalizeOptionalTextFields($input, ['brand_name', 'note']);
 
         $validated = $this->validateInput($input, [
             'amount' => ['required', 'numeric', 'min:0'],
-            'account_id' => ['nullable', 'integer'],
-            'category_id' => ['nullable', 'integer'],
-            'category_type' => ['nullable', 'string', Rule::in([
-                Category::EXPENSES,
-                Category::INCOME,
-                Category::SAVINGS,
-                Category::INVESTMENT,
-            ])],
+            'from_account_id' => ['required', 'integer', 'different:to_account_id'],
+            'to_account_id' => ['required', 'integer'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'currency' => ['nullable', 'string', 'size:3'],
             'note' => ['nullable', 'string', 'max:1000'],
             'date' => ['nullable', 'date'],
         ]);
 
-        if (! Arr::exists($validated, 'category_id') && ! Arr::exists($validated, 'category_type')) {
-            throw new \RuntimeException('Provide either category_id or category_type to create a transaction.');
+        $fromAccount = $this->accessibleAccount((int) $validated['from_account_id'], $user, true);
+        $toAccount = $this->accessibleAccount((int) $validated['to_account_id'], $user, true);
+
+        if ((int) $fromAccount->id === (int) $toAccount->id) {
+            throw new RuntimeException('The source and destination accounts must be different.');
         }
-
-        $account = Arr::exists($validated, 'account_id')
-            ? $this->accessibleAccount((int) $validated['account_id'], $user, true)
-            : $user->getOrCreateDefaultAccount();
-
-        $category = $this->transactionCategory(
-            $account,
-            Arr::exists($validated, 'category_id') ? (int) $validated['category_id'] : null,
-            $validated['category_type'] ?? null,
-        );
 
         $resolvedNote = $validated['note'] ?? null;
 
@@ -64,14 +46,12 @@ class CreateTransactionTool extends FinancialTool
         }
 
         $transaction = app(TransactionService::class)->create([
-            'account_id' => $account->id,
+            'from_account_id' => $fromAccount->id,
+            'to_account_id' => $toAccount->id,
             'amount' => (float) $validated['amount'],
-            'category_id' => $category->id,
-            'transaction_type' => Transaction::transactionTypeForCategoryType($category->type),
-            'currency' => $validated['currency'] ?? $this->defaultCurrency(),
             'note' => $resolvedNote,
             'created_at' => $validated['date'] ?? now(),
-        ])->load(['account', 'category', 'fromAccount', 'toAccount']);
+        ])->load(['account', 'fromAccount', 'toAccount']);
 
         return 'Transaction created successfully: ' . $this->formatTransaction($transaction);
     }
@@ -82,21 +62,14 @@ class CreateTransactionTool extends FinancialTool
             'amount' => $schema->number()
                 ->description('The transaction amount (positive number)')
                 ->required(),
-            'account_id' => $schema->integer()
-                ->description('Optional account ID. If omitted, the user\'s default account is used.')
-                ->nullable(),
-            'category_id' => $schema->integer()
-                ->description('Optional category ID. If omitted, provide category_type instead.')
-                ->nullable(),
+            'from_account_id' => $schema->integer()
+                ->description('The source account ID for this transaction. The user must be able to edit it.')
+                ->required(),
+            'to_account_id' => $schema->integer()
+                ->description('The destination account ID for this transaction. The user must be able to edit it.')
+                ->required(),
             'brand_name' => $schema->string()
                 ->description('The merchant, store, company, or source name. Optional - leave empty if no specific brand.')
-                ->nullable(),
-            'category_type' => $schema->string()
-                ->description('The category type to use when category_id is not provided.')
-                ->enum(['EXPENSES', 'INCOME', 'SAVINGS', 'INVESTMENT'])
-                ->nullable(),
-            'currency' => $schema->string()
-                ->description('The 3-letter currency code (e.g. USD, EUR, AED). Optional - defaults to user preferred currency.')
                 ->nullable(),
             'note' => $schema->string()
                 ->description('Optional note or description for the transaction')

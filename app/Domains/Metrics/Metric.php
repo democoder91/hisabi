@@ -2,7 +2,7 @@
 
 namespace App\Domains\Metrics;
 
-use App\Domains\Category\Models\Category;
+use App\Domains\Account\Models\Account;
 use App\Domains\Transaction\Models\Transaction;
 use App\Contracts\HasPreviousRange;
 use App\Models\User;
@@ -114,7 +114,7 @@ abstract class Metric
 
     protected function transactions(?callable $callback = null, ?array $range = null): Collection
     {
-        $query = Transaction::query()->with('category');
+        $query = Transaction::query()->with(['account', 'fromAccount', 'toAccount']);
 
         $effectiveRange = $range;
 
@@ -136,12 +136,31 @@ abstract class Metric
         return $query->get();
     }
 
-    protected function convertedTransactionAmount(Transaction $transaction, ?string $targetCurrency = null): float
+    protected function accounts(?callable $callback = null): Collection
+    {
+        $query = Account::query();
+
+        $user = $this->metricUser();
+
+        if ($user) {
+            $query->accessibleTo($user);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        if ($callback) {
+            $callback($query);
+        }
+
+        return $query->get();
+    }
+
+    protected function convertAmount(float $amount, ?string $sourceCurrency, ?string $targetCurrency = null): float
     {
         $user = $this->metricUser();
 
-        if (! $user instanceof User) {
-            return round((float) $transaction->amount, 2);
+        if (! $user instanceof User || ! $sourceCurrency) {
+            return round($amount, 2);
         }
 
         /** @var CurrencyRateService $currencyRateService */
@@ -149,10 +168,19 @@ abstract class Metric
 
         return $currencyRateService->convert(
             $user,
+            $amount,
+            $sourceCurrency,
+            $targetCurrency ?: $this->metricCurrency(),
+        );
+    }
+
+    protected function convertedTransactionAmount(Transaction $transaction, ?string $targetCurrency = null): float
+    {
+        return round($this->convertAmount(
             (float) $transaction->amount,
             $transaction->currency,
             $targetCurrency ?: $this->metricCurrency(),
-        );
+        ), 2);
     }
 
     protected function sumConverted(Collection $transactions, ?string $targetCurrency = null): float
@@ -160,14 +188,88 @@ abstract class Metric
         return round($transactions->sum(fn (Transaction $transaction) => $this->convertedTransactionAmount($transaction, $targetCurrency)), 2);
     }
 
-    protected function categoryLabel(?Category $category): string
+    protected function convertedAccountMovement(Account $account, Transaction $transaction, ?string $targetCurrency = null): float
     {
-        if (! $category) {
+        $movement = $transaction->movementForAccount($account);
+
+        if ($movement === 0.0) {
+            return 0.0;
+        }
+
+        return round($this->convertAmount($movement, $transaction->currency, $targetCurrency ?: $this->metricCurrency()), 2);
+    }
+
+    protected function sumAccountMovements(Collection $accounts, Collection $transactions, ?string $targetCurrency = null): float
+    {
+        return round((float) $accounts->sum(function (Account $account) use ($transactions, $targetCurrency) {
+            return $transactions->sum(
+                fn (Transaction $transaction) => $this->convertedAccountMovement($account, $transaction, $targetCurrency)
+            );
+        }), 2);
+    }
+
+    protected function sumAccountTypeMovement(string $type, ?array $range = null): float
+    {
+        $accounts = $this->accounts(fn (Builder $query) => $query->where('type', $type));
+
+        if ($accounts->isEmpty()) {
+            return 0.0;
+        }
+
+        return $this->sumAccountMovements($accounts, $this->transactions(null, $range));
+    }
+
+    protected function accountLabel(?Account $account): string
+    {
+        if (! $account) {
             return 'Unknown';
         }
 
-        return $category->getLocalizedName()
+        return $account->getLocalizedName()
             ?: 'Unknown';
+    }
+
+    protected function accountTypeLabel(string $type): string
+    {
+        if ($type === Account::TYPE_INCOME) {
+            return 'Income';
+        }
+
+        if ($type === Account::TYPE_EXPENSE) {
+            return 'Expenses';
+        }
+
+        if ($type === Account::TYPE_ASSET) {
+            return 'Assets';
+        }
+
+        if ($type === Account::TYPE_LIABILITY) {
+            return 'Liabilities';
+        }
+
+        if ($type === Account::TYPE_EQUITY) {
+            return 'Equity';
+        }
+
+        return 'Unknown';
+    }
+
+    protected function reportingAccount(Transaction $transaction): ?Account
+    {
+        return $transaction->reportingAccount();
+    }
+
+    protected function reportingAccountLabel(Transaction $transaction): string
+    {
+        return $this->accountLabel($this->reportingAccount($transaction));
+    }
+
+    protected function reportingAccountTypeLabel(Transaction $transaction): string
+    {
+        $reportingAccount = $this->reportingAccount($transaction);
+        $type = $reportingAccount ? $reportingAccount->type : null;
+
+        return $type ? $this->accountTypeLabel($type) : 'Unknown';
     }
 
     protected function valuePayload(float $value, ?float $previous = null): array

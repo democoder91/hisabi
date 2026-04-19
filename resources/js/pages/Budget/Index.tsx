@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { debounce } from 'lodash';
 import { type ColumnDef } from '@tanstack/react-table';
 
+import { getAllAccounts } from '@/Api/accounts';
 import { getBudgets } from '@/Api/budgets';
-import { getAllCategories } from '@/Api/categories';
 import { getCurrencySettings } from '@/Api/settings';
 import Authenticated from '@/Layouts/Authenticated';
 import { Button } from '@/components/ui/button';
@@ -19,27 +19,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import Create from './Create';
 import Edit from './Edit';
-import { BudgetCategory, BudgetRecord } from './types';
+import { BudgetAccount, BudgetRecord } from './types';
 
 export default function Index({ auth }: { auth: any }) {
     const { t } = useTranslation();
     const activeLocale = useActiveLocale();
     const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
-    const [categories, setCategories] = useState<BudgetCategory[]>([]);
+    const [accounts, setAccounts] = useState<BudgetAccount[]>([]);
     const [currencies, setCurrencies] = useState<{ value: string; label: string }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [budgetTypeFilter, setBudgetTypeFilter] = useState('');
     const [recurrenceFilter, setRecurrenceFilter] = useState('');
     const [currencyFilter, setCurrencyFilter] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState('');
+    const [accountFilter, setAccountFilter] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const [editBudget, setEditBudget] = useState<BudgetRecord | null>(null);
 
     useEffect(() => {
-        Promise.all([getBudgets(), getAllCategories(), getCurrencySettings()])
-            .then(([{ data: budgetData }, { data: categoryData }, currencyPayload]) => {
+        Promise.all([getBudgets(), getAllAccounts(), getCurrencySettings()])
+            .then(([{ data: budgetData }, { data: accountData }, currencyPayload]) => {
                 setBudgets(budgetData.budgets);
-                setCategories(categoryData.allCategories);
+                setAccounts(accountData.allAccounts);
                 setCurrencies(currencyPayload.options.currencies);
             })
             .catch(console.error);
@@ -66,11 +66,11 @@ export default function Index({ auth }: { auth: any }) {
         setSearchQuery(event.target.value ?? '');
     }, 300), []);
 
-    const localizedCategories = useMemo(() => withLocalizedNames(categories, activeLocale), [categories, activeLocale]);
+    const localizedAccounts = useMemo(() => withLocalizedNames(accounts, activeLocale), [accounts, activeLocale]);
 
     const localizedBudgets = useMemo(() => budgets.map((budget) => ({
         ...withLocalizedName(budget, activeLocale),
-        categories: withLocalizedNames(budget.categories ?? [], activeLocale),
+        accounts: withLocalizedNames(budget.accounts ?? [], activeLocale),
     })), [budgets, activeLocale]);
 
     const filteredBudgets = useMemo(() => filterBudgets(localizedBudgets, {
@@ -78,10 +78,10 @@ export default function Index({ auth }: { auth: any }) {
         budgetType: budgetTypeFilter,
         recurrence: recurrenceFilter,
         currency: currencyFilter,
-        categoryId: categoryFilter,
-    }), [localizedBudgets, searchQuery, budgetTypeFilter, recurrenceFilter, currencyFilter, categoryFilter]);
+        accountId: accountFilter,
+    }), [localizedBudgets, searchQuery, budgetTypeFilter, recurrenceFilter, currencyFilter, accountFilter]);
 
-    const hasActiveFilters = Boolean(searchQuery || budgetTypeFilter || recurrenceFilter || currencyFilter || categoryFilter);
+    const hasActiveFilters = Boolean(searchQuery || budgetTypeFilter || recurrenceFilter || currencyFilter || accountFilter);
 
     const columns = useMemo<ColumnDef<BudgetRecord>[]>(() => [
         {
@@ -111,11 +111,11 @@ export default function Index({ auth }: { auth: any }) {
             ),
         },
         {
-            id: 'categories',
-            header: t('budget.categories'),
+            id: 'accounts',
+            header: t('budget.accounts'),
             cell: ({ row }) => (
                 <span className="text-sm text-muted-foreground">
-                    {row.original.categories.map((category) => category.name).join(', ') || ' - '}
+                    {row.original.accounts.map((account) => account.name).join(', ') || ' - '}
                 </span>
             ),
         },
@@ -164,14 +164,14 @@ export default function Index({ auth }: { auth: any }) {
 
             <Create
                 open={showCreate}
-                categories={localizedCategories}
+                accounts={localizedAccounts}
                 onClose={() => setShowCreate(false)}
                 onCreate={onCreate}
             />
 
             <Edit
                 budget={editBudget}
-                categories={localizedCategories}
+                accounts={localizedAccounts}
                 onClose={() => setEditBudget(null)}
                 onDelete={onDelete}
                 onUpdate={onUpdate}
@@ -221,14 +221,14 @@ export default function Index({ auth }: { auth: any }) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={categoryFilter || 'ALL'} onValueChange={(value) => setCategoryFilter(value === 'ALL' ? '' : value)}>
+                            <Select value={accountFilter || 'ALL'} onValueChange={(value) => setAccountFilter(value === 'ALL' ? '' : value)}>
                                 <SelectTrigger className="w-full sm:w-[220px]">
-                                    <SelectValue placeholder={t('budget.categories')} />
+                                    <SelectValue placeholder={t('budget.accounts')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">{t('budget.allCategories')}</SelectItem>
-                                    {localizedCategories.map((category) => (
-                                        <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>
+                                    <SelectItem value="ALL">{t('budget.allAccounts')}</SelectItem>
+                                    {localizedAccounts.map((account) => (
+                                        <SelectItem key={account.id} value={String(account.id)}>{account.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

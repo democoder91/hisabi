@@ -5,7 +5,6 @@ namespace App\Services\AI;
 use App\Ai\Agents\HisabiAgent;
 use App\Ai\Exceptions\PendingUserInputToolCall;
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,10 +19,17 @@ class InteractiveToolCallService
 
     public const STATUS_PENDING = 'pending';
 
+    private const ACCOUNT_QUESTION_IDS = [
+        'account_id',
+        'from_account_id',
+        'to_account_id',
+        'account_ids',
+    ];
+
     private const QUESTION_ID_ALIASES = [
         'account' => 'account_id',
+        'accounts' => 'account_ids',
         'budget' => 'budget_id',
-        'category' => 'category_id',
         'destination_account' => 'to_account_id',
         'from_account' => 'from_account_id',
         'source_account' => 'from_account_id',
@@ -226,11 +232,13 @@ class InteractiveToolCallService
             $questionId = $this->canonicalizeQuestionId((string) ($question['id'] ?? ''));
             $question['id'] = $questionId;
 
-            if ($questionId !== 'category_id' || ! is_array($question['options'] ?? null)) {
+            if (! is_array($question['options'] ?? null)) {
                 return $question;
             }
 
-            $question['options'] = $this->enrichCategoryOptionMetadata('category_id', $question['options']);
+            if ($this->isAccountQuestionId($questionId)) {
+                $question['options'] = $this->enrichAccountOptionMetadata($question['options']);
+            }
 
             return $question;
         }, $questions);
@@ -382,7 +390,7 @@ class InteractiveToolCallService
             $optionValues[] = $value;
         }
 
-        return $this->enrichCategoryOptionMetadata($questionId, $normalizedOptions);
+        return $normalizedOptions;
     }
 
     private function touchConversation(string $conversationId): void
@@ -399,14 +407,9 @@ class InteractiveToolCallService
         $answers = $this->normalizeAnswerKeys($answers, $questions);
         $errors = [];
         $normalizedAnswers = [];
-        $questionMap = [];
-
-        foreach ($questions as $question) {
-            $questionMap[$question['id']] = $question;
-        }
 
         foreach ($answers as $answerKey => $value) {
-            if (! array_key_exists($answerKey, $questionMap)) {
+            if (! collect($questions)->contains(fn(array $question): bool => ($question['id'] ?? null) === $answerKey)) {
                 $errors["answers.{$answerKey}"] = ['Unexpected answer key provided.'];
             }
         }
@@ -496,7 +499,7 @@ class InteractiveToolCallService
             $normalizedAnswers[$questionId] = $selectedValues;
         }
 
-        $this->validateCategoryTypeConsistency($normalizedAnswers, $questionMap, $errors);
+        $this->validateDistinctTransactionAccounts($normalizedAnswers, $errors);
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -582,71 +585,50 @@ class InteractiveToolCallService
     {
         $questionId = $question['id'] ?? null;
 
-        if ($questionId !== 'category_id' || ! is_array($question['options'] ?? null)) {
+        if (! is_string($questionId) || ! is_array($question['options'] ?? null)) {
             return $question;
         }
 
-        $question['options'] = $this->refreshCategoryOptions(
-            $question['options'],
-            $this->resolveCategoryOwnerIds($conversationAnswers, $user),
-            $this->expectedCategoryType($conversationAnswers),
-        );
+        if ($this->isAccountQuestionId($questionId)) {
+            $question['options'] = $this->refreshAccountOptions(
+                $question['options'],
+                $user,
+                $this->excludedAccountIdForQuestion($questionId, $conversationAnswers),
+            );
+        }
 
         return $question;
     }
 
-    private function resolveCategoryOwnerIds(array $conversationAnswers, User $user): array
+    private function excludedAccountIdForQuestion(string $questionId, array $conversationAnswers): ?int
     {
-        $selectedAccountIds = [];
-
-        foreach (['account_id', 'from_account_id', 'to_account_id'] as $key) {
-            $value = $conversationAnswers[$key] ?? null;
-
-            if (is_string($value) && ctype_digit($value)) {
-                $selectedAccountIds[] = (int) $value;
-            }
+        if ($questionId === 'from_account_id') {
+            $counterpartQuestionId = 'to_account_id';
+        } elseif ($questionId === 'to_account_id') {
+            $counterpartQuestionId = 'from_account_id';
+        } else {
+            $counterpartQuestionId = null;
         }
 
-        $ownerIds = Account::query()
-            ->accessibleTo($user)
-            ->when($selectedAccountIds !== [], fn($query) => $query->whereIn('id', array_values(array_unique($selectedAccountIds))))
-            ->pluck('user_id')
-            ->map(fn(mixed $userId): int => (int) $userId)
-            ->unique()
-            ->values()
-            ->all();
-
-        if ($ownerIds !== []) {
-            return $ownerIds;
-        }
-
-        return [(int) $user->id];
-    }
-
-    private function expectedCategoryType(array $conversationAnswers): ?string
-    {
-        $expectedType = $conversationAnswers['category_type'] ?? $conversationAnswers['transaction_type'] ?? null;
-
-        if (! is_string($expectedType)) {
+        if ($counterpartQuestionId === null) {
             return null;
         }
 
-        $expectedType = strtoupper(trim($expectedType));
+        $counterpartValue = $conversationAnswers[$counterpartQuestionId] ?? null;
 
-        return in_array($expectedType, [
-            Category::EXPENSES,
-            Category::INCOME,
-            Category::SAVINGS,
-            Category::INVESTMENT,
-        ], true) ? $expectedType : null;
+        if ((is_string($counterpartValue) || is_numeric($counterpartValue)) && ctype_digit((string) $counterpartValue)) {
+            return (int) $counterpartValue;
+        }
+
+        return null;
     }
 
-    private function refreshCategoryOptions(array $options, array $ownerIds, ?string $expectedType): array
+    private function refreshAccountOptions(array $options, User $user, ?int $excludedAccountId): array
     {
-        $currentOptions = $this->currentCategoryOptions($ownerIds, $expectedType);
+        $currentOptions = $this->currentAccountOptions($user, $excludedAccountId);
 
         if ($currentOptions === []) {
-            return $this->enrichCategoryOptionMetadata('category_id', $options);
+            return $this->enrichAccountOptionMetadata($options);
         }
 
         $optionsByValue = [];
@@ -675,13 +657,16 @@ class InteractiveToolCallService
 
             $label = trim((string) ($option['label'] ?? $option['value'] ?? ''));
             $originalValue = trim((string) ($option['value'] ?? $label));
-            $matchingOptions = $optionsByLabel[$this->normalizeOptionLabel($label)] ?? [];
             $matchedOption = null;
 
-            if ($matchingOptions !== []) {
-                $matchedOption = $matchingOptions[0];
-            } elseif ($originalValue !== '' && isset($optionsByValue[$originalValue])) {
+            if ($originalValue !== '' && isset($optionsByValue[$originalValue])) {
                 $matchedOption = $optionsByValue[$originalValue];
+            } else {
+                $matchingOptions = $optionsByLabel[$this->normalizeOptionLabel($label)] ?? [];
+
+                if (count($matchingOptions) === 1) {
+                    $matchedOption = $matchingOptions[0];
+                }
             }
 
             if ($matchedOption === null) {
@@ -711,33 +696,74 @@ class InteractiveToolCallService
         }, $refreshedOptions));
     }
 
-    private function currentCategoryOptions(array $ownerIds, ?string $expectedType): array
+    private function currentAccountOptions(User $user, ?int $excludedAccountId): array
     {
-        $categories = DB::table('categories')
-            ->whereIn('user_id', $ownerIds)
-            ->whereNull('deleted_at')
-            ->when($expectedType !== null, fn($query) => $query->where('type', $expectedType))
+        $accounts = Account::query()
+            ->accessibleTo($user)
+            ->when($excludedAccountId !== null, fn($query) => $query->where('id', '!=', $excludedAccountId))
+            ->orderByRaw(Account::localizedNameSqlExpression(app()->getLocale()) . ' ASC')
             ->orderBy('id')
-            ->get(['id', 'name', 'type']);
+            ->get(['id', 'name', 'type', 'user_id']);
 
-        return $categories->map(function (object $category): array {
-            $translations = json_decode((string) $category->name, true);
-            $translations = is_array($translations) ? $translations : ['en' => (string) $category->name];
+        return $accounts->map(function (Account $account): array {
+            $translations = $account->getSafeNameTranslations();
             $labelCandidates = array_values(array_unique(array_filter(array_map(
                 static fn(mixed $value): string => is_string($value) ? trim($value) : '',
                 $translations,
             ))));
-            $label = $labelCandidates[0] ?? ('Category #' . $category->id);
+            $label = $account->getLocalizedName() ?? $labelCandidates[0] ?? ('Account #' . $account->id);
 
             return [
                 'label' => $label,
-                'value' => (string) $category->id,
+                'value' => (string) $account->id,
                 'meta' => [
-                    'category_type' => (string) $category->type,
+                    'account_type' => (string) $account->type,
+                    'owner_id' => (string) $account->user_id,
                     'label_candidates' => $labelCandidates,
                 ],
             ];
         })->all();
+    }
+
+    private function enrichAccountOptionMetadata(array $options): array
+    {
+        $accountIds = array_values(array_filter(array_unique(array_map(
+            static fn(array $option): ?int => is_string($option['value'] ?? null) && ctype_digit($option['value'])
+                ? (int) $option['value']
+                : null,
+            $options,
+        )), static fn(?int $accountId): bool => $accountId !== null));
+
+        if ($accountIds === []) {
+            return $options;
+        }
+
+        /** @var \Illuminate\Support\Collection<int, Account> $accounts */
+        $accounts = Account::query()
+            ->whereIn('id', $accountIds)
+            ->get(['id', 'type', 'user_id'])
+            ->keyBy('id');
+
+        return array_map(static function (array $option) use ($accounts): array {
+            $value = $option['value'] ?? null;
+
+            if (! is_string($value) || ! ctype_digit($value)) {
+                return $option;
+            }
+
+            $account = $accounts->get((int) $value);
+
+            if (! $account instanceof Account) {
+                return $option;
+            }
+
+            $meta = is_array($option['meta'] ?? null) ? $option['meta'] : [];
+            $meta['account_type'] = (string) $account->type;
+            $meta['owner_id'] = (string) $account->user_id;
+            $option['meta'] = $meta;
+
+            return $option;
+        }, $options);
     }
 
     private function normalizeSubmittedOptionValue(string $value, array $question): string
@@ -776,107 +802,28 @@ class InteractiveToolCallService
         return Str::lower(trim((string) preg_replace('/\s+/', ' ', $label)));
     }
 
-    private function enrichCategoryOptionMetadata(string $questionId, array $options): array
+    private function isAccountQuestionId(string $questionId): bool
     {
-        if ($questionId !== 'category_id' || $options === []) {
-            return $options;
-        }
-
-        $categoryIds = array_values(array_unique(array_map(
-            static fn(array $option): ?int => is_string($option['value'] ?? null) && ctype_digit($option['value'])
-                ? (int) $option['value']
-                : null,
-            $options,
-        )));
-
-        $categoryIds = array_values(array_filter($categoryIds, static fn(?int $categoryId): bool => $categoryId !== null));
-
-        if ($categoryIds === []) {
-            return $options;
-        }
-
-        /** @var array<int, string> $categoryTypes */
-        $categoryTypes = DB::table('categories')
-            ->whereIn('id', $categoryIds)
-            ->pluck('type', 'id')
-            ->all();
-
-        return array_map(static function (array $option) use ($categoryTypes): array {
-            $value = $option['value'] ?? null;
-
-            if (! is_string($value) || ! ctype_digit($value)) {
-                return $option;
-            }
-
-            $categoryType = $categoryTypes[(int) $value] ?? null;
-
-            if (! is_string($categoryType) || trim($categoryType) === '') {
-                return $option;
-            }
-
-            $meta = is_array($option['meta'] ?? null) ? $option['meta'] : [];
-            $meta['category_type'] = $categoryType;
-            $option['meta'] = $meta;
-
-            return $option;
-        }, $options);
+        return in_array($questionId, self::ACCOUNT_QUESTION_IDS, true);
     }
 
-    private function validateCategoryTypeConsistency(array $normalizedAnswers, array $questionMap, array &$errors): void
+    private function validateDistinctTransactionAccounts(array $normalizedAnswers, array &$errors): void
     {
-        if (! array_key_exists('category_id', $normalizedAnswers)) {
+        $fromAccountId = $normalizedAnswers['from_account_id'] ?? null;
+        $toAccountId = $normalizedAnswers['to_account_id'] ?? null;
+
+        if (! is_string($fromAccountId) || ! is_string($toAccountId)) {
             return;
         }
 
-        $expectedType = $normalizedAnswers['category_type'] ?? $normalizedAnswers['transaction_type'] ?? null;
-
-        if (! is_string($expectedType)) {
+        if (trim($fromAccountId) === '' || trim($toAccountId) === '') {
             return;
         }
 
-        $expectedType = strtoupper(trim($expectedType));
-
-        if (! in_array($expectedType, [
-            Category::EXPENSES,
-            Category::INCOME,
-            Category::SAVINGS,
-            Category::INVESTMENT,
-        ], true)) {
+        if (trim($fromAccountId) !== trim($toAccountId)) {
             return;
         }
 
-        $categoryId = $normalizedAnswers['category_id'];
-
-        if (! is_string($categoryId) || ! ctype_digit($categoryId)) {
-            return;
-        }
-
-        $actualType = $this->resolveCategoryTypeFromQuestionOption($questionMap['category_id'] ?? null, $categoryId)
-            ?? DB::table('categories')->where('id', (int) $categoryId)->value('type');
-
-        if (! is_string($actualType) || strtoupper(trim($actualType)) === $expectedType) {
-            return;
-        }
-
-        $errors['answers.category_id'] = ['Select a category that matches the chosen transaction type.'];
-    }
-
-    private function resolveCategoryTypeFromQuestionOption(?array $question, string $categoryId): ?string
-    {
-        if (! is_array($question)) {
-            return null;
-        }
-
-        foreach ($question['options'] ?? [] as $option) {
-            if (! is_array($option) || ($option['value'] ?? null) !== $categoryId) {
-                continue;
-            }
-
-            $categoryType = $option['meta']['category_type'] ?? null;
-
-            return is_string($categoryType) ? $categoryType : null;
-        }
-
-        return null;
+        $errors['answers.to_account_id'] = ['Select a destination account that differs from the source account.'];
     }
 }

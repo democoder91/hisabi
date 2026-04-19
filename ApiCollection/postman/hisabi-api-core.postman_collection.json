@@ -657,7 +657,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"name\":{\"en\":\"Monthly Groceries\",\"ar\":\"ميزانية البقالة الشهرية\"},\"amount\":500,\"currency\":\"USD\",\"start_at\":\"2024-01-01\",\"end_at\":\"2024-12-31\",\"saving\":false,\"period\":1,\"reoccurrence\":\"MONTHLY\",\"category_ids\":[{{categoryId}}]}",
+                            "raw": "{\"name\":{\"en\":\"Monthly Groceries\",\"ar\":\"ميزانية البقالة الشهرية\"},\"amount\":500,\"currency\":\"USD\",\"start_at\":\"2024-01-01\",\"end_at\":\"2024-12-31\",\"saving\":false,\"period\":1,\"reoccurrence\":\"MONTHLY\",\"account_ids\":[{{accountId}}]}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -683,7 +683,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"name\":{\"en\":\"Monthly Groceries Updated\",\"ar\":\"ميزانية البقالة الشهرية المحدثة\"},\"amount\":650,\"currency\":\"USD\",\"start_at\":\"2024-01-01\",\"end_at\":\"2024-12-31\",\"saving\":false,\"period\":1,\"reoccurrence\":\"MONTHLY\",\"category_ids\":[{{categoryId}}]}",
+                            "raw": "{\"name\":{\"en\":\"Monthly Groceries Updated\",\"ar\":\"ميزانية البقالة الشهرية المحدثة\"},\"amount\":650,\"currency\":\"USD\",\"start_at\":\"2024-01-01\",\"end_at\":\"2024-12-31\",\"saving\":false,\"period\":1,\"reoccurrence\":\"MONTHLY\",\"account_ids\":[{{accountId}}]}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -722,19 +722,6 @@
                             }
                         ],
                         "url": "{{baseUrl}}/api/v1/transactions"
-                    }
-                },
-                {
-                    "name": "Transaction Form Options",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{baseUrl}}/api/v1/transactions/form-options?account_id={{accountId}}"
                     }
                 },
                 {
@@ -780,7 +767,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"amount\":84.5,\"account_id\":{{accountId}},\"category_id\":{{categoryId}},\"created_at\":\"2024-01-15T10:30:00Z\",\"transaction_type\":\"DEBIT\",\"note\":\"Groceries\"}",
+                            "raw": "{\"amount\":84.5,\"from_account_id\":{{fromAccountId}},\"to_account_id\":{{toAccountId}},\"created_at\":\"2024-01-15T10:30:00Z\",\"note\":\"Groceries\"}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -806,7 +793,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"amount\":96.25,\"account_id\":{{accountId}},\"category_id\":{{categoryId}},\"created_at\":\"2024-01-15T11:00:00Z\",\"transaction_type\":\"DEBIT\",\"note\":\"Groceries and household items\"}",
+                            "raw": "{\"amount\":96.25,\"from_account_id\":{{fromAccountId}},\"to_account_id\":{{toAccountId}},\"created_at\":\"2024-01-15T11:00:00Z\",\"note\":\"Groceries and household items\"}",
                             "options": {
                                 "raw": {
                                     "language": "json"

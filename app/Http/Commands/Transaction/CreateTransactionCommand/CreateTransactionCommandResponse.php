@@ -15,7 +15,12 @@ readonly class CreateTransactionCommandResponse
     public function toResponse(): JsonResponse
     {
         $transactions = collect($this->transactions)
-            ->map(fn (Transaction $transaction) => $transaction->load(['category.user:id,name', 'account.user:id,name', 'account.sharedUsers:id,name,email']))
+            ->map(fn (Transaction $transaction) => $transaction->load([
+                'account.user:id,name',
+                'account.sharedUsers:id,name,email',
+                'fromAccount.user:id,name',
+                'toAccount.user:id,name',
+            ]))
             ->values();
 
         return response()->json([

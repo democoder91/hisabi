@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Transaction\Models\Transaction;
+use App\Domains\Account\Models\Account;
 use Carbon\Carbon;
 
 class TotalExpensesTrendMetricTest extends MetricsTestCase
@@ -17,13 +17,15 @@ class TotalExpensesTrendMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create([
-            'category_id' => $this->expensesCategory->id,
-            'amount' => 1500,
-            'created_at' => Carbon::now()->startOfMonth()
-        ]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses-trend?range=current-year');
+        $this->createLedgerTransaction($checking, $food, 1500, ['created_at' => Carbon::now()->startOfMonth()]);
+
+        $from = Carbon::now()->startOfYear()->format('Y-m-d');
+        $to = Carbon::now()->endOfYear()->format('Y-m-d');
+
+        $response = $this->getJson("/api/v1/metrics/total-expenses-trend?from={$from}&to={$to}");
 
         $response->assertOk();
         $items = $response->json('data.items');
@@ -37,16 +39,16 @@ class TotalExpensesTrendMetricTest extends MetricsTestCase
         $this->actingAs($this->user);
 
         $thisMonth = Carbon::now()->startOfMonth()->addDays(5);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
-        $t1 = Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
-        $t1->created_at = $thisMonth;
-        $t1->save();
+        $this->createLedgerTransaction($checking, $food, 500, ['created_at' => $thisMonth]);
+        $this->createLedgerTransaction($checking, $food, 300, ['created_at' => $thisMonth->copy()->addDays(5)]);
 
-        $t2 = Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
-        $t2->created_at = $thisMonth->copy()->addDays(5);
-        $t2->save();
+        $from = Carbon::now()->startOfYear()->format('Y-m-d');
+        $to = Carbon::now()->endOfYear()->format('Y-m-d');
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses-trend?range=current-year');
+        $response = $this->getJson("/api/v1/metrics/total-expenses-trend?from={$from}&to={$to}");
 
         $response->assertOk();
         $items = $response->json('data.items');
@@ -59,18 +61,17 @@ class TotalExpensesTrendMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create([
-            'category_id' => $this->expensesCategory->id,
-            'amount' => 500,
-            'created_at' => Carbon::now()->startOfMonth()
-        ]);
-        Transaction::factory()->create([
-            'category_id' => $this->incomeCategory->id,
-            'amount' => 5000,
-            'created_at' => Carbon::now()->startOfMonth()
-        ]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses-trend?range=current-year');
+        $this->createLedgerTransaction($checking, $food, 500, ['created_at' => Carbon::now()->startOfMonth()]);
+        $this->createLedgerTransaction($salary, $checking, 5000, ['created_at' => Carbon::now()->startOfMonth()]);
+
+        $from = Carbon::now()->startOfYear()->format('Y-m-d');
+        $to = Carbon::now()->endOfYear()->format('Y-m-d');
+
+        $response = $this->getJson("/api/v1/metrics/total-expenses-trend?from={$from}&to={$to}");
 
         $response->assertOk();
         $items = $response->json('data.items');
@@ -81,7 +82,10 @@ class TotalExpensesTrendMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->getJson('/api/v1/metrics/total-expenses-trend?range=current-year');
+        $from = Carbon::now()->startOfYear()->format('Y-m-d');
+        $to = Carbon::now()->endOfYear()->format('Y-m-d');
+
+        $response = $this->getJson("/api/v1/metrics/total-expenses-trend?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertIsArray($response->json('data.items'));

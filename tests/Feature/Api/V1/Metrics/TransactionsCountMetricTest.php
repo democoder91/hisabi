@@ -3,8 +3,6 @@
 namespace Tests\Feature\Api\V1\Metrics;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
-use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 
 class TransactionsCountMetricTest extends MetricsTestCase
@@ -19,17 +17,29 @@ class TransactionsCountMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->count(3)->create(['category_id' => $this->incomeCategory->id]);
-        Transaction::factory()->count(5)->create(['category_id' => $this->expensesCategory->id]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
-        $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
+        foreach (range(1, 3) as $_) {
+            $this->createLedgerTransaction($salary, $checking, 100);
+        }
+
+        foreach (range(1, 5) as $_) {
+            $this->createLedgerTransaction($checking, $food, 50);
+        }
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/transactions-count?from={$from}&to={$to}");
 
         $response->assertOk();
         $data = $response->json('data');
         $this->assertIsArray($data);
 
-        $incomeCount = collect($data)->firstWhere('label', Category::INCOME);
-        $expensesCount = collect($data)->firstWhere('label', Category::EXPENSES);
+        $incomeCount = collect($data)->firstWhere('label', 'Income');
+        $expensesCount = collect($data)->firstWhere('label', 'Expenses');
 
         $this->assertEquals(3, $incomeCount['value']);
         $this->assertEquals(5, $expensesCount['value']);
@@ -39,23 +49,38 @@ class TransactionsCountMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->count(2)->create(['category_id' => $this->incomeCategory->id]);
-        Transaction::factory()->count(5)->create(['category_id' => $this->expensesCategory->id]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
-        $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
+        foreach (range(1, 2) as $_) {
+            $this->createLedgerTransaction($salary, $checking, 100);
+        }
+
+        foreach (range(1, 5) as $_) {
+            $this->createLedgerTransaction($checking, $food, 50);
+        }
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/transactions-count?from={$from}&to={$to}");
 
         $response->assertOk();
         $data = $response->json('data');
 
-        $this->assertEquals(Category::EXPENSES, $data[0]['label']);
-        $this->assertEquals(Category::INCOME, $data[1]['label']);
+        $this->assertEquals('Expenses', $data[0]['label']);
+        $this->assertEquals('Income', $data[1]['label']);
     }
 
     public function test_returns_empty_array_when_no_data(): void
     {
         $this->actingAs($this->user);
 
-        $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/transactions-count?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertIsArray($response->json('data'));
@@ -64,15 +89,22 @@ class TransactionsCountMetricTest extends MetricsTestCase
 
     public function test_shared_users_do_not_receive_metrics_for_accounts_shared_with_them(): void
     {
-        Transaction::factory()->count(2)->create(['category_id' => $this->expensesCategory->id]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
+        $this->createLedgerTransaction($checking, $food, 100);
+        $this->createLedgerTransaction($checking, $food, 200);
+
+        /** @var User $sharedUser */
         $sharedUser = User::factory()->create();
-        $sharedAccount = Account::withoutGlobalScopes()->firstWhere('user_id', $this->user->id);
-        $sharedAccount->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
+        $checking->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
         $this->actingAs($sharedUser);
 
-        $response = $this->getJson('/api/v1/metrics/transactions-count?range=current-year');
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/transactions-count?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertEmpty($response->json('data'));

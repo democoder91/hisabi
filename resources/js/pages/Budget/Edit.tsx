@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import CategoryMultiSelect from './CategoryMultiSelect';
-import { BudgetCategory, BudgetRecord, budgetRecurrenceOptions } from './types';
+import { BudgetAccount, BudgetRecord, budgetRecurrenceOptions } from './types';
 
 type EditBudgetProps = {
     budget: BudgetRecord | null;
-    categories: BudgetCategory[];
+    accounts: BudgetAccount[];
     onClose: () => void;
     onDelete: (budget: BudgetRecord) => void;
     onUpdate: (budget: BudgetRecord) => void;
@@ -29,7 +29,7 @@ type CurrencyOption = {
 
 const getToday = () => new Date().toISOString().slice(0, 10);
 
-export default function Edit({ budget, categories, onClose, onDelete, onUpdate }: EditBudgetProps) {
+export default function Edit({ budget, accounts, onClose, onDelete, onUpdate }: EditBudgetProps) {
     const { t } = useTranslation();
     const [nameEn, setNameEn] = useState('');
     const [nameAr, setNameAr] = useState('');
@@ -42,7 +42,7 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
     const [period, setPeriod] = useState('1');
     const [reoccurrence, setReoccurrence] = useState<BudgetRecord['reoccurrence']>('MONTHLY');
     const [budgetType, setBudgetType] = useState<'spending' | 'saving'>('spending');
-    const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+    const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
     const selectedCurrencyLabel = currencies.find((item) => item.value === currency)?.label ?? currency;
 
@@ -61,7 +61,7 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
         setPeriod(String(budget.period ?? 1));
         setReoccurrence(budget.reoccurrence);
         setBudgetType(budget.saving ? 'saving' : 'spending');
-        setSelectedCategoryIds(budget.categories.map((category) => category.id));
+        setSelectedAccountIds(budget.accounts.map((account) => account.id));
         setLoading(false);
     }, [budget]);
 
@@ -80,7 +80,7 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
             return false;
         }
 
-        if (!currency || Number(amount) <= 0 || selectedCategoryIds.length === 0) {
+        if (!currency || Number(amount) <= 0 || selectedAccountIds.length === 0) {
             return false;
         }
 
@@ -89,7 +89,7 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
         }
 
         return true;
-    }, [amount, budget, currency, endAt, nameEn, reoccurrence, selectedCategoryIds]);
+    }, [amount, budget, currency, endAt, nameEn, reoccurrence, selectedAccountIds]);
 
     const handleUpdate = () => {
         if (!budget || !isReady || loading) {
@@ -111,7 +111,7 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
             saving: budgetType === 'saving',
             period: Number(period || 1),
             reoccurrence,
-            category_ids: selectedCategoryIds,
+            account_ids: selectedAccountIds,
         })
             .then(({ data }) => {
                 onUpdate(data.updateBudget);
@@ -269,11 +269,11 @@ export default function Edit({ budget, categories, onClose, onDelete, onUpdate }
                         </div>
 
                         <div>
-                            <Label>{t('budget.categories')}</Label>
+                            <Label>{t('budget.accounts')}</Label>
                             <CategoryMultiSelect
-                                categories={categories}
-                                selectedCategoryIds={selectedCategoryIds}
-                                onChange={setSelectedCategoryIds}
+                                accounts={accounts}
+                                selectedAccountIds={selectedAccountIds}
+                                onChange={setSelectedAccountIds}
                             />
                         </div>
 

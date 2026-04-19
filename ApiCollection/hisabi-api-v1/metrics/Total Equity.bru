@@ -1,0 +1,14 @@
+meta {
+  name: Total Equity
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/total-equity?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

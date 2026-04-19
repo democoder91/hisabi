@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
-use App\Domains\Category\Models\Category as DomainCategory;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -83,11 +82,6 @@ class User extends Authenticatable
             ->wherePivotNull('deleted_at')
             ->withPivot('id', 'permission_level', 'deleted_at')
             ->withTimestamps();
-    }
-
-    public function categories(): HasMany
-    {
-        return $this->hasMany(DomainCategory::class);
     }
 
     public function exchangeRates(): HasMany
@@ -183,6 +177,57 @@ class User extends Authenticatable
             'currency' => $this->default_currency ?: config('hisabi.currency'),
             'color' => 'gray',
             'icon' => 'scale',
+        ]);
+    }
+
+    public function getOrCreateUncategorizedExpenseAccount(): Account
+    {
+        return $this->getOrCreateNamedLedgerAccount(
+            'Uncategorized Expenses',
+            Account::TYPE_EXPENSE,
+            'gray',
+            'shapes',
+        );
+    }
+
+    public function getOrCreateUncategorizedIncomeAccount(): Account
+    {
+        return $this->getOrCreateNamedLedgerAccount(
+            'Uncategorized Income',
+            Account::TYPE_INCOME,
+            'gray',
+            'shapes',
+        );
+    }
+
+    private function getOrCreateNamedLedgerAccount(string $name, string $type, string $color, string $icon): Account
+    {
+        $account = $this->accounts()
+            ->withTrashed()
+            ->where(DB::raw(Account::localizedNameSqlExpression('en', false)), $name)
+            ->first();
+
+        if ($account) {
+            if ($account->trashed()) {
+                $account->restore();
+            }
+
+            $account->forceFill([
+                'type' => $type,
+                'color' => $account->color ?: $color,
+                'icon' => $account->icon ?: $icon,
+            ])->saveQuietly();
+
+            return $account;
+        }
+
+        return $this->accounts()->create([
+            'name' => ['en' => $name],
+            'type' => $type,
+            'balance' => 0,
+            'currency' => $this->default_currency ?: config('hisabi.currency'),
+            'color' => $color,
+            'icon' => $icon,
         ]);
     }
 }

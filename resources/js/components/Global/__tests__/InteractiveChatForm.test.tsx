@@ -71,7 +71,7 @@ it('collects text, select, and multiselect answers before submitting', async () 
     });
 });
 
-it('filters category options to match the selected transaction type', async () => {
+it('filters source and destination account options so the same account cannot be selected twice', async () => {
     const user = userEvent.setup();
 
     render(
@@ -82,21 +82,21 @@ it('filters category options to match the selected transaction type', async () =
                 tool_call_id: 'tool-call-2',
                 questions: [
                     {
-                        id: 'transaction_type',
-                        label: 'What type of transaction is this?',
+                        id: 'from_account_id',
+                        label: 'Which account should fund this transaction?',
                         type: 'select',
                         options: [
-                            { label: 'Expense (spending)', value: 'EXPENSES' },
-                            { label: 'Income (earning)', value: 'INCOME' },
+                            { label: 'Checking', value: '1' },
+                            { label: 'Cash', value: '2' },
                         ],
                     },
                     {
-                        id: 'category_id',
-                        label: 'Select a category',
+                        id: 'to_account_id',
+                        label: 'Which account should receive this transaction?',
                         type: 'select',
                         options: [
-                            { label: 'Bills', value: '39', meta: { category_type: 'EXPENSES' } },
-                            { label: 'Family Support', value: '34', meta: { category_type: 'INCOME' } },
+                            { label: 'Checking', value: '1' },
+                            { label: 'Cash', value: '2' },
                         ],
                     },
                 ],
@@ -105,8 +105,15 @@ it('filters category options to match the selected transaction type', async () =
         />,
     );
 
-    await user.selectOptions(screen.getByLabelText('What type of transaction is this?'), 'EXPENSES');
+    const fromAccountSelect = screen.getByLabelText('Which account should fund this transaction?') as HTMLSelectElement;
+    const toAccountSelect = screen.getByLabelText('Which account should receive this transaction?') as HTMLSelectElement;
 
-    expect(screen.getByRole('option', { name: 'Bills' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Family Support' })).not.toBeInTheDocument();
+    await user.selectOptions(fromAccountSelect, '1');
+
+    expect(Array.from(toAccountSelect.options).map((option) => option.value)).toEqual(['', '2']);
+
+    await user.selectOptions(fromAccountSelect, '');
+    await user.selectOptions(toAccountSelect, '2');
+
+    expect(Array.from(fromAccountSelect.options).map((option) => option.value)).toEqual(['', '1']);
 });

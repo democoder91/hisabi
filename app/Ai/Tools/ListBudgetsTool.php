@@ -33,7 +33,7 @@ class ListBudgetsTool extends FinancialTool
             'limit' => ['nullable', 'integer', 'min:1', 'max:25'],
         ]);
 
-        $query = Budget::query()->with('categories');
+        $query = Budget::query()->with('accounts');
 
         if (array_key_exists('saving', $validated)) {
             $query->where('saving', (bool) $validated['saving']);

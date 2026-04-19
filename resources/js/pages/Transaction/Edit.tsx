@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from 'react-i18next';
 
-import { updateTransaction, deleteTransaction, getTransactionFormOptions } from "../../Api";
+import { updateTransaction, deleteTransaction } from "../../Api";
 import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,45 +10,32 @@ import Combobox from "@/components/Global/Combobox";
 import {
     getAccountOptionLabel,
     getAppCurrency,
-    getCategoryOptionLabel,
     getSharedAccountOwnerLabel,
-    getTransactionTypeForCategoryType,
-    isCategoryAvailableForAccount,
-    isCategoryCompatibleWithTransactionType,
-    TRANSACTION_TYPES,
 } from '@/Utils';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Dialog,
     DialogContent,
     DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function Edit({ transaction, accounts, categories, onUpdate, onDelete, onClose }) {
+export default function Edit({ transaction, accounts, onUpdate, onDelete, onClose }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(0);
-    const [account, setAccount] = useState(null);
+    const [fromAccount, setFromAccount] = useState(null);
+    const [toAccount, setToAccount] = useState(null);
     const [createdAt, setCreatedAt] = useState('');
-    const [category, setCategory] = useState(null);
     const [note, setNote] = useState('');
-    const [transactionType, setTransactionType] = useState(TRANSACTION_TYPES.DEBIT);
-    const [availableCategories, setAvailableCategories] = useState(categories);
-    const [categoriesLoading, setCategoriesLoading] = useState(false);
-    const previousAccountIdRef = useRef<number | null>(null);
     const formatSharedBy = (ownerName) => t('account.sharedBy', { name: ownerName });
-
-    const filteredCategories = useMemo(() => {
-        return availableCategories.filter((item) => {
-            return isCategoryAvailableForAccount(item, account)
-                && isCategoryCompatibleWithTransactionType(item, transactionType);
-        });
-    }, [account, availableCategories, transactionType]);
 
     const editableAccounts = useMemo(() => {
         return accounts.filter((item) => item.canEditTransactions);
     }, [accounts]);
 
-    const selectedCurrency = account?.currency || transaction?.currency || getAppCurrency();
+    const destinationAccountOptions = useMemo(() => {
+        return editableAccounts.filter((item) => item.id !== fromAccount?.id);
+    }, [editableAccounts, fromAccount]);
+
+    const selectedCurrency = fromAccount?.currency || toAccount?.currency || transaction?.currency || getAppCurrency();
 
     const canEdit = transaction?.canEdit ?? false;
 
@@ -56,88 +43,21 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
         if (!transaction) return;
 
         setAmount(transaction.amount);
-        setAccount(transaction.account);
-        setCategory(categories.find((item) => item.id === transaction.category?.id) ?? transaction.category);
+        setFromAccount(transaction.fromAccount ?? transaction.account ?? null);
+        setToAccount(transaction.toAccount ?? null);
         setCreatedAt(transaction.created_at);
         setNote(transaction.note ?? '');
-        setTransactionType(
-            transaction.transaction_type
-            ?? getTransactionTypeForCategoryType(transaction.category?.type)
-        );
-    }, [categories, transaction]);
+    }, [transaction]);
 
     useEffect(() => {
-        if (!transaction) {
-            previousAccountIdRef.current = null;
-            setAvailableCategories(categories);
-            setCategoriesLoading(false);
-
+        if (!toAccount) {
             return;
         }
 
-        if (!account?.id) {
-            previousAccountIdRef.current = null;
-            setAvailableCategories([]);
-            setCategoriesLoading(false);
-
-            return;
+        if (toAccount.id === fromAccount?.id || !destinationAccountOptions.some((item) => item.id === toAccount.id)) {
+            setToAccount(destinationAccountOptions[0] ?? null);
         }
-
-        const accountId = Number(account.id);
-
-        if (previousAccountIdRef.current !== null && previousAccountIdRef.current !== accountId) {
-            setCategory(null);
-        }
-
-        previousAccountIdRef.current = accountId;
-        setCategoriesLoading(true);
-
-        let cancelled = false;
-
-        getTransactionFormOptions(accountId)
-            .then(({ data }) => {
-                if (cancelled) {
-                    return;
-                }
-
-                setAvailableCategories(data.categories);
-            })
-            .catch((error) => {
-                if (cancelled) {
-                    return;
-                }
-
-                setAvailableCategories([]);
-                console.error(error);
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setCategoriesLoading(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [account?.id, categories, transaction]);
-
-    useEffect(() => {
-        if (category && (!isCategoryCompatibleWithTransactionType(category, transactionType)
-            || !isCategoryAvailableForAccount(category, account)
-            || !availableCategories.some((item) => item.id === category.id))) {
-            setCategory(null);
-        }
-    }, [account, availableCategories, category, transactionType]);
-
-    const handleCategoryChange = (item) => {
-        setCategory(item);
-
-        if (item?.type) {
-            setTransactionType(getTransactionTypeForCategoryType(item.type));
-        }
-    };
-
-    const getCategoryLabel = (item) => getCategoryOptionLabel(item, filteredCategories);
+    }, [destinationAccountOptions, fromAccount, toAccount]);
 
     const handleUpdate = () => {
         if (!transaction) return;
@@ -146,11 +66,10 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
         updateTransaction({
             id: transactionId,
             amount,
-            accountId: account?.id,
-            categoryId: category?.id,
+            fromAccountId: fromAccount?.id,
+            toAccountId: toAccount?.id,
             createdAt,
             note,
-            transactionType,
         })
             .then(({ data }) => {
                 onUpdate(data.transaction);
@@ -184,16 +103,6 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                         )}
 
                         <div>
-                            <Label htmlFor="transaction_type">{t('transaction.type')}</Label>
-                            <Tabs value={transactionType} onValueChange={setTransactionType} className="mt-2">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value={TRANSACTION_TYPES.DEBIT} disabled={!canEdit}>{t('transaction.debit')}</TabsTrigger>
-                                    <TabsTrigger value={TRANSACTION_TYPES.CREDIT} disabled={!canEdit}>{t('transaction.credit')}</TabsTrigger>
-                                </TabsList>
-                            </Tabs>
-                        </div>
-
-                        <div>
                             <Label htmlFor="amount">
                                 {`${t('transaction.amount')} (${selectedCurrency})`}
                             </Label>
@@ -223,37 +132,40 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
 
                         <div>
                             <Combobox
-                                label={t('transaction.account')}
+                                label={t('transaction.sourceAccount')}
                                 items={editableAccounts}
-                                initialSelectedItem={account}
+                                initialSelectedItem={fromAccount}
                                 disabled={!canEdit}
-                                onChange={(item) => canEdit && setAccount(item)}
+                                onChange={(item) => canEdit && setFromAccount(item)}
                                 displayInputValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
                                 displayOptionValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
                             />
-                            {account && getSharedAccountOwnerLabel(account, formatSharedBy) && (
+                            {fromAccount && getSharedAccountOwnerLabel(fromAccount, formatSharedBy) && (
                                 <p className="mt-2 text-xs text-muted-foreground">
-                                    {getSharedAccountOwnerLabel(account, formatSharedBy)}
+                                    {getSharedAccountOwnerLabel(fromAccount, formatSharedBy)}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <Combobox
+                                label={t('transaction.destinationAccount')}
+                                items={destinationAccountOptions}
+                                initialSelectedItem={toAccount}
+                                disabled={!canEdit || !fromAccount}
+                                onChange={(item) => canEdit && setToAccount(item)}
+                                displayInputValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
+                                displayOptionValue={(item) => item ? getAccountOptionLabel(item, formatSharedBy) : ''}
+                            />
+                            {toAccount && getSharedAccountOwnerLabel(toAccount, formatSharedBy) && (
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                    {getSharedAccountOwnerLabel(toAccount, formatSharedBy)}
                                 </p>
                             )}
                         </div>
 
                         <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
                             {t('settings.preferences.effectiveCurrency')}: <span className="font-medium text-foreground">{selectedCurrency}</span>
-                        </div>
-
-                        <div>
-                            <Combobox
-                                label={t('transaction.category')}
-                                items={filteredCategories}
-                                initialSelectedItem={category}
-                                disabled={!canEdit || !account || categoriesLoading}
-                                onChange={(item) => canEdit && handleCategoryChange(item)}
-                                placeholder={categoriesLoading ? t('common.loading') : undefined}
-                                displayInputValue={(item) => item ? getCategoryLabel(item) : ''}
-                                displayOptionValue={(item) => item ? getCategoryLabel(item) : ''}
-                                getItemValue={(item) => item ? `${getCategoryLabel(item)} ${item.id}` : ''}
-                            />
                         </div>
 
                         <div>
@@ -275,7 +187,7 @@ export default function Edit({ transaction, accounts, categories, onUpdate, onDe
                                 <LongPressButton onLongPress={handleDelete}>
                                     Hold to Delete
                                 </LongPressButton>
-                                <Button disabled={categoriesLoading || !account || !category || !createdAt || Number(amount) === 0} onClick={handleUpdate}>
+                                <Button disabled={!fromAccount || !toAccount || fromAccount.id === toAccount.id || !createdAt || Number(amount) === 0} onClick={handleUpdate}>
                                     Update
                                 </Button>
                             </div>

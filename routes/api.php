@@ -5,7 +5,6 @@ use App\Http\Controllers\Api\V1\AccountAuditController;
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BudgetController;
-use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\PaymobWebhookController;
 use App\Http\Controllers\Api\V1\SettingsController;
@@ -34,9 +33,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
         });
 
-        Route::get('/transactions/form-options', [TransactionController::class, 'formOptions']);
         Route::apiResource('transactions', TransactionController::class)
-            ->only(['index', 'store', 'show', 'update', 'destroy']);
+            ->only(['index', 'store', 'show', 'update', 'destroy'])
+            ->whereNumber('transaction');
 
         Route::get('/accounts', [AccountController::class, 'index']);
         Route::get('/accounts/all', [AccountController::class, 'all']);
@@ -54,12 +53,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/sms', [SmsController::class, 'store']);
         Route::put('/sms/{id}', [SmsController::class, 'update']);
         Route::delete('/sms/{id}', [SmsController::class, 'destroy']);
-
-        Route::get('/categories/all', [CategoryController::class, 'all']);
-        Route::post('/categories', [CategoryController::class, 'store']);
-        Route::get('/categories/{id}', [CategoryController::class, 'show']);
-        Route::put('/categories/{id}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
         Route::get('/budgets', [BudgetController::class, 'index']);
         Route::post('/budgets', [BudgetController::class, 'store']);
@@ -82,24 +75,22 @@ Route::prefix('v1')->group(function () {
         Route::prefix('metrics')->group(function () {
             Route::get('/total-income', [MetricsController::class, 'totalIncome']);
             Route::get('/total-expenses', [MetricsController::class, 'totalExpenses']);
-            Route::get('/total-savings', [MetricsController::class, 'totalSavings']);
-            Route::get('/total-investment', [MetricsController::class, 'totalInvestment']);
-            Route::get('/total-cash', [MetricsController::class, 'totalCash']);
+            Route::get('/total-assets', [MetricsController::class, 'totalAssets']);
+            Route::get('/total-liabilities', [MetricsController::class, 'totalLiabilities']);
+            Route::get('/total-equity', [MetricsController::class, 'totalEquity']);
             Route::get('/net-worth', [MetricsController::class, 'netWorth']);
             Route::get('/net-worth-trend', [MetricsController::class, 'netWorthTrend']);
             Route::get('/total-income-trend', [MetricsController::class, 'totalIncomeTrend']);
             Route::get('/total-expenses-trend', [MetricsController::class, 'totalExpensesTrend']);
-            Route::get('/category-trend', [MetricsController::class, 'categoryTrend']);
-            Route::get('/category-daily-trend', [MetricsController::class, 'categoryDailyTrend']);
-            Route::get('/expenses-by-category', [MetricsController::class, 'expensesByCategory']);
-            Route::get('/income-by-category', [MetricsController::class, 'incomeByCategory']);
+            Route::get('/account-trend', [MetricsController::class, 'accountTrend']);
+            Route::get('/account-daily-trend', [MetricsController::class, 'accountDailyTrend']);
+            Route::get('/expenses-by-account', [MetricsController::class, 'expensesByAccount']);
+            Route::get('/income-by-account', [MetricsController::class, 'incomeByAccount']);
             Route::get('/transactions-count', [MetricsController::class, 'transactionsCount']);
-            Route::get('/transactions-by-category', [MetricsController::class, 'transactionsByCategory']);
             Route::get('/highest-transaction', [MetricsController::class, 'highestTransaction']);
             Route::get('/lowest-transaction', [MetricsController::class, 'lowestTransaction']);
             Route::get('/average-transaction', [MetricsController::class, 'averageTransaction']);
-            Route::get('/transactions-std-dev', [MetricsController::class, 'transactionsStdDev']);
-            Route::get('/category-stats', [MetricsController::class, 'categoryStats']);
+            Route::get('/account-stats', [MetricsController::class, 'accountStats']);
             Route::get('/circle-pack', [MetricsController::class, 'circlePack']);
         });
     });

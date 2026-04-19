@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
 use App\Enums\Currency;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,10 +39,14 @@ class CreateBudgetRequest extends FormRequest
                 Budget::MONTHLY,
                 Budget::YEARLY,
             ])],
-            'category_ids' => ['required', 'array', 'min:1'],
-            'category_ids.*' => [
+            'account_ids' => ['required', 'array', 'min:1'],
+            'account_ids.*' => [
                 'integer',
-                Rule::exists('categories', 'id')->where(fn($query) => $query->where('user_id', $this->user()->id)),
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (! Account::query()->accessibleTo($this->user())->find((int) $value)) {
+                        $fail('The selected account is invalid.');
+                    }
+                },
             ],
         ];
     }

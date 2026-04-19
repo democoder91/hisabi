@@ -4,15 +4,12 @@ namespace Tests\Unit\Ai\Tools;
 
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
-use App\Ai\Tools\CreateCategoryTool;
 use App\Ai\Tools\CreateTransferTool;
 use App\Ai\Tools\EditAccountTool;
 use App\Ai\Tools\EditBudgetTool;
-use App\Ai\Tools\EditCategoryTool;
 use App\Ai\Tools\EditTransactionTool;
 use App\Ai\Tools\ListAccountsTool;
 use App\Ai\Tools\ListBudgetsTool;
-use App\Ai\Tools\ListCategoriesTool;
 use App\Ai\Tools\ListTransactionsTool;
 use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
@@ -64,43 +61,17 @@ class FinanceCrudToolsTest extends TestCase
         $this->assertSame(900.50, $account->balance);
     }
 
-    public function test_category_tools_can_create_list_and_edit_categories(): void
-    {
-        $createOutput = (new CreateCategoryTool())->handle(new Request([
-            'name_en' => 'Dining',
-            'type' => 'expenses',
-            'color' => 'red',
-            'icon' => 'utensils',
-        ]));
-
-        $category = Category::query()->latest('id')->first();
-        $listOutput = (new ListCategoriesTool())->handle(new Request([
-            'type' => Category::EXPENSES,
-        ]));
-        $editOutput = (new EditCategoryTool())->handle(new Request([
-            'category_id' => $category->id,
-            'name_en' => 'Restaurants',
-            'color' => 'orange',
-        ]));
-
-        $category->refresh();
-
-        $this->assertStringContainsString('Dining', $createOutput);
-        $this->assertStringContainsString((string) $category->id, $listOutput);
-        $this->assertStringContainsString('Restaurants', $editOutput);
-        $this->assertSame('Restaurants', $category->getTranslation('name', 'en'));
-        $this->assertSame('orange', $category->color);
-    }
-
     public function test_budget_tools_can_create_list_and_edit_budgets(): void
     {
-        $food = Category::factory()->create([
+        $food = Account::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Food', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
         ]);
-        $transport = Category::factory()->create([
+        $transport = Account::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Transport', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
         ]);
 
         $createOutput = (new CreateBudgetTool())->handle(new Request([
@@ -109,49 +80,53 @@ class FinanceCrudToolsTest extends TestCase
             'start_at' => '2026-04-01',
             'period' => 1,
             'reoccurrence' => 'monthly',
-            'category_ids' => [$food->id, $transport->id],
+            'account_ids' => [$food->id, $transport->id],
         ]));
 
-        $budget = Budget::query()->with('categories')->latest('id')->first();
+        $budget = Budget::query()->with('accounts')->latest('id')->first();
         $listOutput = (new ListBudgetsTool())->handle(new Request([
             'reoccurrence' => Budget::MONTHLY,
         ]));
         $editOutput = (new EditBudgetTool())->handle(new Request([
             'budget_id' => $budget->id,
             'amount' => 1500,
-            'category_ids' => [$food->id],
+            'account_ids' => [$food->id],
             'saving' => true,
         ]));
 
-        $budget->refresh()->load('categories');
+        $budget->refresh()->load('accounts');
 
         $this->assertStringContainsString('Monthly Essentials', $createOutput);
         $this->assertStringContainsString((string) $budget->id, $listOutput);
         $this->assertStringContainsString('1500.00', $editOutput);
         $this->assertSame(1500.0, $budget->amount);
         $this->assertTrue($budget->saving);
-        $this->assertSame([$food->id], $budget->categories->pluck('id')->all());
+        $this->assertSame([$food->id], $budget->accounts->pluck('id')->all());
     }
 
     public function test_transaction_tools_can_list_and_edit_transactions(): void
     {
-        $account = Account::factory()->create([
+        $sourceAccount = Account::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Checking', 'ar' => null],
+            'type' => Account::TYPE_ASSET,
+            'currency' => 'AED',
         ]);
-        $food = Category::factory()->create([
+        $expenseAccount = Account::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Food', 'ar' => null],
-            'type' => Category::EXPENSES,
+            'type' => Account::TYPE_EXPENSE,
         ]);
-        $savings = Category::factory()->create([
+        $savingsAccount = Account::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Savings', 'ar' => null],
-            'type' => Category::SAVINGS,
+            'type' => Account::TYPE_ASSET,
         ]);
         $transaction = Transaction::withoutGlobalScopes()->create([
-            'account_id' => $account->id,
-            'category_id' => $food->id,
+            'account_id' => $sourceAccount->id,
+            'category_id' => null,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $expenseAccount->id,
             'amount' => 25,
             'transaction_type' => Transaction::TYPE_DEBIT,
             'currency' => 'AED',
@@ -160,21 +135,24 @@ class FinanceCrudToolsTest extends TestCase
         ]);
 
         $listOutput = (new ListTransactionsTool())->handle(new Request([
-            'account_id' => $account->id,
+            'account_id' => $sourceAccount->id,
         ]));
         $editOutput = (new EditTransactionTool())->handle(new Request([
             'transaction_id' => $transaction->id,
             'amount' => 40,
-            'category_id' => $savings->id,
+            'to_account_id' => $savingsAccount->id,
             'note' => 'Savings transfer',
         ]));
 
-        $transaction = Transaction::withoutGlobalScopes()->with(['account', 'category'])->find($transaction->id);
+        $transaction = Transaction::withoutGlobalScopes()->with(['account', 'category', 'fromAccount', 'toAccount'])->find($transaction->id);
 
         $this->assertStringContainsString('Lunch', $listOutput);
         $this->assertStringContainsString('Savings transfer', $editOutput);
         $this->assertSame(40.0, $transaction->amount);
-        $this->assertSame($savings->id, $transaction->category_id);
+        $this->assertSame($sourceAccount->id, $transaction->from_account_id);
+        $this->assertSame($savingsAccount->id, $transaction->to_account_id);
+        $this->assertNull($transaction->category_id);
+        $this->assertSame('AED', $transaction->currency);
         $this->assertSame(Transaction::TYPE_DEBIT, $transaction->transaction_type);
         $this->assertSame('Savings transfer', $transaction->note);
     }
@@ -277,30 +255,34 @@ class FinanceCrudToolsTest extends TestCase
         ]));
     }
 
-    public function test_edit_transaction_tool_rejects_reusing_a_participant_owned_category_on_a_shared_account(): void
+    public function test_edit_transaction_tool_requires_edit_access_for_replacement_accounts(): void
     {
         $owner = User::factory()->create();
         $sharedAccount = Account::factory()->create([
             'user_id' => $owner->id,
             'name' => ['en' => 'Shared Wallet', 'ar' => null],
+            'type' => Account::TYPE_ASSET,
         ]);
         $sharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
 
-        $ownersCategory = Category::factory()->create([
+        $initialDestinationAccount = Account::factory()->create([
             'user_id' => $owner->id,
-            'type' => Category::EXPENSES,
+            'type' => Account::TYPE_EXPENSE,
             'name' => ['en' => 'Owner Food', 'ar' => null],
         ]);
 
-        $editorsCategory = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => ['en' => 'Editor Food', 'ar' => null],
+        $viewOnlyDestinationAccount = Account::factory()->create([
+            'user_id' => $owner->id,
+            'type' => Account::TYPE_EXPENSE,
+            'name' => ['en' => 'View Only Food', 'ar' => null],
         ]);
+        $viewOnlyDestinationAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
         $transaction = Transaction::withoutGlobalScopes()->create([
             'account_id' => $sharedAccount->id,
-            'category_id' => $ownersCategory->id,
+            'category_id' => null,
+            'from_account_id' => $sharedAccount->id,
+            'to_account_id' => $initialDestinationAccount->id,
             'amount' => 20,
             'transaction_type' => Transaction::TYPE_DEBIT,
             'currency' => 'AED',
@@ -309,12 +291,12 @@ class FinanceCrudToolsTest extends TestCase
         ]);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('The selected category is invalid for the chosen account.');
+        $this->expectExceptionMessage('You do not have permission to modify transactions for the specified account.');
 
         (new EditTransactionTool())->handle(new Request([
             'transaction_id' => $transaction->id,
-            'category_id' => $editorsCategory->id,
-            'note' => 'Editor category attempt',
+            'to_account_id' => $viewOnlyDestinationAccount->id,
+            'note' => 'Editor destination attempt',
         ]));
     }
 }

@@ -4,13 +4,14 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Arr;
 
 class TransactionAuditResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $oldValues = $this->old_values ?? [];
-        $newValues = $this->new_values ?? [];
+        $oldValues = Arr::except($this->old_values ?? [], ['category_id', 'category_name']);
+        $newValues = Arr::except($this->new_values ?? [], ['category_id', 'category_name']);
         $allKeys = array_values(array_unique([...array_keys($oldValues), ...array_keys($newValues)]));
 
         $changedFields = array_values(array_filter($allKeys, function (string $key) use ($oldValues, $newValues) {

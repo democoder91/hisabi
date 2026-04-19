@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Transaction\Models\Transaction;
+use App\Domains\Account\Models\Account;
 
 class AverageTransactionMetricTest extends MetricsTestCase
 {
@@ -12,31 +12,44 @@ class AverageTransactionMetricTest extends MetricsTestCase
         $response->assertUnauthorized();
     }
 
-    public function test_returns_average_transaction_by_category(): void
+    public function test_returns_average_transaction_by_account(): void
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 100]);
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 200]);
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 300]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
 
-        $response = $this->getJson('/api/v1/metrics/average-transaction?range=current-year');
+        $this->createLedgerTransaction($checking, $food, 100);
+        $this->createLedgerTransaction($checking, $food, 200);
+        $this->createLedgerTransaction($checking, $food, 300);
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/average-transaction?from={$from}&to={$to}");
 
         $response->assertOk();
         $items = $response->json('data.items');
         $this->assertIsArray($items);
-        $foodCategory = collect($items)->firstWhere('label', 'Food');
-        $this->assertEquals(200, $foodCategory['value']);
+        $foodAccount = collect($items)->firstWhere('label', 'Food');
+        $this->assertEquals(200, $foodAccount['value']);
     }
 
-    public function test_groups_by_category(): void
+    public function test_groups_by_account(): void
     {
         $this->actingAs($this->user);
 
-        Transaction::factory()->create(['category_id' => $this->expensesCategory->id, 'amount' => 500]);
-        Transaction::factory()->create(['category_id' => $this->incomeCategory->id, 'amount' => 5000]);
+        $checking = $this->createAccount(['name' => ['en' => 'Checking'], 'type' => Account::TYPE_ASSET]);
+        $food = $this->createAccount(['name' => ['en' => 'Food'], 'type' => Account::TYPE_EXPENSE]);
+        $salary = $this->createAccount(['name' => ['en' => 'Salary'], 'type' => Account::TYPE_INCOME]);
 
-        $response = $this->getJson('/api/v1/metrics/average-transaction?range=current-year');
+        $this->createLedgerTransaction($checking, $food, 500);
+        $this->createLedgerTransaction($salary, $checking, 5000);
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/average-transaction?from={$from}&to={$to}");
 
         $response->assertOk();
         $items = $response->json('data.items');
@@ -47,7 +60,10 @@ class AverageTransactionMetricTest extends MetricsTestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->getJson('/api/v1/metrics/average-transaction?range=current-year');
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $response = $this->getJson("/api/v1/metrics/average-transaction?from={$from}&to={$to}");
 
         $response->assertOk();
         $this->assertIsArray($response->json('data.items'));

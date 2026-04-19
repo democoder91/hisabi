@@ -1,0 +1,14 @@
+meta {
+  name: Total Liabilities
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/total-liabilities?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

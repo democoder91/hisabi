@@ -4,8 +4,11 @@ namespace App\Http\Queries\Transaction\GetTransactionsQuery;
 
 class GetTransactionsQuery
 {
-    public function __construct(
-        public readonly int $perPage
-    ) {}
+    public int $perPage;
+
+    public function __construct(int $perPage)
+    {
+        $this->perPage = $perPage;
+    }
 }
 

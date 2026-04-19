@@ -3,7 +3,6 @@
 namespace App\Domains\Budget\Models;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\Concerns\HasLocalizedTranslatableName;
 use App\Models\Concerns\BelongsToUser;
@@ -53,14 +52,6 @@ class Budget extends Model
     public function accounts(): BelongsToMany
     {
         return $this->belongsToMany(Account::class, 'budget_account')
-            ->wherePivotNull('deleted_at')
-            ->withPivot('id', 'deleted_at')
-            ->withTimestamps();
-    }
-
-    public function categories(): BelongsToMany
-    {
-        return $this->belongsToMany(Category::class)
             ->wherePivotNull('deleted_at')
             ->withPivot('id', 'deleted_at')
             ->withTimestamps();
@@ -128,29 +119,17 @@ class Budget extends Model
         [$startAt, $endAt] = $this->getCurrentWindowStartAndEndDates();
 
         $accountIds = $this->accounts()->pluck('accounts.id');
-        $categoryIds = $this->categories()->pluck('categories.id');
 
-        if ($accountIds->isEmpty() && $categoryIds->isEmpty()) {
+        if ($accountIds->isEmpty()) {
             return 0;
         }
 
         $transactions = Transaction::query()
             ->select('transactions.amount', 'transactions.currency')
             ->whereBetween('transactions.created_at', [$startAt, $endAt])
-            ->where(function ($query) use ($accountIds, $categoryIds) {
-                if ($categoryIds->isNotEmpty()) {
-                    $query->orWhereIn('transactions.category_id', $categoryIds->all());
-                }
-
-                if ($accountIds->isNotEmpty()) {
-                    $query->orWhere(function ($subQuery) use ($accountIds) {
-                        $subQuery->where('transactions.transaction_type', Transaction::TYPE_CREDIT)
-                            ->whereIn('transactions.from_account_id', $accountIds->all());
-                    })->orWhere(function ($subQuery) use ($accountIds) {
-                        $subQuery->where('transactions.transaction_type', Transaction::TYPE_DEBIT)
-                            ->whereIn('transactions.to_account_id', $accountIds->all());
-                    });
-                }
+            ->where(function ($query) use ($accountIds) {
+                $query->whereIn('transactions.from_account_id', $accountIds->all())
+                    ->orWhereIn('transactions.to_account_id', $accountIds->all());
             })
             ->get();
 

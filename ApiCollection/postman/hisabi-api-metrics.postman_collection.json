@@ -33,7 +33,7 @@
             }
         },
         {
-            "name": "Total Savings",
+            "name": "Total Assets",
             "request": {
                 "method": "GET",
                 "header": [
@@ -42,11 +42,11 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/total-savings"
+                "url": "{{baseUrl}}/api/v1/metrics/total-assets?from={{fromDate}}&to={{toDate}}"
             }
         },
         {
-            "name": "Total Investment",
+            "name": "Total Liabilities",
             "request": {
                 "method": "GET",
                 "header": [
@@ -55,11 +55,11 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/total-investment"
+                "url": "{{baseUrl}}/api/v1/metrics/total-liabilities?from={{fromDate}}&to={{toDate}}"
             }
         },
         {
-            "name": "Total Cash",
+            "name": "Total Equity",
             "request": {
                 "method": "GET",
                 "header": [
@@ -68,7 +68,7 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/total-cash"
+                "url": "{{baseUrl}}/api/v1/metrics/total-equity?from={{fromDate}}&to={{toDate}}"
             }
         },
         {
@@ -124,7 +124,7 @@
             }
         },
         {
-            "name": "Category Trend",
+            "name": "Account Trend",
             "request": {
                 "method": "GET",
                 "header": [
@@ -133,11 +133,11 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/category-trend?from={{fromDate}}&to={{toDate}}&id={{categoryId}}"
+                "url": "{{baseUrl}}/api/v1/metrics/account-trend?from={{fromDate}}&to={{toDate}}&id={{accountId}}"
             }
         },
         {
-            "name": "Category Daily Trend",
+            "name": "Account Daily Trend",
             "request": {
                 "method": "GET",
                 "header": [
@@ -146,11 +146,11 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/category-daily-trend?from={{fromDate}}&to={{toDate}}&id={{categoryId}}"
+                "url": "{{baseUrl}}/api/v1/metrics/account-daily-trend?from={{fromDate}}&to={{toDate}}&id={{accountId}}"
             }
         },
         {
-            "name": "Expenses By Category",
+            "name": "Expenses By Account",
             "request": {
                 "method": "GET",
                 "header": [
@@ -159,11 +159,11 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/expenses-by-category?from={{fromDate}}&to={{toDate}}"
+                "url": "{{baseUrl}}/api/v1/metrics/expenses-by-account?from={{fromDate}}&to={{toDate}}"
             }
         },
         {
-            "name": "Income By Category",
+            "name": "Income By Account",
             "request": {
                 "method": "GET",
                 "header": [
@@ -172,7 +172,7 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/income-by-category?from={{fromDate}}&to={{toDate}}"
+                "url": "{{baseUrl}}/api/v1/metrics/income-by-account?from={{fromDate}}&to={{toDate}}"
             }
         },
         {
@@ -186,19 +186,6 @@
                     }
                 ],
                 "url": "{{baseUrl}}/api/v1/metrics/transactions-count?from={{fromDate}}&to={{toDate}}"
-            }
-        },
-        {
-            "name": "Transactions By Category",
-            "request": {
-                "method": "GET",
-                "header": [
-                    {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}"
-                    }
-                ],
-                "url": "{{baseUrl}}/api/v1/metrics/transactions-by-category?from={{fromDate}}&to={{toDate}}"
             }
         },
         {
@@ -241,7 +228,7 @@
             }
         },
         {
-            "name": "Transactions Std Dev",
+            "name": "Account Stats",
             "request": {
                 "method": "GET",
                 "header": [
@@ -250,20 +237,7 @@
                         "value": "Bearer {{token}}"
                     }
                 ],
-                "url": "{{baseUrl}}/api/v1/metrics/transactions-std-dev?from={{fromDate}}&to={{toDate}}&id={{categoryId}}"
-            }
-        },
-        {
-            "name": "Category Stats",
-            "request": {
-                "method": "GET",
-                "header": [
-                    {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}"
-                    }
-                ],
-                "url": "{{baseUrl}}/api/v1/metrics/category-stats?from={{fromDate}}&to={{toDate}}"
+                "url": "{{baseUrl}}/api/v1/metrics/account-stats?from={{fromDate}}&to={{toDate}}"
             }
         },
         {

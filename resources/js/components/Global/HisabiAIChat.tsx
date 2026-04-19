@@ -14,7 +14,14 @@ import VoiceRecorder from './VoiceRecorder';
 import { Button } from '@/components/ui/button';
 
 interface HisabiAIChatProps {
-  onClose: () => void;
+  onClose?: () => void;
+  title?: string;
+  subtitle?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  placeholder?: string;
+  defaultSuggestions?: string[];
+  loadingText?: string;
 }
 
 interface ChatMessage {
@@ -26,7 +33,16 @@ interface ChatMessage {
   suggestions?: string[];
 }
 
-export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
+export default function HisabiAIChat({
+  onClose,
+  title = 'NexoAi',
+  subtitle,
+  emptyTitle = 'Start a conversation...',
+  emptyDescription = 'Ask me anything about your finances!',
+  placeholder = 'Ask about your finances...',
+  defaultSuggestions,
+  loadingText = 'Analyzing your finances...',
+}: HisabiAIChatProps) {
   const { auth } = usePage<{ auth?: { user?: { available_credits?: number; is_super?: boolean } } }>().props;
   const isSuperUser = auth?.user?.is_super === true;
   const [message, setMessage] = useState('');
@@ -131,7 +147,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
 
   // Get suggestions from the last assistant message
   const lastAssistantMessage = [...chatHistory].reverse().find(msg => msg.role === 'assistant');
-  const currentSuggestions = lastAssistantMessage?.suggestions || [
+  const currentSuggestions = lastAssistantMessage?.suggestions || defaultSuggestions || [
     'Show me my spending summary for this month',
     'What are my top expenses?',
     'How much can I save this month?'
@@ -143,15 +159,19 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
       <div className="border-b p-4">
         <div className='flex justify-between items-center'>
           <div>
-            <h2 className='text-lg font-semibold'>NexoAi</h2>
-            <p className='text-xs text-muted-foreground'>{isSuperUser ? 'Unlimited AI access' : `${availableCredits} credits remaining`}</p>
+            <h2 className='text-lg font-semibold'>{title}</h2>
+            <p className='text-xs text-muted-foreground'>
+              {subtitle || (isSuperUser ? 'Unlimited AI access' : `${availableCredits} credits remaining`)}
+            </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <XIcon className='w-5 h-5' />
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <XIcon className='w-5 h-5' />
+            </button>
+          )}
         </div>
       </div>
 
@@ -161,8 +181,8 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
           {chatHistory.length === 0 && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-2">
-                <p className="text-muted-foreground text-sm">Start a conversation...</p>
-                <p className="text-xs text-muted-foreground">Ask me anything about your finances!</p>
+                <p className="text-muted-foreground text-sm">{emptyTitle}</p>
+                <p className="text-xs text-muted-foreground">{emptyDescription}</p>
               </div>
             </div>
           )}
@@ -196,7 +216,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
           {loading && (
             <div className="flex items-center gap-2 py-4">
               <Loader size={20} />
-              <span className="text-sm text-muted-foreground">Analyzing your finances...</span>
+              <span className="text-sm text-muted-foreground">{loadingText}</span>
             </div>
           )}
         </ConversationContent>
@@ -229,7 +249,7 @@ export default function HisabiAIChat({ onClose }: HisabiAIChatProps) {
             value={message}
             onChange={handleChange}
             disabled={loading || (!isSuperUser && availableCredits < 1)}
-            placeholder="Ask about your finances..."
+            placeholder={placeholder}
           />
           <PromptInputToolbar>
             <VoiceRecorder

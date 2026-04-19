@@ -19,7 +19,7 @@ class AskUserInputTool implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Use this tool to ask the user for specific missing information, such as selecting an account, category, or confirming details before executing a transaction.';
+        return 'Use this tool to ask the user for specific missing information, such as selecting an account, choosing source and destination accounts, or confirming details before executing a transaction.';
     }
 
     public function handle(Request $request): Stringable|string

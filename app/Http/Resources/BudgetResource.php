@@ -11,6 +11,7 @@ class BudgetResource extends JsonResource
     {
         $startAt = $this->start_at;
         $endAt = $this->end_at;
+        $accounts = $this->relationLoaded('accounts') ? $this->accounts : collect();
 
         return [
             'id' => $this->id,
@@ -33,18 +34,19 @@ class BudgetResource extends JsonResource
             'elapsed_days_percentage' => $this->elapsed_days_percentage,
             'is_saving' => $this->is_saving,
             'total_transactions_amount' => $this->total_transactions_amount,
-            'categories' => $this->whenLoaded('categories', function () {
-                return $this->categories->map(function ($category) {
-                    return [
-                        'id' => $category->id,
-                        'accountId' => $category->account_id,
-                        'name' => $category->getLocalizedName(),
-                        'name_translations' => $category->getSafeNameTranslations(),
-                        'color' => $category->color,
-                        'icon' => $category->icon,
-                    ];
-                })->values()->all();
-            }, []),
+            'accounts' => $accounts->map(function ($account) {
+                $owner = $account->relationLoaded('user') ? $account->user : null;
+
+                return [
+                    'id' => $account->id,
+                    'name' => $account->getLocalizedName(),
+                    'name_translations' => $account->getSafeNameTranslations(),
+                    'type' => $account->type,
+                    'currency' => $account->currency,
+                    'ownerUserId' => $account->user_id,
+                    'ownerName' => $owner ? $owner->name : null,
+                ];
+            })->values()->all(),
         ];
     }
 }

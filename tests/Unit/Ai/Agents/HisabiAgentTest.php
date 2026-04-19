@@ -6,16 +6,13 @@ use App\Ai\Agents\HisabiAgent;
 use App\Ai\Tools\AskUserInputTool;
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
-use App\Ai\Tools\CreateCategoryTool;
 use App\Ai\Tools\CreateTransferTool;
 use App\Ai\Tools\CreateTransactionTool;
 use App\Ai\Tools\EditAccountTool;
 use App\Ai\Tools\EditBudgetTool;
-use App\Ai\Tools\EditCategoryTool;
 use App\Ai\Tools\EditTransactionTool;
 use App\Ai\Tools\ListAccountsTool;
 use App\Ai\Tools\ListBudgetsTool;
-use App\Ai\Tools\ListCategoriesTool;
 use App\Ai\Tools\ListTransactionsTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,15 +34,12 @@ class HisabiAgentTest extends TestCase
             CreateTransactionTool::class,
             CreateTransferTool::class,
             CreateBudgetTool::class,
-            CreateCategoryTool::class,
             EditAccountTool::class,
             EditTransactionTool::class,
             EditBudgetTool::class,
-            EditCategoryTool::class,
             ListAccountsTool::class,
             ListTransactionsTool::class,
             ListBudgetsTool::class,
-            ListCategoriesTool::class,
             AskUserInputTool::class,
         ], array_map(static fn($tool) => get_class($tool), $tools));
     }
@@ -63,9 +57,12 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString('create_transaction', $instructions);
         $this->assertStringContainsString('create_transfer', $instructions);
         $this->assertStringContainsString('edit_budget', $instructions);
-        $this->assertStringContainsString('list_categories', $instructions);
         $this->assertStringContainsString('ask_user_for_input', $instructions);
         $this->assertStringContainsString('Do not invent transaction memos', $instructions);
+        $this->assertStringContainsString('source-account to destination-account movements', $instructions);
+        $this->assertStringContainsString('at least one account ID', $instructions);
+        $this->assertStringContainsString('Explain how the Hisabi application works', $instructions);
+        $this->assertStringNotContainsString('list_categories', $instructions);
     }
 
     public function test_instructions_use_user_currency(): void

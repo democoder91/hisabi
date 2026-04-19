@@ -1,0 +1,14 @@
+meta {
+  name: Account Daily Trend
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/account-daily-trend?from={{fromDate}}&to={{toDate}}&id={{accountId}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

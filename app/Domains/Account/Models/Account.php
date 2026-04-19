@@ -2,7 +2,6 @@
 
 namespace App\Domains\Account\Models;
 
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\TransactionAudit;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\Concerns\HasLocalizedTranslatableName;
@@ -15,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\Translatable\HasTranslations;
@@ -100,11 +98,6 @@ class Account extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
-    }
-
-    public function compatibilityCategory(): HasOne
-    {
-        return $this->hasOne(Category::class)->withTrashed();
     }
 
     public function sharedUsers(): BelongsToMany

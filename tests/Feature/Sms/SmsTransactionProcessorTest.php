@@ -3,7 +3,9 @@
 namespace Tests\Feature\Sms;
 
 use App\Contracts\SmsTransactionProcessor;
+use App\Domains\Account\Models\Account;
 use App\Domains\Sms\Models\Sms;
+use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,11 +14,15 @@ class SmsTransactionProcessorTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->actingAs(User::factory()->create());
+        $this->user = User::factory()->create();
+
+        $this->actingAs($this->user);
     }
 
     public function test_not_valid_template_should_create_sms_without_transaction()
@@ -43,7 +49,11 @@ class SmsTransactionProcessorTest extends TestCase
         $this->assertEquals($sms, $smsFromDB->body);
         $this->assertNotNull($smsFromDB->transaction);
         $this->assertEquals('ENOC', $smsFromDB->transaction->note);
-        $this->assertNotNull($smsFromDB->transaction->category);
+        $this->assertNull($smsFromDB->transaction->category_id);
+        $this->assertEquals(Transaction::TYPE_DEBIT, $smsFromDB->transaction->transaction_type);
+        $this->assertEquals($this->user->getOrCreateDefaultAccount()->id, $smsFromDB->transaction->from_account_id);
+        $this->assertEquals($this->user->getOrCreateUncategorizedExpenseAccount()->id, $smsFromDB->transaction->to_account_id);
+        $this->assertEquals(Account::TYPE_EXPENSE, $smsFromDB->transaction->toAccount->type);
     }
 
     public function test_it_stores_processed_purchase_sms_with_transaction_amount()
@@ -80,6 +90,10 @@ class SmsTransactionProcessorTest extends TestCase
         $smsFromDB = Sms::first();
         $this->assertEquals('Salary', $smsFromDB->transaction->note);
         $this->assertEquals('70000.0', $smsFromDB->transaction->amount);
+        $this->assertEquals(Transaction::TYPE_CREDIT, $smsFromDB->transaction->transaction_type);
+        $this->assertEquals($this->user->getOrCreateUncategorizedIncomeAccount()->id, $smsFromDB->transaction->from_account_id);
+        $this->assertEquals($this->user->getOrCreateDefaultAccount()->id, $smsFromDB->transaction->to_account_id);
+        $this->assertEquals(Account::TYPE_INCOME, $smsFromDB->transaction->fromAccount->type);
     }
 
     public function test_it_process_multi_sms()

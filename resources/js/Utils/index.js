@@ -83,32 +83,6 @@ export const getTailwindColor = (index) => {
     return colors()[index] ? colors()[index].tailwind : "bg-gray-500";
 }
 
-export const getTransactionTypeForCategoryType = (categoryType) => {
-    return categoryType === 'INCOME'
-        ? TRANSACTION_TYPES.CREDIT
-        : TRANSACTION_TYPES.DEBIT
-}
-
-export const isCategoryCompatibleWithTransactionType = (category, transactionType) => {
-    if (!category?.type || !transactionType) {
-        return true
-    }
-
-    return getTransactionTypeForCategoryType(category.type) === transactionType
-}
-
-export const isCategoryAvailableForAccount = (category, account) => {
-    if (!category || !account) {
-        return true
-    }
-
-    if (account.ownerId == null || category.ownerUserId == null) {
-        return true
-    }
-
-    return Number(category.ownerUserId) === Number(account.ownerId)
-}
-
 export const getSharedAccountOwnerLabel = (account, formatSharedBy) => {
     if (!account || account.isOwner || !account.ownerName) {
         return ''
@@ -198,36 +172,6 @@ export const getAccountOptionLabel = (account, formatSharedBy) => {
     return sharedOwnerLabel
         ? `${accountName} · ${sharedOwnerLabel}`
         : accountName
-}
-
-export const getCategoryOptionLabel = (category, categories = []) => {
-    if (!category) {
-        return ''
-    }
-
-    const baseLabel = getLocalizedName(category)
-    const matchingCategories = categories.filter((item) => getLocalizedName(item) === baseLabel)
-
-    if (matchingCategories.length <= 1) {
-        return baseLabel
-    }
-
-    const sameOwnerMatches = matchingCategories.filter((item) => item?.ownerUserId === category.ownerUserId)
-    const ownerLabel = category.ownerName ? category.ownerName : `#${category.id}`
-
-    if (sameOwnerMatches.length > 1) {
-        return `${baseLabel} · ${ownerLabel} · #${category.id}`
-    }
-
-    return `${baseLabel} · ${ownerLabel}`
-}
-
-export const isBrandCompatibleWithTransactionType = (brand, transactionType) => {
-    if (!brand?.category?.type || !transactionType) {
-        return true
-    }
-
-    return getTransactionTypeForCategoryType(brand.category.type) === transactionType
 }
 
 export const isCreditTransaction = (transaction) => {

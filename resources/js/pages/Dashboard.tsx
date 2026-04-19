@@ -10,12 +10,11 @@ import ValueMetric from '@/components/Domain/ValueMetric';
 import TrendMetric from '@/components/Domain/TrendMetric';
 import PartitionMetric from '@/components/Domain/PartitionMetric';
 import CirclePackMetric from '@/components/Domain/CirclePackMetric';
-import CategoryStats from '@/components/Domain/CategoryStats';
+import AccountStats from '@/components/Domain/AccountStats';
 import SectionDivider from '@/components/Global/SectionDivider';
 import Budgets from '@/components/Domain/Budgets';
 import RecordTransactionButton from '@/components/Domain/RecordTransactionButton';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
-import { getAllCategories } from '@/Api/categories';
 import { getAllAccounts } from '@/Api/accounts';
 import { useActiveLocale } from '@/hooks/useActiveLocale';
 import { withLocalizedNames } from '@/Utils';
@@ -23,7 +22,6 @@ import { withLocalizedNames } from '@/Utils';
 export default function Dashboard({ auth, hasData }: any) {
     const { t } = useTranslation();
     const activeLocale = useActiveLocale();
-    const [allCategories, setAllCategories] = useState<any[]>([]);
     const [allAccounts, setAllAccounts] = useState<any[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange>({
@@ -32,16 +30,11 @@ export default function Dashboard({ auth, hasData }: any) {
     });
 
     useEffect(() => {
-        Promise.all([
-            getAllCategories(),
-            getAllAccounts()
-        ]).then(([{ data: categories }, { data: accounts }]) => {
-            setAllCategories(categories.allCategories);
+        getAllAccounts().then(({ data: accounts }) => {
             setAllAccounts(accounts.allAccounts);
         }).catch(console.error);
     }, []);
 
-    const localizedCategories = useMemo(() => withLocalizedNames(allCategories, activeLocale), [allCategories, activeLocale]);
     const localizedAccounts = useMemo(() => withLocalizedNames(allAccounts, activeLocale), [allAccounts, activeLocale]);
 
     const handleDateChange = (newDateRange: DateRange | undefined) => {
@@ -60,18 +53,17 @@ export default function Dashboard({ auth, hasData }: any) {
                 />
                 <RecordTransactionButton
                     accounts={localizedAccounts}
-                    categories={localizedCategories}
                     onSuccess={() => setRefreshKey(prev => prev + 1)}
                 />
             </div>
         </div>
     );
 
-    const categoryRelation = useMemo(() => ({
-        data: localizedCategories,
+    const accountRelation = useMemo(() => ({
+        data: localizedAccounts,
         display_using: 'name',
         foreign_key: 'id'
-    }), [localizedCategories]);
+    }), [localizedAccounts]);
 
     return (
         <Authenticated auth={auth} header={header}>
@@ -99,22 +91,21 @@ export default function Dashboard({ auth, hasData }: any) {
                             <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4"
                             >
                                 <ValueMetric
-                                    key={`totalCash-${refreshKey}`}
-                                    name={t('dashboard.totalCash')}
-                                    metric="totalCash"
-                                    helpText={t('dashboard.totalCashHelp')}
+                                    key={`totalAssets-${refreshKey}`}
+                                    name={t('dashboard.totalAssets')}
+                                    metric="totalAssets"
                                     dateRange={dateRange}
                                 />
                                 <ValueMetric
-                                    key={`totalSavings-${refreshKey}`}
-                                    name={t('dashboard.totalSavings')}
-                                    metric="totalSavings"
+                                    key={`totalLiabilities-${refreshKey}`}
+                                    name={t('dashboard.totalLiabilities')}
+                                    metric="totalLiabilities"
                                     dateRange={dateRange}
                                 />
                                 <ValueMetric
-                                    key={`totalInvestment-${refreshKey}`}
-                                    name={t('dashboard.totalInvestment')}
-                                    metric="totalInvestment"
+                                    key={`totalEquity-${refreshKey}`}
+                                    name={t('dashboard.totalEquity')}
+                                    metric="totalEquity"
                                     dateRange={dateRange}
                                 />
                             </div>
@@ -148,39 +139,39 @@ export default function Dashboard({ auth, hasData }: any) {
                             </div>
 
 
-                            <SectionDivider title={t('dashboard.categoriesAnalytics')} />
+                            <SectionDivider title={t('dashboard.accountsAnalytics')} />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
-                                    <CategoryStats dateRange={dateRange} />
+                                    <AccountStats dateRange={dateRange} />
                                 </div>
                                 <PartitionMetric
-                                    key={`incomePerCategory-${refreshKey}`}
+                                    key={`incomePerAccount-${refreshKey}`}
                                     name={t('dashboard.incomeSources')}
-                                    metric="incomePerCategory"
+                                    metric="incomePerAccount"
                                     show_currency={true}
                                     dateRange={dateRange}
                                 />
                                 <PartitionMetric
-                                    key={`expensesPerCategory-${refreshKey}`}
-                                    name={t('dashboard.spendingByCategory')}
-                                    metric="expensesPerCategory"
+                                    key={`expensesPerAccount-${refreshKey}`}
+                                    name={t('dashboard.spendingByAccount')}
+                                    metric="expensesPerAccount"
                                     show_currency={true}
                                     dateRange={dateRange}
                                 />
 
                                 <TrendMetric
-                                    key={`totalPerCategoryTrend-${refreshKey}`}
-                                    name={t('dashboard.overallTrendByCategory')}
-                                    metric="totalPerCategoryTrend"
-                                    relation={categoryRelation}
+                                    key={`totalPerAccountTrend-${refreshKey}`}
+                                    name={t('dashboard.overallTrendByAccount')}
+                                    metric="totalPerAccountTrend"
+                                    relation={accountRelation}
                                     dateRange={dateRange}
                                 />
                                 <TrendMetric
-                                    key={`totalPerCategoryDailyTrend-${refreshKey}`}
-                                    name={t('dashboard.dailyTrendByCategory')}
-                                    metric="totalPerCategoryDailyTrend"
-                                    relation={categoryRelation}
+                                    key={`totalPerAccountDailyTrend-${refreshKey}`}
+                                    name={t('dashboard.dailyTrendByAccount')}
+                                    metric="totalPerAccountDailyTrend"
+                                    relation={accountRelation}
                                     dateRange={dateRange}
                                     defaultToCurrentYear={false}
                                 />

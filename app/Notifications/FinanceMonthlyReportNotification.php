@@ -42,14 +42,14 @@ class FinanceMonthlyReportNotification extends Notification
     public function toMail($notifiable)
     {
         $data = [
-            'sections' => app(ReportManager::class)->generate(),
+            'sections' => app(ReportManager::class)->generate(null, null, $notifiable),
             'currency' => config('hisabi.currency'),
             'range' => now()->format('M Y')
         ];
 
         return (new MailMessage)
-                    ->subject('Finance report for ' . $data['month'])
-                    ->line('Please find the finance report attachment for ' . $data['month'])
+                    ->subject('Finance report for ' . $data['range'])
+                    ->line('Please find the finance report attachment for ' . $data['range'])
                     ->attachData(PdfRenderer::render('report', $data), 'hisabi-report.pdf');
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Ai\Tools;
 
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Scopes\OwnedAccountScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -21,18 +20,13 @@ class ListTransactionsTool extends FinancialTool
     {
         $user = $this->authenticatedUser();
         $input = $request->all();
-        $this->uppercaseIfPresent($input, ['category_type', 'transaction_type']);
+        $this->uppercaseIfPresent($input, ['transaction_type']);
 
         $validated = $this->validateInput($input, [
             'transaction_id' => ['nullable', 'integer'],
             'account_id' => ['nullable', 'integer'],
-            'category_id' => ['nullable', 'integer'],
-            'category_type' => ['nullable', 'string', Rule::in([
-                Category::EXPENSES,
-                Category::INCOME,
-                Category::SAVINGS,
-                Category::INVESTMENT,
-            ])],
+            'from_account_id' => ['nullable', 'integer'],
+            'to_account_id' => ['nullable', 'integer'],
             'transaction_type' => ['nullable', 'string', Rule::in([
                 Transaction::TYPE_DEBIT,
                 Transaction::TYPE_CREDIT,
@@ -46,7 +40,7 @@ class ListTransactionsTool extends FinancialTool
         $query = Transaction::query()
             ->withoutGlobalScope(OwnedAccountScope::class)
             ->forAccessibleAccounts($user)
-            ->with(['account.sharedUsers:id,name,email', 'category', 'fromAccount', 'toAccount']);
+            ->with(['account.sharedUsers:id,name,email', 'fromAccount', 'toAccount']);
 
         if (! empty($validated['transaction_id'])) {
             $query->whereKey($validated['transaction_id']);
@@ -61,12 +55,14 @@ class ListTransactionsTool extends FinancialTool
             });
         }
 
-        if (! empty($validated['category_id'])) {
-            $query->where('category_id', (int) $validated['category_id']);
+        if (! empty($validated['from_account_id'])) {
+            $fromAccount = $this->accessibleAccount((int) $validated['from_account_id'], $user);
+            $query->where('from_account_id', $fromAccount->id);
         }
 
-        if (! empty($validated['category_type'])) {
-            $query->whereHas('category', fn($builder) => $builder->where('type', $validated['category_type']));
+        if (! empty($validated['to_account_id'])) {
+            $toAccount = $this->accessibleAccount((int) $validated['to_account_id'], $user);
+            $query->where('to_account_id', $toAccount->id);
         }
 
         if (! empty($validated['transaction_type'])) {
@@ -117,14 +113,13 @@ class ListTransactionsTool extends FinancialTool
                 ->description('Optional exact transaction ID to retrieve.')
                 ->nullable(),
             'account_id' => $schema->integer()
-                ->description('Optional account ID filter.')
+                ->description('Optional filter for any transaction involving this account.')
                 ->nullable(),
-            'category_id' => $schema->integer()
-                ->description('Optional category ID filter.')
+            'from_account_id' => $schema->integer()
+                ->description('Optional source account ID filter.')
                 ->nullable(),
-            'category_type' => $schema->string()
-                ->description('Optional category type filter.')
-                ->enum([Category::EXPENSES, Category::INCOME, Category::SAVINGS, Category::INVESTMENT])
+            'to_account_id' => $schema->integer()
+                ->description('Optional destination account ID filter.')
                 ->nullable(),
             'transaction_type' => $schema->string()
                 ->description('Optional transaction direction filter.')

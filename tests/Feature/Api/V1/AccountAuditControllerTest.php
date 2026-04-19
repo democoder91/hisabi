@@ -3,7 +3,6 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Models\TransactionAudit;
 use App\Models\User;
@@ -16,7 +15,7 @@ class AccountAuditControllerTest extends TestCase
 
     private User $user;
     private Account $account;
-    private Category $category;
+    private Account $expenseAccount;
 
     protected function setUp(): void
     {
@@ -27,19 +26,18 @@ class AccountAuditControllerTest extends TestCase
             'user_id' => $this->user->id,
             'name' => ['en' => 'Checking', 'ar' => 'الحساب الجاري'],
         ]);
-
-        $this->category = Category::factory()->create([
+        $this->expenseAccount = Account::factory()->create([
             'user_id' => $this->user->id,
-            'name' => ['en' => 'Food'],
-            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Food Expense', 'ar' => 'مصروف الطعام'],
+            'type' => Account::TYPE_EXPENSE,
         ]);
     }
 
     public function test_creating_a_transaction_generates_an_audit_record(): void
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
-            'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 42,
             'created_at' => now()->toDateString(),
             'note' => 'Lunch',
@@ -55,23 +53,30 @@ class AccountAuditControllerTest extends TestCase
         $this->assertSame($this->user->id, $audit->user_id);
         $this->assertNull($audit->old_values);
         $this->assertSame('Checking', $audit->new_values['account_name']);
+        $this->assertSame('Checking', $audit->new_values['from_account_name']);
+        $this->assertSame('Food Expense', $audit->new_values['to_account_name']);
         $this->assertEquals(42.0, $audit->new_values['amount']);
         $this->assertSame('Lunch', $audit->new_values['note']);
-        $this->assertSame('Food', $audit->new_values['category_name']);
+        $this->assertArrayNotHasKey('category_id', $audit->new_values);
+        $this->assertArrayNotHasKey('category_name', $audit->new_values);
     }
 
     public function test_updating_a_transaction_captures_old_and_new_values(): void
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'category_id' => null,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 40,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => $this->account->currency,
             'note' => 'Before',
         ]);
 
         $response = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
-            'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 75,
             'created_at' => now()->toDateString(),
             'note' => 'After',
@@ -87,15 +92,20 @@ class AccountAuditControllerTest extends TestCase
         $this->assertSame('Before', $audit->old_values['note']);
         $this->assertEquals(75.0, $audit->new_values['amount']);
         $this->assertSame('After', $audit->new_values['note']);
-        $this->assertSame('Food', $audit->new_values['category_name']);
+        $this->assertArrayNotHasKey('category_id', $audit->new_values);
+        $this->assertArrayNotHasKey('category_name', $audit->new_values);
     }
 
     public function test_deleting_a_transaction_generates_a_delete_audit_record(): void
     {
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'category_id' => null,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 18,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => $this->account->currency,
             'note' => 'To delete',
         ]);
 
@@ -116,22 +126,23 @@ class AccountAuditControllerTest extends TestCase
     public function test_owner_can_fetch_audits_for_their_account_only(): void
     {
         $ownedTransaction = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
-            'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 33,
             'created_at' => now()->toDateString(),
         ])->json('transaction.id');
 
         $otherOwner = User::factory()->create();
         $otherAccount = Account::factory()->create(['user_id' => $otherOwner->id]);
-        $otherCategory = Category::factory()->create([
+        $otherExpenseAccount = Account::factory()->create([
             'user_id' => $otherOwner->id,
-            'name' => ['en' => 'Transport'],
-            'type' => Category::EXPENSES,
+            'name' => ['en' => 'Transport Expense'],
+            'type' => Account::TYPE_EXPENSE,
         ]);
+
         $this->actingAs($otherOwner)->postJson('/api/v1/transactions', [
-            'account_id' => $otherAccount->id,
-            'category_id' => $otherCategory->id,
+            'from_account_id' => $otherAccount->id,
+            'to_account_id' => $otherExpenseAccount->id,
             'amount' => 19,
             'created_at' => now()->toDateString(),
         ])->assertCreated();
@@ -154,8 +165,8 @@ class AccountAuditControllerTest extends TestCase
         $this->account->sharedUsers()->attach($sharedUser->id, ['permission_level' => Account::PERMISSION_VIEW]);
 
         $this->actingAs($this->user)->postJson('/api/v1/transactions', [
-            'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 11,
             'created_at' => now()->toDateString(),
         ])->assertCreated();
@@ -165,7 +176,7 @@ class AccountAuditControllerTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_moving_a_transaction_to_another_account_records_update_audits_for_both_accounts(): void
+    public function test_moving_a_transaction_to_another_account_records_update_audits_for_all_affected_accounts(): void
     {
         $secondaryAccount = Account::factory()->create([
             'user_id' => $this->user->id,
@@ -174,14 +185,18 @@ class AccountAuditControllerTest extends TestCase
 
         $transaction = Transaction::factory()->create([
             'account_id' => $this->account->id,
-            'category_id' => $this->category->id,
+            'category_id' => null,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 28,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => $this->account->currency,
             'note' => 'Before move',
         ]);
 
         $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transaction->id}", [
-            'account_id' => $secondaryAccount->id,
-            'category_id' => $this->category->id,
+            'from_account_id' => $secondaryAccount->id,
+            'to_account_id' => $this->expenseAccount->id,
             'amount' => 64,
             'created_at' => now()->toDateString(),
             'note' => 'Moved accounts',
@@ -193,14 +208,57 @@ class AccountAuditControllerTest extends TestCase
             ->orderBy('account_id')
             ->get();
 
-        $this->assertCount(2, $audits);
-        $this->assertSame([
-            $this->account->id,
-            $secondaryAccount->id,
-        ], $audits->pluck('account_id')->all());
-        $this->assertSame($this->account->id, $audits[0]->old_values['account_id']);
-        $this->assertSame($secondaryAccount->id, $audits[0]->new_values['account_id']);
-        $this->assertSame($this->account->id, $audits[1]->old_values['account_id']);
-        $this->assertSame($secondaryAccount->id, $audits[1]->new_values['account_id']);
+        $this->assertCount(3, $audits);
+        $this->assertSame(
+            collect([$this->account->id, $secondaryAccount->id, $this->expenseAccount->id])->sort()->values()->all(),
+            $audits->pluck('account_id')->sort()->values()->all()
+        );
+    }
+
+    public function test_audit_api_response_hides_legacy_category_fields(): void
+    {
+        $transaction = Transaction::factory()->create([
+            'account_id' => $this->account->id,
+            'category_id' => null,
+            'from_account_id' => $this->account->id,
+            'to_account_id' => $this->expenseAccount->id,
+            'amount' => 50,
+            'transaction_type' => Transaction::TYPE_DEBIT,
+            'currency' => $this->account->currency,
+        ]);
+
+        TransactionAudit::query()->create([
+            'transaction_id' => $transaction->id,
+            'account_id' => $this->account->id,
+            'user_id' => $this->user->id,
+            'action' => TransactionAudit::ACTION_UPDATED,
+            'old_values' => [
+                'account_id' => $this->account->id,
+                'account_name' => 'Checking',
+                'category_id' => 10,
+                'category_name' => 'Food',
+                'amount' => 10,
+            ],
+            'new_values' => [
+                'account_id' => $this->account->id,
+                'account_name' => 'Checking',
+                'category_id' => 11,
+                'category_name' => 'Dining',
+                'amount' => 50,
+            ],
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/accounts/{$this->account->id}/audits");
+
+        $response->assertOk();
+
+        $payload = $response->json('data.0');
+
+        $this->assertArrayNotHasKey('category_id', $payload['oldValues']);
+        $this->assertArrayNotHasKey('category_name', $payload['oldValues']);
+        $this->assertArrayNotHasKey('category_id', $payload['newValues']);
+        $this->assertArrayNotHasKey('category_name', $payload['newValues']);
+        $this->assertNotContains('category_id', $payload['changedFields']);
+        $this->assertNotContains('category_name', $payload['changedFields']);
     }
 }

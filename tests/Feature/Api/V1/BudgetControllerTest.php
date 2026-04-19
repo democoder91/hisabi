@@ -4,7 +4,6 @@ namespace Tests\Feature\Api\V1;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
-use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\ExchangeRate;
 use App\Models\User;
@@ -17,10 +16,17 @@ class BudgetControllerTest extends TestCase
 
     private User $user;
 
+    private Account $trackingAccount;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->user = User::factory()->create();
+        $this->trackingAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Groceries'],
+            'type' => Account::TYPE_EXPENSE,
+        ]);
     }
 
     public function test_it_requires_authentication(): void
@@ -97,11 +103,6 @@ class BudgetControllerTest extends TestCase
 
     public function test_it_converts_matching_transactions_into_the_budget_currency(): void
     {
-        $category = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-        ]);
-
         $budget = Budget::factory()->create([
             'user_id' => $this->user->id,
             'currency' => 'EUR',
@@ -110,7 +111,7 @@ class BudgetControllerTest extends TestCase
             'end_at' => now()->addDay(),
         ]);
 
-        $budget->categories()->sync([$category->id]);
+        $budget->accounts()->sync([$this->trackingAccount->id]);
 
         ExchangeRate::query()->updateOrCreate(
             ['user_id' => $this->user->id, 'currency' => 'USD'],
@@ -124,12 +125,16 @@ class BudgetControllerTest extends TestCase
 
         $account = Account::factory()->create([
             'user_id' => $this->user->id,
+            'type' => Account::TYPE_ASSET,
             'currency' => 'USD',
         ]);
 
         Transaction::factory()->create([
             'account_id' => $account->id,
-            'category_id' => $category->id,
+            'category_id' => null,
+            'from_account_id' => $account->id,
+            'to_account_id' => $this->trackingAccount->id,
+            'transaction_type' => Transaction::TYPE_DEBIT,
             'amount' => 100,
             'created_at' => now(),
         ]);
@@ -153,16 +158,16 @@ class BudgetControllerTest extends TestCase
             ->assertJsonPath('budget.id', $budget->id)
             ->assertJsonPath('budget.name', 'Emergency Budget')
             ->assertJsonPath('budget.name_translations.ar', 'ميزانية الطوارئ');
+
+        $this->assertArrayNotHasKey('categories', $response->json('budget'));
     }
 
-    public function test_it_returns_localized_budget_and_category_names_for_the_active_locale(): void
+    public function test_it_returns_localized_budget_and_account_names_for_the_active_locale(): void
     {
         $this->user->forceFill(['locale' => 'ar'])->save();
 
-        $category = Category::factory()->create([
-            'user_id' => $this->user->id,
+        $this->trackingAccount->update([
             'name' => ['en' => 'Groceries', 'ar' => 'البقالة'],
-            'type' => Category::EXPENSES,
         ]);
 
         $budget = Budget::factory()->create([
@@ -170,21 +175,21 @@ class BudgetControllerTest extends TestCase
             'name' => ['en' => 'Emergency Budget', 'ar' => 'ميزانية الطوارئ'],
         ]);
 
-        $budget->categories()->sync([$category->id]);
+        $budget->accounts()->sync([$this->trackingAccount->id]);
 
         $response = $this->actingAs($this->user)
             ->getJson("/api/v1/budgets/{$budget->id}");
 
         $response->assertOk()
             ->assertJsonPath('budget.name', 'ميزانية الطوارئ')
-            ->assertJsonPath('budget.categories.0.name', 'البقالة')
-            ->assertJsonPath('budget.categories.0.name_translations.en', 'Groceries');
+            ->assertJsonPath('budget.accounts.0.name', 'البقالة')
+            ->assertJsonPath('budget.accounts.0.name_translations.en', 'Groceries');
+
+        $this->assertArrayNotHasKey('categories', $response->json('budget'));
     }
 
     public function test_it_creates_a_budget(): void
     {
-        $category = Category::factory()->create(['user_id' => $this->user->id]);
-
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/budgets', [
                 'name' => ['en' => 'Groceries', 'ar' => 'مشتريات'],
@@ -195,13 +200,13 @@ class BudgetControllerTest extends TestCase
                 'saving' => false,
                 'period' => 1,
                 'reoccurrence' => Budget::CUSTOM,
-                'category_ids' => [$category->id],
+                'account_ids' => [$this->trackingAccount->id],
             ]);
 
         $response->assertCreated()
             ->assertJsonPath('budget.name', 'Groceries')
             ->assertJsonPath('budget.name_translations.en', 'Groceries')
-            ->assertJsonPath('budget.categories.0.id', $category->id)
+            ->assertJsonPath('budget.accounts.0.id', $this->trackingAccount->id)
             ->assertJsonPath('budget.currency', 'EUR');
 
         $budget = Budget::query()->latest('id')->first();
@@ -209,8 +214,12 @@ class BudgetControllerTest extends TestCase
         $this->assertNotNull($budget);
         $this->assertSame($this->user->id, $budget->user_id);
         $this->assertSame('Groceries', $budget->getTranslation('name', 'en'));
-        $this->assertSame([$category->id], $budget->categories()->pluck('categories.id')->all());
+        $this->assertSame([$this->trackingAccount->id], $budget->accounts()->pluck('accounts.id')->all());
         $this->assertSame('EUR', $budget->currency);
+        $this->assertDatabaseHas('budget_account', [
+            'budget_id' => $budget->id,
+            'account_id' => $this->trackingAccount->id,
+        ]);
     }
 
     public function test_it_validates_budget_required_fields(): void
@@ -219,13 +228,35 @@ class BudgetControllerTest extends TestCase
             ->postJson('/api/v1/budgets', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'amount', 'currency', 'start_at', 'period', 'reoccurrence', 'category_ids']);
+            ->assertJsonValidationErrors(['name', 'amount', 'currency', 'start_at', 'period', 'reoccurrence', 'account_ids']);
+    }
+
+    public function test_it_requires_account_ids_when_legacy_category_ids_are_supplied(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/budgets', [
+                'name' => ['en' => 'Groceries', 'ar' => 'مشتريات'],
+                'amount' => 1500,
+                'currency' => 'USD',
+                'start_at' => now()->startOfMonth()->toDateString(),
+                'end_at' => now()->endOfMonth()->toDateString(),
+                'saving' => false,
+                'period' => 1,
+                'reoccurrence' => Budget::CUSTOM,
+                'category_ids' => [9999],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['account_ids']);
     }
 
     public function test_it_updates_a_budget(): void
     {
-        $originalCategory = Category::factory()->create(['user_id' => $this->user->id]);
-        $newCategory = Category::factory()->create(['user_id' => $this->user->id]);
+        $newAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Transport'],
+            'type' => Account::TYPE_EXPENSE,
+        ]);
         $budget = Budget::factory()->create([
             'user_id' => $this->user->id,
             'name' => ['en' => 'Old Budget'],
@@ -233,7 +264,7 @@ class BudgetControllerTest extends TestCase
             'start_at' => now()->subWeek(),
             'end_at' => now()->addWeek(),
         ]);
-        $budget->categories()->sync([$originalCategory->id]);
+        $budget->accounts()->sync([$this->trackingAccount->id]);
 
         $response = $this->actingAs($this->user)
             ->putJson("/api/v1/budgets/{$budget->id}", [
@@ -245,24 +276,24 @@ class BudgetControllerTest extends TestCase
                 'saving' => true,
                 'period' => 1,
                 'reoccurrence' => Budget::CUSTOM,
-                'category_ids' => [$newCategory->id],
+                'account_ids' => [$newAccount->id],
             ]);
 
         $response->assertOk()
             ->assertJsonPath('budget.name', 'New Budget')
             ->assertJsonPath('budget.saving', true)
-            ->assertJsonPath('budget.categories.0.id', $newCategory->id)
+            ->assertJsonPath('budget.accounts.0.id', $newAccount->id)
             ->assertJsonPath('budget.currency', 'GBP');
 
         $budget->refresh();
 
         $this->assertSame('New Budget', $budget->getTranslation('name', 'en'));
         $this->assertTrue($budget->saving);
-        $this->assertSame([$newCategory->id], $budget->categories()->pluck('categories.id')->all());
+        $this->assertSame([$newAccount->id], $budget->accounts()->pluck('accounts.id')->all());
         $this->assertSame('GBP', $budget->currency);
-        $this->assertSoftDeleted('budget_category', [
+        $this->assertSoftDeleted('budget_account', [
             'budget_id' => $budget->id,
-            'category_id' => $originalCategory->id,
+            'account_id' => $this->trackingAccount->id,
         ]);
     }
 
@@ -285,7 +316,6 @@ class BudgetControllerTest extends TestCase
 
     public function test_it_returns_404_when_updating_another_users_budget(): void
     {
-        $category = Category::factory()->create(['user_id' => $this->user->id]);
         $budget = Budget::factory()->create();
 
         $response = $this->actingAs($this->user)
@@ -298,7 +328,7 @@ class BudgetControllerTest extends TestCase
                 'saving' => false,
                 'period' => 1,
                 'reoccurrence' => Budget::CUSTOM,
-                'category_ids' => [$category->id],
+                'account_ids' => [$this->trackingAccount->id],
             ]);
 
         $response->assertNotFound();

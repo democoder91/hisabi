@@ -1,29 +1,33 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Head } from '@inertiajs/react';
 import { debounce } from 'lodash';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { endOfMonth, startOfMonth } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { type ColumnDef } from '@tanstack/react-table';
+import { X } from '@phosphor-icons/react';
 
-import Authenticated from '@/Layouts/Authenticated';
-import Edit from './Edit';
 import RecordTransactionButton from '@/components/Domain/RecordTransactionButton';
-import Filters from './Filters';
-import { useActiveLocale } from '@/hooks/useActiveLocale';
+import TransactionStats from '@/components/Domain/TransactionStats';
 import LoadMore from '@/components/Global/LoadMore';
+import Filters from '@/pages/Transaction/Filters';
+import Authenticated from '@/Layouts/Authenticated';
+import { useActiveLocale } from '@/hooks/useActiveLocale';
+import Edit from './Edit';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import { getTransactions, getAllAccounts, getTransactionFormOptions } from '@/Api';
-import { animateRowItem, formatNumber, getSharedAccountOwnerLabel, isCreditTransaction, withLocalizedName, withLocalizedNames } from '@/Utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowElbowDownRightIcon, X } from '@phosphor-icons/react';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import TransactionStats from '@/components/Domain/TransactionStats';
-import { getCategoryIcon } from '@/Utils/categoryIcons';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
-
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { getAllAccounts, getTransactions } from '@/Api';
+import {
+    animateRowItem,
+    formatNumber,
+    getSharedAccountOwnerLabel,
+    isCreditTransaction,
+    withLocalizedName,
+    withLocalizedNames,
+} from '@/Utils';
 
 export default function Index({ auth }: { auth: any }) {
     const { t } = useTranslation();
@@ -31,18 +35,16 @@ export default function Index({ auth }: { auth: any }) {
     const urlParams = new URLSearchParams(window.location.search);
     const initialSearch = urlParams.get('search') || '';
 
-    // Initialize filters from URL
     const initialFilters = {
         accountId: urlParams.get('account') || '',
-        categoryId: urlParams.get('category') || '',
-        transactionType: urlParams.get('type') || '',
+        fromAccountId: urlParams.get('fromAccount') || '',
+        toAccountId: urlParams.get('toAccount') || '',
         dateFrom: urlParams.get('dateFrom') || '',
         dateTo: urlParams.get('dateTo') || '',
     };
 
     const [transactions, setTransactions] = useState<any[]>([]);
     const [allAccounts, setAllAccounts] = useState<any[]>([]);
-    const [allCategories, setAllCategories] = useState<any[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMorePages, setHasMorePages] = useState(true);
     const [searchQuery, setSearchQuery] = useState(initialSearch);
@@ -57,19 +59,15 @@ export default function Index({ auth }: { auth: any }) {
     useEffect(() => {
         getAllAccounts()
             .then(({ data }) => {
-                setAllAccounts(data.allAccounts)
-            })
-            .catch(console.error);
-
-        getTransactionFormOptions()
-            .then(({ data }) => {
-                setAllCategories(data.categories)
+                setAllAccounts(data.allAccounts);
             })
             .catch(console.error);
     }, []);
 
     useEffect(() => {
-        if (currentPage > 1 && !hasMorePages) return;
+        if (currentPage > 1 && !hasMorePages) {
+            return;
+        }
 
         setLoading(true);
 
@@ -82,7 +80,7 @@ export default function Index({ auth }: { auth: any }) {
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [currentPage, searchQuery, filters]);
+    }, [currentPage, searchQuery, filters, hasMorePages]);
 
     const onCreate = (createdItems: any) => {
         const normalizedItems = (Array.isArray(createdItems) ? createdItems : [createdItems])
@@ -101,10 +99,11 @@ export default function Index({ auth }: { auth: any }) {
     };
 
     const onUpdate = (updatedItem: any) => {
-        setTransactions(transactions.map(transaction => {
+        setTransactions((current) => current.map((transaction) => {
             if (transaction.id === updatedItem.id) {
                 return updatedItem;
             }
+
             return transaction;
         }));
         animateRowItem(updatedItem.id);
@@ -112,57 +111,75 @@ export default function Index({ auth }: { auth: any }) {
 
     const onDelete = (deletedItem: any) => {
         (animateRowItem as any)(deletedItem.id, 'deleted', () => {
-            setTransactions(transactions.filter(item => item.id != deletedItem.id));
+            setTransactions((current) => current.filter((item) => item.id != deletedItem.id));
         });
     };
 
     const performSearchHandler = (e: any) => {
         const value = e.target.value ?? '';
-
         const url = new URL(window.location.href);
+
         if (value) {
             url.searchParams.set('search', value);
         } else {
             url.searchParams.delete('search');
         }
-        window.history.pushState({}, '', url);
 
+        window.history.pushState({}, '', url);
         setCurrentPage(1);
         setSearchQuery(value);
-    }
+    };
 
-    const performSearch = useMemo(
-        () => debounce(performSearchHandler, 300)
-        , []);
-
+    const performSearch = useMemo(() => debounce(performSearchHandler, 300), []);
     const localizedAllAccounts = useMemo(() => withLocalizedNames(allAccounts, activeLocale), [allAccounts, activeLocale]);
-    const localizedAllCategories = useMemo(() => withLocalizedNames(allCategories, activeLocale), [allCategories, activeLocale]);
-    const localizedTransactions = useMemo(() => transactions.map((transaction) => ({
-        ...transaction,
-        account: transaction.account ? withLocalizedName(transaction.account, activeLocale) : transaction.account,
-        category: transaction.category ? withLocalizedName(transaction.category, activeLocale) : transaction.category,
-    })), [transactions, activeLocale]);
+    const localizedAccountMap = useMemo(
+        () => new Map(localizedAllAccounts.map((account: any) => [String(account.id), account])),
+        [localizedAllAccounts],
+    );
+
+    const localizedTransactions = useMemo(() => {
+        const resolveAccount = (account: any) => {
+            if (!account) {
+                return null;
+            }
+
+            return localizedAccountMap.get(String(account.id)) ?? withLocalizedName(account, activeLocale);
+        };
+
+        return transactions.map((transaction) => {
+            const fallbackFromAccount = transaction.fromAccount
+                ?? (transaction.transaction_type === 'DEBIT' ? transaction.account : null);
+            const fallbackToAccount = transaction.toAccount
+                ?? (transaction.transaction_type === 'CREDIT' ? transaction.account : null);
+
+            return {
+                ...transaction,
+                account: resolveAccount(transaction.account),
+                fromAccount: resolveAccount(fallbackFromAccount),
+                toAccount: resolveAccount(fallbackToAccount),
+            };
+        });
+    }, [transactions, localizedAccountMap, activeLocale]);
 
     const handleFiltersApply = (newFilters: any) => {
         const url = new URL(window.location.href);
 
-        // Update URL params for filters
         if (newFilters.accountId) {
             url.searchParams.set('account', newFilters.accountId);
         } else {
             url.searchParams.delete('account');
         }
 
-        if (newFilters.categoryId) {
-            url.searchParams.set('category', newFilters.categoryId);
+        if (newFilters.fromAccountId) {
+            url.searchParams.set('fromAccount', newFilters.fromAccountId);
         } else {
-            url.searchParams.delete('category');
+            url.searchParams.delete('fromAccount');
         }
 
-        if (newFilters.transactionType) {
-            url.searchParams.set('type', newFilters.transactionType);
+        if (newFilters.toAccountId) {
+            url.searchParams.set('toAccount', newFilters.toAccountId);
         } else {
-            url.searchParams.delete('type');
+            url.searchParams.delete('toAccount');
         }
 
         if (newFilters.dateFrom && newFilters.dateTo) {
@@ -174,7 +191,6 @@ export default function Index({ auth }: { auth: any }) {
         }
 
         window.history.pushState({}, '', url);
-
         setCurrentPage(1);
         setFilters(newFilters);
     };
@@ -186,11 +202,11 @@ export default function Index({ auth }: { auth: any }) {
             case 'account':
                 updatedFilters.accountId = '';
                 break;
-            case 'category':
-                updatedFilters.categoryId = '';
+            case 'fromAccount':
+                updatedFilters.fromAccountId = '';
                 break;
-            case 'type':
-                updatedFilters.transactionType = '';
+            case 'toAccount':
+                updatedFilters.toAccountId = '';
                 break;
             case 'date':
                 updatedFilters.dateFrom = '';
@@ -207,82 +223,51 @@ export default function Index({ auth }: { auth: any }) {
         }
     };
 
+    const getAccountById = (accountId: string) => {
+        if (!accountId) {
+            return null;
+        }
+
+        return localizedAllAccounts.find((account: any) => account.id == accountId) ?? null;
+    };
+
+    const renderAccountCell = (account: any) => {
+        if (!account) {
+            return '-';
+        }
+
+        const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName: string) => t('account.sharedBy', { name: ownerName }));
+
+        return (
+            <div className="space-y-1">
+                <p className="font-medium">{account.name}</p>
+                {sharedOwnerLabel && (
+                    <p className="text-xs text-muted-foreground">{sharedOwnerLabel}</p>
+                )}
+                <p className="text-xs text-muted-foreground">{account.currency}</p>
+            </div>
+        );
+    };
+
     const columns = useMemo<ColumnDef<any>[]>(() => [
         {
-            id: 'category',
-            header: t('transaction.category'),
-            cell: ({ row }) => {
-                const transaction = row.original;
-                const hasCategory = transaction.category !== null;
-                const CategoryIcon = transaction.category?.icon
-                    ? getCategoryIcon(transaction.category.icon)
-                    : null;
-
-                return (
-                    <div className="flex items-center gap-3">
-                        {CategoryIcon && hasCategory ? (
-                            <div className={`badge badge-${transaction.category.color} flex size-10 items-center justify-center rounded-full`}>
-                                <CategoryIcon size={24} weight="regular" className="text-current" />
-                            </div>
-                        ) : (
-                            <Avatar className="size-10">
-                                <AvatarFallback>{hasCategory ? transaction.category.name.charAt(0) : '?'}</AvatarFallback>
-                                <AvatarImage />
-                            </Avatar>
-                        )}
-                        <div className="space-y-1">
-                            <p className="font-medium">{transaction.category?.name ?? '-'}</p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <ArrowElbowDownRightIcon size={10} weight="bold" />
-                                <span>{transaction.created_at}</span>
-                            </div>
-                        </div>
-                    </div>
-                );
-            },
+            id: 'date',
+            header: t('transaction.date'),
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap text-sm text-muted-foreground">
+                    {row.original.created_at ?? '-'}
+                </span>
+            ),
         },
         {
-            id: 'account',
-            header: t('transaction.account'),
-            cell: ({ row }) => {
-                const account = row.original.account;
-
-                if (!account) {
-                    return '-';
-                }
-
-                const sharedOwnerLabel = getSharedAccountOwnerLabel(account, (ownerName: string) => t('account.sharedBy', { name: ownerName }));
-
-                return (
-                    <div className="space-y-1">
-                        <p className="font-medium">{account.name}</p>
-                        {sharedOwnerLabel && (
-                            <p className="text-xs text-muted-foreground">{sharedOwnerLabel}</p>
-                        )}
-                    </div>
-                );
-            },
+            id: 'sourceAccount',
+            header: t('transaction.sourceAccount'),
+            cell: ({ row }) => renderAccountCell(row.original.fromAccount ?? row.original.account),
         },
         {
-            id: 'type',
-            header: t('transaction.type'),
-            cell: ({ row }) => {
-                const transaction = row.original;
-                const isIncomeTransaction = isCreditTransaction(transaction);
-                const transactionTypeLabel = transaction.transaction_type
-                    ? t(`transaction.${transaction.transaction_type.toLowerCase()}`)
-                    : null;
-
-                if (!transactionTypeLabel) {
-                    return '-';
-                }
-
-                return (
-                    <Badge variant="outline" className={isIncomeTransaction ? 'border-green-200 text-green-600' : 'border-red-200 text-red-600'}>
-                        {transactionTypeLabel}
-                    </Badge>
-                );
-            },
+            id: 'destinationAccount',
+            header: t('transaction.destinationAccount'),
+            cell: ({ row }) => renderAccountCell(row.original.toAccount),
         },
         {
             accessorKey: 'note',
@@ -317,7 +302,7 @@ export default function Index({ auth }: { auth: any }) {
     ], [t]);
 
     const header = (
-        <div className="flex items-center justify-between w-full">
+        <div className="flex w-full items-center justify-between">
             <h2>{t('transaction.title')}</h2>
             <div className="flex items-center gap-2">
                 <DatePickerWithRange
@@ -326,12 +311,11 @@ export default function Index({ auth }: { auth: any }) {
                 />
                 <RecordTransactionButton
                     accounts={localizedAllAccounts}
-                    categories={localizedAllCategories}
                     onSuccess={onCreate}
                 />
             </div>
         </div>
-    )
+    );
 
     return (
         <Authenticated auth={auth} header={header}>
@@ -340,61 +324,58 @@ export default function Index({ auth }: { auth: any }) {
             <Edit
                 transaction={editItem}
                 accounts={localizedAllAccounts}
-                categories={localizedAllCategories}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 onClose={() => setEditItem(null)}
             />
 
             <div className="p-4">
-                <div className="max-w-7xl mx-auto grid gap-4">
-
+                <div className="mx-auto grid max-w-7xl gap-4">
                     <TransactionStats dateRange={dateRange} />
 
                     <div className="flex justify-between gap-2">
                         <Input
                             name="search"
                             placeholder={t('common.search')}
-                            className='max-w-56'
+                            className="max-w-56"
                             defaultValue={searchQuery}
                             onChange={performSearch}
                         />
                         <div className="flex gap-2">
-                            {/* Active filter badges */}
-                            {filters.categoryId && (
-                                <Badge
-                                    variant="secondary"
-                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
-                                    onClick={() => clearFilter('category')}
-                                >
-                                    {localizedAllCategories.find((c: any) => c.id == filters.categoryId)?.name}
-                                    <X size={14} weight="bold" />
-                                </Badge>
-                            )}
                             {filters.accountId && (
                                 <Badge
                                     variant="secondary"
-                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
+                                    className="h-9 cursor-pointer gap-1.5 rounded-full px-3 transition-colors hover:bg-secondary/80"
                                     onClick={() => clearFilter('account')}
                                 >
-                                    {localizedAllAccounts.find((account: any) => account.id == filters.accountId)?.name}
+                                    {getAccountById(filters.accountId)?.name}
                                     <X size={14} weight="bold" />
                                 </Badge>
                             )}
-                            {filters.transactionType && (
+                            {filters.fromAccountId && (
                                 <Badge
                                     variant="secondary"
-                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
-                                    onClick={() => clearFilter('type')}
+                                    className="h-9 cursor-pointer gap-1.5 rounded-full px-3 transition-colors hover:bg-secondary/80"
+                                    onClick={() => clearFilter('fromAccount')}
                                 >
-                                    {filters.transactionType === 'CREDIT' ? t('transaction.credit') : t('transaction.debit')}
+                                    {getAccountById(filters.fromAccountId)?.name}
+                                    <X size={14} weight="bold" />
+                                </Badge>
+                            )}
+                            {filters.toAccountId && (
+                                <Badge
+                                    variant="secondary"
+                                    className="h-9 cursor-pointer gap-1.5 rounded-full px-3 transition-colors hover:bg-secondary/80"
+                                    onClick={() => clearFilter('toAccount')}
+                                >
+                                    {getAccountById(filters.toAccountId)?.name}
                                     <X size={14} weight="bold" />
                                 </Badge>
                             )}
                             {filters.dateFrom && filters.dateTo && (
                                 <Badge
                                     variant="secondary"
-                                    className="h-9 gap-1.5 cursor-pointer hover:bg-secondary/80 transition-colors rounded-full px-3"
+                                    className="h-9 cursor-pointer gap-1.5 rounded-full px-3 transition-colors hover:bg-secondary/80"
                                     onClick={() => clearFilter('date')}
                                 >
                                     {filters.dateFrom} - {filters.dateTo}
@@ -403,7 +384,6 @@ export default function Index({ auth }: { auth: any }) {
                             )}
                             <Filters
                                 accounts={localizedAllAccounts}
-                                categories={localizedAllCategories}
                                 onApply={handleFiltersApply}
                                 activeFilters={filters}
                             />
@@ -420,7 +400,12 @@ export default function Index({ auth }: { auth: any }) {
                     />
 
                     {transactions.length > 0 && (
-                        <LoadMore hasContent={transactions.length > 0} hasMorePages={hasMorePages} loading={loading} onClick={() => setCurrentPage(currentPage + 1)} />
+                        <LoadMore
+                            hasContent={transactions.length > 0}
+                            hasMorePages={hasMorePages}
+                            loading={loading}
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                        />
                     )}
                 </div>
             </div>

@@ -12,9 +12,9 @@ use App\Http\Controllers\BillingManagementController;
 use App\Http\Controllers\BillingSubscriptionController;
 use App\Http\Controllers\BillingUserManagementController;
 use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GuideController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TransactionController;
 use App\Services\BillingCatalogService;
@@ -34,6 +34,7 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/ai', [AiChatController::class, 'index'])->name('ai.chat');
+    Route::get('/guide', [GuideController::class, 'index'])->name('guide');
 
     Route::get('/billing', function (Request $request, BillingCatalogService $billingCatalogService) {
         $user = $request->user();
@@ -68,7 +69,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets');
     });
 
-    Route::get('/categories', [CategoryController::class, 'index'])->name('categories');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::get('/report', function (Request $request) {
         $start_date = $request->query('start_date');
@@ -76,7 +76,7 @@ Route::middleware(['auth'])->group(function () {
         $authenticatedUser = Auth::user();
 
         $data = [
-            'sections' => app(ReportManager::class)->generate($start_date, $end_date),
+            'sections' => app(ReportManager::class)->generate($start_date, $end_date, $authenticatedUser),
             'currency' => $authenticatedUser ? $authenticatedUser->default_currency : config('hisabi.currency'),
             'range' => $start_date && $end_date ? $start_date . ' - ' . $end_date : now()->format('F Y')
         ];

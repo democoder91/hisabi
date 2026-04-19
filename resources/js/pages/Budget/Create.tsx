@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import CategoryMultiSelect from './CategoryMultiSelect';
-import { BudgetCategory, BudgetRecord, budgetRecurrenceOptions } from './types';
+import { BudgetAccount, BudgetRecord, budgetRecurrenceOptions } from './types';
 
 type CreateBudgetProps = {
     open: boolean;
-    categories: BudgetCategory[];
+    accounts: BudgetAccount[];
     onClose: () => void;
     onCreate: (budget: BudgetRecord) => void;
 };
@@ -27,7 +27,7 @@ type CurrencyOption = {
 
 const getToday = () => new Date().toISOString().slice(0, 10);
 
-export default function Create({ open, categories, onClose, onCreate }: CreateBudgetProps) {
+export default function Create({ open, accounts, onClose, onCreate }: CreateBudgetProps) {
     const { t } = useTranslation();
     const [nameEn, setNameEn] = useState('');
     const [nameAr, setNameAr] = useState('');
@@ -40,7 +40,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
     const [period, setPeriod] = useState('1');
     const [reoccurrence, setReoccurrence] = useState<BudgetRecord['reoccurrence']>('MONTHLY');
     const [budgetType, setBudgetType] = useState<'spending' | 'saving'>('spending');
-    const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+    const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
     const selectedCurrencyLabel = currencies.find((item) => item.value === currency)?.label ?? currency;
 
@@ -65,7 +65,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
             setPeriod('1');
             setReoccurrence('MONTHLY');
             setBudgetType('spending');
-            setSelectedCategoryIds([]);
+            setSelectedAccountIds([]);
             setLoading(false);
         }
     }, [open]);
@@ -75,7 +75,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
             return false;
         }
 
-        if (!currency || Number(amount) <= 0 || selectedCategoryIds.length === 0) {
+        if (!currency || Number(amount) <= 0 || selectedAccountIds.length === 0) {
             return false;
         }
 
@@ -84,7 +84,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
         }
 
         return true;
-    }, [amount, currency, endAt, nameEn, reoccurrence, selectedCategoryIds]);
+    }, [amount, currency, endAt, nameEn, reoccurrence, selectedAccountIds]);
 
     const handleCreate = () => {
         if (!isReady || loading) {
@@ -105,7 +105,7 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
             saving: budgetType === 'saving',
             period: Number(period || 1),
             reoccurrence,
-            category_ids: selectedCategoryIds,
+            account_ids: selectedAccountIds,
         })
             .then(({ data }) => {
                 onCreate(data.createBudget);
@@ -249,11 +249,11 @@ export default function Create({ open, categories, onClose, onCreate }: CreateBu
                     </div>
 
                     <div>
-                        <Label>{t('budget.categories')}</Label>
+                        <Label>{t('budget.accounts')}</Label>
                         <CategoryMultiSelect
-                            categories={categories}
-                            selectedCategoryIds={selectedCategoryIds}
-                            onChange={setSelectedCategoryIds}
+                            accounts={accounts}
+                            selectedAccountIds={selectedAccountIds}
+                            onChange={setSelectedAccountIds}
                         />
                     </div>
 

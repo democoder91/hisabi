@@ -187,29 +187,15 @@ class Transaction extends Model
 
     public function scopeExpenses($query)
     {
-        return $query->whereHas('category', function ($query) {
-            return $query->where('type', Category::EXPENSES);
+        return $query->whereHas('toAccount', function ($query) {
+            return $query->where('type', Account::TYPE_EXPENSE);
         });
     }
 
     public function scopeIncome($query)
     {
-        return $query->whereHas('category', function ($query) {
-            return $query->where('type', Category::INCOME);
-        });
-    }
-
-    public function scopeSavings($query)
-    {
-        return $query->whereHas('category', function ($query) {
-            return $query->where('type', Category::SAVINGS);
-        });
-    }
-
-    public function scopeInvestment($query)
-    {
-        return $query->whereHas('category', function ($query) {
-            return $query->where('type', Category::INVESTMENT);
+        return $query->whereHas('fromAccount', function ($query) {
+            return $query->where('type', Account::TYPE_INCOME);
         });
     }
 
@@ -223,34 +209,45 @@ class Transaction extends Model
         return $query->where('transaction_type', self::TYPE_CREDIT);
     }
 
-    public static function transactionTypeForCategoryType(string $categoryType): string
+    public function reportingAccount(): ?Account
     {
-        return $categoryType === Category::INCOME
-            ? self::TYPE_CREDIT
-            : self::TYPE_DEBIT;
+        if ($this->fromAccount && $this->fromAccount->type === Account::TYPE_INCOME) {
+            return $this->fromAccount;
+        }
+
+        if ($this->toAccount && $this->toAccount->type === Account::TYPE_EXPENSE) {
+            return $this->toAccount;
+        }
+
+        return $this->counterpartyAccount() ?: $this->account;
     }
 
-    public function categoryLedgerType(): ?string
+    public function reportingAccountType(): ?string
     {
-        if ($this->category) {
-            return $this->category->type;
+        $reportingAccount = $this->reportingAccount();
+
+        return $reportingAccount ? $reportingAccount->type : null;
+    }
+
+    public function movementForAccount(Account $account): float
+    {
+        if ($this->usesDoubleEntry()) {
+            if ((int) $this->from_account_id === (int) $account->id) {
+                return $account->balanceDeltaForCredit((float) $this->amount);
+            }
+
+            if ((int) $this->to_account_id === (int) $account->id) {
+                return $account->balanceDeltaForDebit((float) $this->amount);
+            }
+
+            return 0.0;
         }
 
-        $counterpartyAccount = $this->counterpartyAccount();
-
-        if (! $counterpartyAccount) {
-            return null;
+        if ((int) $this->account_id !== (int) $account->id) {
+            return 0.0;
         }
 
-        if ($counterpartyAccount->type === Account::TYPE_INCOME) {
-            return Category::INCOME;
-        }
-
-        if ($counterpartyAccount->type === Account::TYPE_EXPENSE) {
-            return Category::EXPENSES;
-        }
-
-        return null;
+        return self::signedAmountFromValues((float) $this->amount, (string) $this->transaction_type);
     }
 
     public function counterpartyAccount(): ?Account
@@ -269,7 +266,7 @@ class Transaction extends Model
         $user = Auth::user();
 
         if (! $user instanceof User) {
-            return;
+            return null;
         }
 
         $brandFromSms = $sms->meta['data']['brand'] ?? null;
@@ -277,22 +274,36 @@ class Transaction extends Model
         $transactionDatetimeFromSMS = $sms->meta['data']['datetime'] ?? null;
 
         if (! $amountFromSms) {
-            return;
+            return null;
         }
-
-        $category = Category::findOrCreateFallbackForUser($user->id, Category::EXPENSES);
 
         $amount = (float) filter_var($amountFromSms, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
         $transactionDatetime = $transactionDatetimeFromSMS ? Carbon::parse($transactionDatetimeFromSMS) : now();
 
+        if (static::smsRepresentsIncome((string) ($sms->body ?? ''))) {
+            $fromAccount = $user->getOrCreateUncategorizedIncomeAccount();
+            $toAccount = $user->getOrCreateDefaultAccount();
+            $transactionType = self::TYPE_CREDIT;
+        } else {
+            $fromAccount = $user->getOrCreateDefaultAccount();
+            $toAccount = $user->getOrCreateUncategorizedExpenseAccount();
+            $transactionType = self::TYPE_DEBIT;
+        }
+
         return static::create([
-            'account_id' => $user->getOrCreateDefaultAccount()->id,
-            'category_id' => $category->id,
+            'from_account_id' => $fromAccount->id,
+            'to_account_id' => $toAccount->id,
             'amount' => $amount,
-            'transaction_type' => static::transactionTypeForCategoryType($category->type),
+            'transaction_type' => $transactionType,
             'note' => $brandFromSms,
-            'created_at' => $transactionDatetime
+            'date' => $transactionDatetime,
+            'created_at' => $transactionDatetime,
         ]);
+    }
+
+    private static function smsRepresentsIncome(string $smsBody): bool
+    {
+        return str_contains(mb_strtolower($smsBody), 'credited');
     }
 
     private function applyAccountBalanceDelta(int $accountId, float $delta): void

@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Api\V1\Metrics;
 
-use App\Domains\Category\Models\Category;
+use App\Domains\Account\Models\Account;
+use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,36 +13,38 @@ abstract class MetricsTestCase extends TestCase
     use RefreshDatabase;
 
     protected User $user;
-    protected Category $incomeCategory;
-    protected Category $expensesCategory;
-    protected Category $savingsCategory;
-    protected Category $investmentCategory;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
+    }
 
-        $this->incomeCategory = Category::factory()->create([
+    protected function createAccount(array $attributes = []): Account
+    {
+        return Account::factory()->create(array_merge([
             'user_id' => $this->user->id,
-            'type' => Category::INCOME,
-            'name' => ['en' => 'Salary'],
-        ]);
-        $this->expensesCategory = Category::factory()->create([
+            'currency' => $this->user->default_currency ?? config('hisabi.currency', 'AED'),
+        ], $attributes));
+    }
+
+    protected function createLedgerTransaction(Account $fromAccount, Account $toAccount, float $amount, array $attributes = []): Transaction
+    {
+        $transactionType = $attributes['transaction_type']
+            ?? ($fromAccount->type === Account::TYPE_INCOME ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT);
+
+        return Transaction::withoutGlobalScopes()->create(array_merge([
             'user_id' => $this->user->id,
-            'type' => Category::EXPENSES,
-            'name' => ['en' => 'Food'],
-        ]);
-        $this->savingsCategory = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::SAVINGS,
-            'name' => ['en' => 'Emergency Fund'],
-        ]);
-        $this->investmentCategory = Category::factory()->create([
-            'user_id' => $this->user->id,
-            'type' => Category::INVESTMENT,
-            'name' => ['en' => 'Stocks'],
-        ]);
+            'account_id' => $transactionType === Transaction::TYPE_CREDIT ? $toAccount->id : $fromAccount->id,
+            'category_id' => null,
+            'from_account_id' => $fromAccount->id,
+            'to_account_id' => $toAccount->id,
+            'amount' => $amount,
+            'transaction_type' => $transactionType,
+            'currency' => $attributes['currency'] ?? $fromAccount->currency,
+            'note' => $attributes['note'] ?? 'Metric transaction',
+            'created_at' => $attributes['created_at'] ?? now(),
+        ], $attributes));
     }
 }

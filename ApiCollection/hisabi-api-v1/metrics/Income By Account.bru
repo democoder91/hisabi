@@ -1,0 +1,14 @@
+meta {
+  name: Income By Account
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/income-by-account?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

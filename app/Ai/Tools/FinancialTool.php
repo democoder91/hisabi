@@ -4,8 +4,6 @@ namespace App\Ai\Tools;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
-use App\Domains\Category\Models\Category;
-use App\Domains\Category\Services\CategoryService;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -215,19 +213,15 @@ abstract class FinancialTool implements Tool
         return config('hisabi.currency', 'AED');
     }
 
-    protected function ownedCategoryIds(array $categoryIds, User $user): array
+    protected function accessibleAccountIds(array $accountIds, User $user, bool $requireEditable = false): array
     {
-        $normalized = array_values(array_unique(array_map(static fn($id) => (int) $id, $categoryIds)));
-        $categoryService = app(CategoryService::class);
+        $normalized = array_values(array_unique(array_map(static fn($id) => (int) $id, $accountIds)));
 
-        $categories = collect($normalized)
-            ->map(fn(int $categoryId) => $categoryService->findLedgerCategoryOrFail($categoryId));
-
-        if ($categories->contains(fn(Category $category) => (int) $category->user_id !== (int) $user->id)) {
-            throw new RuntimeException('One or more category_ids are invalid for the authenticated user.');
-        }
-
-        return $categories->pluck('id')->map(fn(mixed $id) => (int) $id)->all();
+        return collect($normalized)
+            ->map(fn(int $accountId) => $this->accessibleAccount($accountId, $user, $requireEditable))
+            ->pluck('id')
+            ->map(fn(mixed $id) => (int) $id)
+            ->all();
     }
 
     protected function accessibleAccount(int $accountId, User $user, bool $requireEditable = false): Account
@@ -248,30 +242,6 @@ abstract class FinancialTool implements Tool
 
         return $account;
     }
-
-    protected function transactionCategory(Account $account, ?int $categoryId, ?string $categoryType): Category
-    {
-        $categoryService = app(CategoryService::class);
-
-        if ($categoryId) {
-            $category = $categoryService->findLedgerCategoryOrFail($categoryId);
-
-            if (! $category || (int) $category->user_id !== (int) $account->user_id) {
-                throw new RuntimeException('The selected category is invalid for the chosen account.');
-            }
-
-            return $category;
-        }
-
-        if (! $categoryType) {
-            throw new RuntimeException('Provide either category_id or category_type.');
-        }
-
-        return $categoryService->findLedgerCategoryOrFail(
-            (int) Category::findOrCreateFallbackForUser((int) $account->user_id, $categoryType)->id,
-        );
-    }
-
     protected function formatAmount(float|int $amount, ?string $currency = null): string
     {
         $formatted = number_format((float) $amount, 2, '.', '');
@@ -293,30 +263,13 @@ abstract class FinancialTool implements Tool
             $permission,
         );
     }
-
-    protected function formatCategory(Category $category): string
-    {
-        $name = $category->getLocalizedName() ?: 'Unnamed category';
-
-        return sprintf(
-            '#%d %s | type %s | account %s | color %s | icon %s | transactions %d',
-            $category->id,
-            $name,
-            $category->type,
-            $category->account_id ? '#' . $category->account_id : 'n/a',
-            $category->color,
-            $category->icon,
-            (int) ($category->transactions_count ?? 0),
-        );
-    }
-
     protected function formatBudget(Budget $budget): string
     {
         $name = $budget->getLocalizedName() ?? 'Unnamed budget';
-        $categoryNames = $budget->relationLoaded('categories')
-            ? $budget->categories
-            ->map(fn(Category $category) => $category->getLocalizedName() ?: 'Unnamed category')
-            ->join(', ')
+        $accountNames = $budget->relationLoaded('accounts')
+            ? $budget->accounts
+                ->map(fn(Account $account) => $account->getLocalizedName() ?: 'Unnamed account')
+                ->join(', ')
             : '';
 
         $parts = [
@@ -328,8 +281,8 @@ abstract class FinancialTool implements Tool
             'window ' . ($budget->start_at?->format('Y-m-d') ?? 'n/a') . ' -> ' . ($budget->end_at?->format('Y-m-d') ?? 'n/a'),
         ];
 
-        if ($categoryNames !== '') {
-            $parts[] = 'categories ' . $categoryNames;
+        if ($accountNames !== '') {
+            $parts[] = 'accounts ' . $accountNames;
         }
 
         return implode(' | ', $parts);
@@ -337,7 +290,6 @@ abstract class FinancialTool implements Tool
 
     protected function formatTransaction(Transaction $transaction): string
     {
-        $categoryName = $transaction->category?->getLocalizedName() ?: 'Uncategorized';
         $accountName = $transaction->account?->getLocalizedName() ?? 'Unknown account';
         $fromAccountName = $transaction->fromAccount?->getLocalizedName();
         $toAccountName = $transaction->toAccount?->getLocalizedName();
@@ -346,16 +298,14 @@ abstract class FinancialTool implements Tool
             sprintf('#%d %s', $transaction->id, $transaction->created_at?->format('Y-m-d') ?? 'n/a'),
             $transaction->transaction_type,
             $this->formatAmount($transaction->amount, $transaction->currency ?: $this->defaultCurrency()),
-            'account ' . $accountName,
-            'category ' . $categoryName,
         ];
 
         if ($fromAccountName && $toAccountName) {
-            $parts[] = 'ledger ' . $fromAccountName . ' -> ' . $toAccountName;
-        }
-
-        if ($transaction->category?->type) {
-            $parts[] = 'category_type ' . $transaction->category->type;
+            $parts[] = 'source ' . $fromAccountName;
+            $parts[] = 'destination ' . $toAccountName;
+            $parts[] = 'primary_account ' . $accountName;
+        } else {
+            $parts[] = 'account ' . $accountName;
         }
 
         if ($transaction->note) {

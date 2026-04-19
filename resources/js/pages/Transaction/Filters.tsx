@@ -1,79 +1,61 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { FunnelIcon } from '@phosphor-icons/react';
-import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { DateRange } from 'react-day-picker';
+import { FunnelIcon } from '@phosphor-icons/react';
+
 import Combobox from '@/components/Global/Combobox';
-import { getAccountOptionLabel, getCategoryOptionLabel } from '@/Utils';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { getAccountOptionLabel } from '@/Utils';
 
 interface FilterProps {
     accounts: any[];
-    categories: any[];
     onApply: (filters: any) => void;
     activeFilters: any;
 }
 
-export default function TransactionFilters({ accounts, categories, onApply, activeFilters }: FilterProps) {
+export default function TransactionFilters({ accounts, onApply, activeFilters }: FilterProps) {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
 
     const formatSharedBy = (ownerName: string) => t('account.sharedBy', { name: ownerName });
+    const getAccountLabel = (account: any) => getAccountOptionLabel(account, formatSharedBy);
 
-    const handleAccountChange = (account: any) => {
-        const updatedFilters = { ...activeFilters, accountId: account ? account.id : '' };
-        onApply(updatedFilters);
-    };
-
-    const handleCategoryChange = (category: any) => {
-        const updatedFilters = { ...activeFilters, categoryId: category ? category.id : '' };
-        onApply(updatedFilters);
-    };
-
-    const handleTransactionTypeChange = (value: string) => {
-        const updatedFilters = {
+    const handleAccountChange = (key: 'accountId' | 'fromAccountId' | 'toAccountId') => (account: any) => {
+        onApply({
             ...activeFilters,
-            transactionType: value === 'ALL' ? '' : value,
-        };
-
-        onApply(updatedFilters);
+            [key]: account ? account.id : '',
+        });
     };
 
     const getActiveFilterCount = () => {
         let count = 0;
         if (activeFilters.accountId) count++;
-        if (activeFilters.categoryId) count++;
-        if (activeFilters.transactionType) count++;
+        if (activeFilters.fromAccountId) count++;
+        if (activeFilters.toAccountId) count++;
         if (activeFilters.dateFrom && activeFilters.dateTo) count++;
         return count;
     };
 
-    const filterCount = getActiveFilterCount();
-
     const handleDateChange = (dateRange: DateRange | undefined) => {
         if (dateRange?.from && dateRange?.to) {
-            const updatedFilters = {
+            onApply({
                 ...activeFilters,
                 dateFrom: dateRange.from.toISOString().split('T')[0],
                 dateTo: dateRange.to.toISOString().split('T')[0],
-            };
-            onApply(updatedFilters);
-        } else if (!dateRange) {
-            const updatedFilters = {
+            });
+
+            return;
+        }
+
+        if (!dateRange) {
+            onApply({
                 ...activeFilters,
                 dateFrom: '',
                 dateTo: '',
-            };
-            onApply(updatedFilters);
+            });
         }
     };
 
@@ -84,27 +66,24 @@ export default function TransactionFilters({ accounts, categories, onApply, acti
                 to: new Date(activeFilters.dateTo),
             };
         }
+
         return undefined;
     };
 
-    const getSelectedCategory = () => {
-        if (!activeFilters.categoryId) return undefined;
-        return categories.find((c: any) => c.id == activeFilters.categoryId);
+    const getSelectedAccount = (key: 'accountId' | 'fromAccountId' | 'toAccountId') => {
+        if (!activeFilters[key]) {
+            return undefined;
+        }
+
+        return accounts.find((account: any) => account.id == activeFilters[key]);
     };
 
-    const getSelectedAccount = () => {
-        if (!activeFilters.accountId) return undefined;
-        return accounts.find((account: any) => account.id == activeFilters.accountId);
-    };
-
-    const selectedTransactionType = activeFilters.transactionType || 'ALL';
-    const getCategoryLabel = (category: any) => getCategoryOptionLabel(category, categories);
-    const getAccountLabel = (account: any) => getAccountOptionLabel(account, formatSharedBy);
+    const filterCount = getActiveFilterCount();
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-2 relative">
+                <Button variant="outline" className="relative gap-2">
                     <FunnelIcon className="h-4 w-4" />
                     {t('transaction.filters')}
                     {filterCount > 0 && (
@@ -119,8 +98,8 @@ export default function TransactionFilters({ accounts, categories, onApply, acti
                     <Combobox
                         label={t('transaction.account')}
                         items={accounts}
-                        initialSelectedItem={getSelectedAccount()}
-                        onChange={handleAccountChange}
+                        initialSelectedItem={getSelectedAccount('accountId')}
+                        onChange={handleAccountChange('accountId')}
                         placeholder={t('transaction.allAccounts')}
                         displayInputValue={(item) => item ? getAccountLabel(item) : ''}
                         displayOptionValue={(item) => item ? getAccountLabel(item) : ''}
@@ -128,30 +107,27 @@ export default function TransactionFilters({ accounts, categories, onApply, acti
                     />
 
                     <Combobox
-                        label={t('transaction.category')}
-                        items={categories}
-                        initialSelectedItem={getSelectedCategory()}
-                        onChange={handleCategoryChange}
-                        displayInputValue={(item) => item ? getCategoryLabel(item) : ''}
-                        displayOptionValue={(item) => item ? getCategoryLabel(item) : ''}
-                        getItemValue={(item) => item ? `${getCategoryLabel(item)} ${item.id}` : ''}
+                        label={t('transaction.sourceAccount')}
+                        items={accounts}
+                        initialSelectedItem={getSelectedAccount('fromAccountId')}
+                        onChange={handleAccountChange('fromAccountId')}
+                        placeholder={t('transaction.allAccounts')}
+                        displayInputValue={(item) => item ? getAccountLabel(item) : ''}
+                        displayOptionValue={(item) => item ? getAccountLabel(item) : ''}
+                        getItemValue={(item) => item ? `${getAccountLabel(item)} ${item.id}` : ''}
                     />
 
-                    <div className="grid gap-2">
-                        <label className="text-sm font-medium">{t('transaction.type')}</label>
-                        <Select value={selectedTransactionType} onValueChange={handleTransactionTypeChange}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('transaction.allTypes')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">{t('transaction.allTypes')}</SelectItem>
-                                <SelectItem value="DEBIT">{t('transaction.debit')}</SelectItem>
-                                <SelectItem value="CREDIT">{t('transaction.credit')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <Combobox
+                        label={t('transaction.destinationAccount')}
+                        items={accounts}
+                        initialSelectedItem={getSelectedAccount('toAccountId')}
+                        onChange={handleAccountChange('toAccountId')}
+                        placeholder={t('transaction.allAccounts')}
+                        displayInputValue={(item) => item ? getAccountLabel(item) : ''}
+                        displayOptionValue={(item) => item ? getAccountLabel(item) : ''}
+                        getItemValue={(item) => item ? `${getAccountLabel(item)} ${item.id}` : ''}
+                    />
 
-                    {/* Date Filter */}
                     <div className="grid gap-2">
                         <DatePickerWithRange
                             onDateChange={handleDateChange}
@@ -163,4 +139,3 @@ export default function TransactionFilters({ accounts, categories, onApply, acti
         </Popover>
     );
 }
-

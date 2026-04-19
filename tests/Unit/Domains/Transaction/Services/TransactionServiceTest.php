@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Domains\Transaction\Services;
 
+use App\Domains\Account\Models\Account;
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Services\TransactionService;
-use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -79,18 +79,17 @@ class TransactionServiceTest extends TestCase
         $this->assertEquals($transaction1->id, $items[2]->id);
     }
 
-    public function test_it_includes_category_relation(): void
+    public function test_it_does_not_eager_load_category_relation(): void
     {
         // Arrange
-        $transaction = Transaction::factory()->create();
+        Transaction::factory()->create();
 
         // Act
         $result = $this->service->getPaginated(perPage: 10);
 
         // Assert
         $item = $result->items()[0];
-        $this->assertTrue($item->relationLoaded('category'));
-        $this->assertEquals($transaction->category->name, $item->category->name);
+        $this->assertFalse($item->relationLoaded('category'));
     }
 
     public function test_it_searches_by_amount(): void
@@ -125,46 +124,70 @@ class TransactionServiceTest extends TestCase
         $this->assertEquals($matchingTransaction->id, $result->items()[0]->id);
     }
 
-    public function test_it_searches_by_category_name(): void
+    public function test_it_searches_by_account_name(): void
     {
         // Arrange
-        $starbucks = Category::factory()->create(['name' => 'Starbucks']);
-        $mcdonalds = Category::factory()->create(['name' => 'McDonalds']);
+        $travelWallet = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Travel Wallet', 'ar' => null],
+        ]);
+        $groceries = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Groceries', 'ar' => null],
+        ]);
 
-        Transaction::factory()->create(['category_id' => $mcdonalds->id]);
-        $matchingTransaction = Transaction::factory()->create(['category_id' => $starbucks->id]);
+        Transaction::factory()->create([
+            'account_id' => $groceries->id,
+            'category_id' => null,
+        ]);
+        $matchingTransaction = Transaction::factory()->create([
+            'account_id' => $travelWallet->id,
+            'category_id' => null,
+        ]);
 
         // Act
-        request()->merge(['filter' => ['search' => 'starbucks']]);
+        request()->merge(['filter' => ['search' => 'travel']]);
         $result = $this->service->getPaginated(perPage: 10);
 
         // Assert
         $this->assertCount(1, $result->items());
         $this->assertEquals($matchingTransaction->id, $result->items()[0]->id);
-        $this->assertEquals('Starbucks', $result->items()[0]->category->name);
+        $this->assertEquals($travelWallet->id, $result->items()[0]->account_id);
     }
 
     public function test_it_searches_across_multiple_fields(): void
     {
         // Arrange
-        $coffee = Category::factory()->create(['name' => 'Coffee Shop']);
-        $groceries = Category::factory()->create(['name' => 'Groceries']);
-        $travel = Category::factory()->create(['name' => 'Travel']);
+        $coffeeWallet = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Coffee Wallet', 'ar' => null],
+        ]);
+        $groceries = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Groceries', 'ar' => null],
+        ]);
+        $travel = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Travel', 'ar' => null],
+        ]);
 
         $t1 = Transaction::factory()->create([
-            'category_id' => $coffee->id,
+            'account_id' => $coffeeWallet->id,
+            'category_id' => null,
             'amount' => 100,
             'note' => 'Regular purchase'
         ]);
 
         $t2 = Transaction::factory()->create([
-            'category_id' => $groceries->id,
+            'account_id' => $groceries->id,
+            'category_id' => null,
             'amount' => 200,
             'note' => 'Coffee beans'
         ]);
 
         $t3 = Transaction::factory()->create([
-            'category_id' => $travel->id,
+            'account_id' => $travel->id,
+            'category_id' => null,
             'amount' => 300,
             'note' => 'Other purchase'
         ]);

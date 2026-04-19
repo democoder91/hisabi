@@ -27,50 +27,46 @@ const getMetric = async (endpoint, params = {}) => {
 
 export const getTotalIncome = (dateRange) => getMetric('total-income', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getTotalExpenses = (dateRange) => getMetric('total-expenses', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
-export const getTotalSavings = () => getMetric('total-savings');
-export const getTotalInvestment = () => getMetric('total-investment');
-export const getTotalCash = () => getMetric('total-cash');
+export const getTotalAssets = (dateRange) => getMetric('total-assets', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
+export const getTotalLiabilities = (dateRange) => getMetric('total-liabilities', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
+export const getTotalEquity = (dateRange) => getMetric('total-equity', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getNetWorth = () => getMetric('net-worth');
 
 export const getNetWorthTrend = (dateRange) => getMetric('net-worth-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getTotalIncomeTrend = (dateRange) => getMetric('total-income-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getTotalExpensesTrend = (dateRange) => getMetric('total-expenses-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
-export const getCategoryTrend = (dateRange, id) => getMetric('category-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to), id });
-export const getCategoryDailyTrend = (dateRange, id) => getMetric('category-daily-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to), id });
+export const getAccountTrend = (dateRange, id) => getMetric('account-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to), id });
+export const getAccountDailyTrend = (dateRange, id) => getMetric('account-daily-trend', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to), id });
 
-export const getExpensesByCategory = (dateRange) => getMetric('expenses-by-category', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
-export const getIncomeByCategory = (dateRange) => getMetric('income-by-category', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
+export const getExpensesByAccount = (dateRange) => getMetric('expenses-by-account', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
+export const getIncomeByAccount = (dateRange) => getMetric('income-by-account', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 
 export const getTransactionsCount = (dateRange) => getMetric('transactions-count', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
-export const getTransactionsByCategory = (dateRange) => getMetric('transactions-by-category', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getHighestTransaction = (dateRange) => getMetric('highest-transaction', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getLowestTransaction = (dateRange) => getMetric('lowest-transaction', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 export const getAverageTransaction = (dateRange) => getMetric('average-transaction', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
-export const getTransactionsStdDev = (dateRange, id) => getMetric('transactions-std-dev', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to), id });
-export const getCategoryStats = (dateRange) => getMetric('category-stats', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
+export const getAccountStats = (dateRange) => getMetric('account-stats', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 
 export const getCirclePack = (dateRange) => getMetric('circle-pack', { from: formatDate(dateRange?.from), to: formatDate(dateRange?.to) });
 
 export const metricEndpoints = {
     totalIncome: getTotalIncome,
     totalExpenses: getTotalExpenses,
-    totalSavings: getTotalSavings,
-    totalInvestment: getTotalInvestment,
-    totalCash: getTotalCash,
+    totalAssets: getTotalAssets,
+    totalLiabilities: getTotalLiabilities,
+    totalEquity: getTotalEquity,
     netWorth: getNetWorth,
     netWorthTrend: getNetWorthTrend,
     totalIncomeTrend: getTotalIncomeTrend,
     totalExpensesTrend: getTotalExpensesTrend,
-    totalPerCategoryTrend: getCategoryTrend,
-    totalPerCategoryDailyTrend: getCategoryDailyTrend,
-    expensesPerCategory: getExpensesByCategory,
-    incomePerCategory: getIncomeByCategory,
+    totalPerAccountTrend: getAccountTrend,
+    totalPerAccountDailyTrend: getAccountDailyTrend,
+    expensesPerAccount: getExpensesByAccount,
+    incomePerAccount: getIncomeByAccount,
     numberOfTransactions: getTransactionsCount,
-    numberOfTransactionsPerCategory: getTransactionsByCategory,
     highestValueTransaction: getHighestTransaction,
     lowestValueTransaction: getLowestTransaction,
     averageValueTransaction: getAverageTransaction,
-    transactionsStandardDeviation: getTransactionsStdDev,
-    categoryStats: getCategoryStats,
+    accountStats: getAccountStats,
     financeVisualizationCirclePackMetric: getCirclePack,
 };

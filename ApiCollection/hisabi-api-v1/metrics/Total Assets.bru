@@ -1,0 +1,14 @@
+meta {
+  name: Total Assets
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/metrics/total-assets?from={{fromDate}}&to={{toDate}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

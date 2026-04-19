@@ -2,24 +2,20 @@
 
 namespace App\Domains\Metrics\Metrics;
 
-use App\Domains\Category\Models\Category;
+use App\Domains\Account\Models\Account;
 use App\Domains\Metrics\Metric;
 
 class CirclePackMetric extends Metric
 {
     public function calculate(): array
     {
-        $labelExpression = $this->localizedJsonValueExpression('categories.name');
-
         $colors = [
-            'red' => '#ef4444',
-            'blue' => '#3b82f6',
-            'green' => '#22c55e',
-            'orange' => '#f97316',
-            'purple' => '#A754F7',
-            'pink' => '#ec4899',
-            'indigo' => '#6366f1',
-            'gray' => '#94A4B8'
+            Account::TYPE_EXPENSE => '#ef4444',
+            Account::TYPE_INCOME => '#3b82f6',
+            Account::TYPE_ASSET => '#22c55e',
+            Account::TYPE_LIABILITY => '#f97316',
+            Account::TYPE_EQUITY => '#6366f1',
+            'unknown' => '#94A4B8',
         ];
 
         $rootLevel = [
@@ -27,23 +23,21 @@ class CirclePackMetric extends Metric
             'children' => [],
         ];
 
-        $transactions = $this->transactions();
+        $transactions = $this->transactions()->groupBy(fn ($transaction) => $transaction->reportingAccountType() ?? 'unknown');
 
-        foreach ($transactions->groupBy(fn ($transaction) => $transaction->category ? $transaction->category->type : 'Unknown') as $key => $value) {
-            $rootLevel["children"][] = [
-                "label" => $key,
-                "children" => $value->map(function ($item) use ($colors) {
-                    return [
-                        "label" => $this->categoryLabel($item->category),
-                        "value" => $this->convertedTransactionAmount($item),
-                        "color" => $colors[$item->category ? $item->category->color : ''] ?? 'white'
-                    ];
-                })->groupBy('label')->map(function ($children) {
-                    $firstChild = $children->first();
-                    $firstChild['value'] = round($children->sum('value'), 2);
-
-                    return $firstChild;
-                })->values()->toArray()
+        foreach ($transactions as $type => $items) {
+            $rootLevel['children'][] = [
+                'label' => $type === 'unknown' ? 'Unknown' : $this->accountTypeLabel($type),
+                'children' => $items->groupBy(fn ($transaction) => $this->reportingAccountLabel($transaction))
+                    ->map(function ($children, $label) use ($colors, $type) {
+                        return [
+                            'label' => $label,
+                            'value' => round($children->sum(fn ($transaction) => $this->convertedTransactionAmount($transaction)), 2),
+                            'color' => $colors[$type] ?? $colors['unknown'],
+                        ];
+                    })
+                    ->values()
+                    ->toArray(),
             ];
         }
 

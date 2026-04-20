@@ -3,6 +3,7 @@
 namespace App\Domains\Transaction\Services;
 
 use App\Domains\Account\Models\Account;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Scopes\OwnedAccountScope;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -127,7 +128,7 @@ class TransactionService
         return [
             'user_id' => $fromAccount->user_id,
             'account_id' => $primaryAccountId,
-            'category_id' => null,
+            'category_id' => $this->resolveCategoryId($data, $transaction, $fromAccount, $toAccount, $transactionType),
             'from_account_id' => $fromAccount->id,
             'to_account_id' => $toAccount->id,
             'amount' => (float) ($data['amount'] ?? $transaction?->amount ?? 0),
@@ -138,6 +139,49 @@ class TransactionService
             'date' => $timestamp,
             'created_at' => $timestamp,
         ];
+    }
+
+    private function resolveCategoryId(
+        array $data,
+        ?Transaction $transaction,
+        Account $fromAccount,
+        Account $toAccount,
+        string $transactionType
+    ): ?int {
+        if (array_key_exists('category_id', $data)) {
+            return $data['category_id'] !== null ? (int) $data['category_id'] : $this->fallbackCategoryId($transaction, $fromAccount, $toAccount, $transactionType);
+        }
+
+        if ($transaction?->category_id) {
+            return (int) $transaction->category_id;
+        }
+
+        return $this->fallbackCategoryId($transaction, $fromAccount, $toAccount, $transactionType);
+    }
+
+    private function fallbackCategoryId(?Transaction $transaction, Account $fromAccount, Account $toAccount, string $transactionType): ?int
+    {
+        if (! Transaction::requiresCategoryId()) {
+            return null;
+        }
+
+        $existingCategoryId = $transaction?->category_id;
+
+        if ($existingCategoryId) {
+            return (int) $existingCategoryId;
+        }
+
+        $userId = (int) ($fromAccount->user_id ?: $toAccount->user_id);
+
+        if ($userId <= 0) {
+            return null;
+        }
+
+        $categoryType = strtoupper($transactionType) === Transaction::TYPE_CREDIT
+            ? Category::INCOME
+            : Category::EXPENSES;
+
+        return Category::findOrCreateFallbackForUser($userId, $categoryType)->id;
     }
 
     private function accessibleQuery(): Builder

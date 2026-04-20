@@ -15,11 +15,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
+use Throwable;
 
 class Transaction extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected static ?array $columnDefinitionsCache = null;
 
     protected array $balanceSnapshot = [];
     protected array $auditSnapshot = [];
@@ -304,6 +308,33 @@ class Transaction extends Model
     private static function smsRepresentsIncome(string $smsBody): bool
     {
         return str_contains(mb_strtolower($smsBody), 'credited');
+    }
+
+    public static function requiresCategoryId(): bool
+    {
+        $definition = self::columnDefinition('category_id');
+
+        return $definition !== null && ! ($definition['nullable'] ?? true);
+    }
+
+    public static function forgetCachedSchemaDetails(): void
+    {
+        self::$columnDefinitionsCache = null;
+    }
+
+    private static function columnDefinition(string $column): ?array
+    {
+        if (self::$columnDefinitionsCache === null) {
+            try {
+                self::$columnDefinitionsCache = collect(Schema::getColumns((new self())->getTable()))
+                    ->mapWithKeys(fn (array $definition): array => [strtolower((string) $definition['name']) => $definition])
+                    ->all();
+            } catch (Throwable) {
+                self::$columnDefinitionsCache = [];
+            }
+        }
+
+        return self::$columnDefinitionsCache[strtolower($column)] ?? null;
     }
 
     private function applyAccountBalanceDelta(int $accountId, float $delta): void

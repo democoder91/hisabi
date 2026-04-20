@@ -3,10 +3,12 @@
 namespace Tests\Unit\Domains\Transaction\Services;
 
 use App\Domains\Account\Models\Account;
+use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Domains\Transaction\Services\TransactionService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class TransactionServiceTest extends TestCase
@@ -20,9 +22,17 @@ class TransactionServiceTest extends TestCase
     {
         parent::setUp();
 
+        Transaction::forgetCachedSchemaDetails();
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
         $this->service = new TransactionService();
+    }
+
+    protected function tearDown(): void
+    {
+        Transaction::forgetCachedSchemaDetails();
+
+        parent::tearDown();
     }
 
     public function test_it_returns_paginated_transactions(): void
@@ -284,5 +294,75 @@ class TransactionServiceTest extends TestCase
         $this->assertCount(3, $result->items());
         $this->assertEquals(3, $result->perPage());
         $this->assertTrue($result->hasMorePages());
+    }
+
+    public function test_it_assigns_an_uncategorized_expense_category_when_legacy_schema_requires_category_id(): void
+    {
+        Schema::shouldReceive('getColumns')
+            ->once()
+            ->with('transactions')
+            ->andReturn([
+                ['name' => 'category_id', 'nullable' => false],
+            ]);
+
+        $wallet = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_ASSET,
+            'currency' => 'EGP',
+        ]);
+        $groceries = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_EXPENSE,
+            'currency' => 'EGP',
+        ]);
+
+        $transaction = $this->service->create([
+            'from_account_id' => $wallet->id,
+            'to_account_id' => $groceries->id,
+            'amount' => 60,
+            'note' => 'Groceries',
+        ]);
+
+        $category = Category::query()->find($transaction->category_id);
+
+        $this->assertNotNull($transaction->category_id);
+        $this->assertNotNull($category);
+        $this->assertSame(Category::EXPENSES, $category->type);
+        $this->assertSame($this->user->id, $category->user_id);
+    }
+
+    public function test_it_assigns_an_uncategorized_income_category_when_legacy_schema_requires_category_id_for_credit_transactions(): void
+    {
+        Schema::shouldReceive('getColumns')
+            ->once()
+            ->with('transactions')
+            ->andReturn([
+                ['name' => 'category_id', 'nullable' => false],
+            ]);
+
+        $salary = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_INCOME,
+            'currency' => 'EGP',
+        ]);
+        $wallet = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_ASSET,
+            'currency' => 'EGP',
+        ]);
+
+        $transaction = $this->service->create([
+            'from_account_id' => $salary->id,
+            'to_account_id' => $wallet->id,
+            'amount' => 1000,
+            'note' => 'Salary',
+        ]);
+
+        $category = Category::query()->find($transaction->category_id);
+
+        $this->assertNotNull($transaction->category_id);
+        $this->assertNotNull($category);
+        $this->assertSame(Category::INCOME, $category->type);
+        $this->assertSame($this->user->id, $category->user_id);
     }
 }

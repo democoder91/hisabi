@@ -24,6 +24,11 @@ class FinancialAnalyzer
 
         $currency = $this->resolveCurrency($user);
         $transactions = $this->transactionsSince($timeRange, $user);
+
+        if (! Account::supportsTypeColumn()) {
+            return $this->generateLegacySummary($user, $transactions, $currency);
+        }
+
         $incomeAccounts = $this->accountsByType($user, Account::TYPE_INCOME);
         $expenseAccounts = $this->accountsByType($user, Account::TYPE_EXPENSE);
         $assetAccounts = $this->accountsByType($user, Account::TYPE_ASSET);
@@ -88,15 +93,9 @@ SUMMARY;
 
     protected function accountsByType(?User $user, string $type): Collection
     {
-        $query = Account::query();
-
-        if ($user) {
-            $query->accessibleTo($user);
-        } else {
-            $query->whereRaw('1 = 0');
-        }
-
-        return $query->where('type', $type)->get();
+        return $this->accessibleAccountsQuery($user)
+            ->where('type', $type)
+            ->get();
     }
 
     protected function formatAccountBreakdown(
@@ -176,6 +175,11 @@ SUMMARY;
         return $query;
     }
 
+    protected function accessibleAccounts(?User $user): Collection
+    {
+        return $this->accessibleAccountsQuery($user)->get();
+    }
+
     /**
      * Resolve currency from user preference or system config.
      */
@@ -196,9 +200,47 @@ SUMMARY;
         return number_format($number, 2);
     }
 
+    protected function generateLegacySummary(?User $user, Collection $transactions, string $currency): string
+    {
+        $accounts = $this->accessibleAccounts($user);
+        $knownAccounts = $accounts->take(10)->map(function (Account $account) {
+            return '  - ' . $this->accountLabel($account);
+        })->join("\n");
+
+        if ($knownAccounts === '') {
+            $knownAccounts = 'No accessible accounts available.';
+        }
+
+        return <<<SUMMARY
+**Financial Overview (Last 3 Months):**
+- Accessible Accounts: {$accounts->count()}
+- Recent Transactions: {$transactions->count()}
+- Preferred Currency: {$currency}
+
+**Known Accounts:**
+{$knownAccounts}
+
+**Legacy Schema Notice:**
+Detailed income, expense, asset, liability, and equity analytics are unavailable because the accounts table in this environment does not include ledger account types.
+
+Use list_accounts to confirm account names or IDs before creating or editing transactions.
+SUMMARY;
+    }
+
     protected function accountLabel(Account $account): string
     {
         return $account->getLocalizedName() ?: self::UNKNOWN_LABEL;
+    }
+
+    protected function accessibleAccountsQuery(?User $user): Builder
+    {
+        $query = Account::query();
+
+        if ($user) {
+            return $query->accessibleTo($user);
+        }
+
+        return $query->whereRaw('1 = 0');
     }
 
     protected function convertAmount(?User $user, float $amount, string $sourceCurrency, string $targetCurrency): float

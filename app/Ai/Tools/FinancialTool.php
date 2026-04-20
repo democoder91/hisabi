@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Ai\Contracts\Tool;
 use RuntimeException;
@@ -242,6 +243,139 @@ abstract class FinancialTool implements Tool
 
         return $account;
     }
+
+    protected function normalizeAccountReferenceInputs(array &$input, User $user, array $keys, bool $requireEditable = false): void
+    {
+        foreach ($keys as $key) {
+            if (! Arr::exists($input, $key)) {
+                continue;
+            }
+
+            $input[$key] = $this->normalizeAccountReferenceValue($input[$key], $user, $requireEditable);
+        }
+    }
+
+    protected function recoverableToolFailure(string $action, RuntimeException $exception, string $hint): string
+    {
+        return sprintf(
+            'Unable to %s yet: %s %s',
+            $action,
+            trim($exception->getMessage()),
+            trim($hint),
+        );
+    }
+
+    private function normalizeAccountReferenceValue(mixed $value, User $user, bool $requireEditable): mixed
+    {
+        if (is_int($value) || (is_string($value) && ctype_digit(trim($value)))) {
+            return (int) trim((string) $value);
+        }
+
+        if (! is_string($value) && ! $value instanceof Stringable) {
+            return $value;
+        }
+
+        $reference = trim((string) $value);
+
+        if ($reference === '') {
+            return $value;
+        }
+
+        return $this->resolveAccessibleAccountReference($reference, $user, $requireEditable)->id;
+    }
+
+    private function resolveAccessibleAccountReference(string $reference, User $user, bool $requireEditable): Account
+    {
+        $normalizedReference = $this->normalizeAccountReferenceLabel($reference);
+
+        if ($normalizedReference === '') {
+            throw new RuntimeException('The specified account reference is invalid.');
+        }
+
+        $accounts = Account::query()
+            ->accessibleTo($user)
+            ->with(['sharedUsers:id,name,email'])
+            ->withCount('transactions')
+            ->get();
+
+        $exactMatches = $accounts->filter(function (Account $account) use ($normalizedReference): bool {
+            return in_array($normalizedReference, $this->accountReferenceCandidates($account), true);
+        })->values();
+
+        if ($exactMatches->count() === 1) {
+            return $this->assertEditableAccountReference($exactMatches->first(), $user, $requireEditable);
+        }
+
+        if ($exactMatches->count() > 1) {
+            throw new RuntimeException(sprintf(
+                'Multiple accessible accounts match "%s". Use list_accounts to identify the correct account ID.',
+                $reference,
+            ));
+        }
+
+        $partialMatches = $accounts->filter(function (Account $account) use ($normalizedReference): bool {
+            foreach ($this->accountReferenceCandidates($account) as $candidate) {
+                if (str_contains($candidate, $normalizedReference) || str_contains($normalizedReference, $candidate)) {
+                    return true;
+                }
+            }
+
+            return false;
+        })->values();
+
+        if ($partialMatches->count() === 1) {
+            return $this->assertEditableAccountReference($partialMatches->first(), $user, $requireEditable);
+        }
+
+        if ($partialMatches->count() > 1) {
+            throw new RuntimeException(sprintf(
+                'Multiple accessible accounts partially match "%s". Use list_accounts to identify the correct account ID.',
+                $reference,
+            ));
+        }
+
+        throw new RuntimeException(sprintf(
+            'No accessible account matches "%s". Use list_accounts to resolve the correct account ID.',
+            $reference,
+        ));
+    }
+
+    private function assertEditableAccountReference(Account $account, User $user, bool $requireEditable): Account
+    {
+        if ($requireEditable && ! $account->canBeEditedBy($user)) {
+            throw new RuntimeException('You do not have permission to modify transactions for the specified account.');
+        }
+
+        return $account;
+    }
+
+    private function accountReferenceCandidates(Account $account): array
+    {
+        $translations = $account->getSafeNameTranslations();
+        $candidates = array_values(array_filter(array_map(
+            fn(mixed $value): string => is_string($value) ? $this->normalizeAccountReferenceLabel($value) : '',
+            [
+                $account->getLocalizedName(),
+                ...array_values($translations),
+                'Account #' . $account->id,
+            ],
+        )));
+
+        return array_values(array_unique($candidates));
+    }
+
+    private function normalizeAccountReferenceLabel(string $value): string
+    {
+        $normalized = Str::of($value)
+            ->lower()
+            ->replaceMatches('/\s+/u', ' ')
+            ->replaceMatches('/\baccount\b/u', ' ')
+            ->trim()
+            ->value();
+
+        return trim((string) preg_replace('/\s+/u', ' ', $normalized));
+    }
+
     protected function formatAmount(float|int $amount, ?string $currency = null): string
     {
         $formatted = number_format((float) $amount, 2, '.', '');

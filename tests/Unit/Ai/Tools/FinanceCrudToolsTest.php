@@ -17,6 +17,8 @@ use App\Domains\Category\Models\Category;
 use App\Domains\Transaction\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Ai\Tools\Request;
 use RuntimeException;
 use Tests\TestCase;
@@ -31,8 +33,16 @@ class FinanceCrudToolsTest extends TestCase
     {
         parent::setUp();
 
+        Account::forgetCachedTypeColumnSupport();
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
+    }
+
+    protected function tearDown(): void
+    {
+        Account::forgetCachedTypeColumnSupport();
+
+        parent::tearDown();
     }
 
     public function test_account_tools_can_create_list_and_edit_accounts(): void
@@ -59,6 +69,36 @@ class FinanceCrudToolsTest extends TestCase
         $this->assertStringContainsString('Emergency Fund', $editOutput);
         $this->assertSame('Emergency Fund', $account->getTranslation('name', 'en'));
         $this->assertSame(900.50, $account->balance);
+    }
+
+    public function test_create_account_tool_skips_parent_id_when_the_legacy_schema_lacks_that_column(): void
+    {
+        Schema::shouldReceive('hasColumn')
+            ->with('accounts', 'type')
+            ->andReturn(true);
+        Schema::shouldReceive('hasColumn')
+            ->with('accounts', 'parent_id')
+            ->andReturn(false);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $createOutput = (new CreateAccountTool())->handle(new Request([
+            'name_en' => 'Transportation',
+            'balance' => 0,
+            'parent_id' => null,
+        ]));
+
+        $insertQueries = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->filter(fn (string $query): bool => str_contains(strtolower($query), 'insert into') && str_contains(strtolower($query), 'accounts'));
+
+        $account = Account::query()->where('user_id', $this->user->id)->latest('id')->first();
+
+        $this->assertNotNull($account);
+        $this->assertStringContainsString('Transportation', $createOutput);
+        $this->assertTrue($insertQueries->isNotEmpty());
+        $this->assertFalse($insertQueries->contains(fn (string $query): bool => str_contains(strtolower($query), 'parent_id')));
     }
 
     public function test_budget_tools_can_create_list_and_edit_budgets(): void

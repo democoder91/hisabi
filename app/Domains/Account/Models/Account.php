@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Translatable\HasTranslations;
 
 class Account extends Model
@@ -35,15 +36,36 @@ class Account extends Model
 
     public array $translatable = ['name'];
 
-    protected $guarded = [];
+    protected static array $columnSupportCache = [];
 
-    protected $attributes = [
-        'type' => self::TYPE_ASSET,
-    ];
+    protected $guarded = [];
 
     protected $casts = [
         'balance' => 'float',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $account): void {
+            if (! self::supportsTypeColumn()) {
+                unset($account->type);
+            }
+
+            if (! self::supportsParentIdColumn()) {
+                unset($account->parent_id);
+            }
+
+            if (! self::supportsTypeColumn()) {
+                return;
+            }
+
+            $type = $account->getAttribute('type');
+
+            if (! is_string($type) || trim($type) === '') {
+                $account->setAttribute('type', self::TYPE_ASSET);
+            }
+        });
+    }
 
     public static function ledgerTypes(): array
     {
@@ -54,6 +76,26 @@ class Account extends Model
             self::TYPE_INCOME,
             self::TYPE_EXPENSE,
         ];
+    }
+
+    public static function supportsTypeColumn(): bool
+    {
+        return self::supportsColumn('type');
+    }
+
+    public static function supportsParentIdColumn(): bool
+    {
+        return self::supportsColumn('parent_id');
+    }
+
+    public static function forgetCachedTypeColumnSupport(): void
+    {
+        self::$columnSupportCache = [];
+    }
+
+    private static function supportsColumn(string $column): bool
+    {
+        return self::$columnSupportCache[$column] ??= Schema::hasColumn((new self())->getTable(), $column);
     }
 
     public static function debitPositiveTypes(): array

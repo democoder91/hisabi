@@ -82,6 +82,8 @@ class AccountService
 
     public function create(array $data): Account
     {
+        $data = $this->prepareAccountPayload($data);
+
         return Account::query()->create([
             ...$data,
             'user_id' => $data['user_id'] ?? Auth::id(),
@@ -90,6 +92,8 @@ class AccountService
 
     public function update(Account $account, array $data): Account
     {
+        $data = $this->prepareAccountPayload($data);
+
         $account->update($data);
 
         return $this->reloadResourceAccount($account);
@@ -203,5 +207,22 @@ class AccountService
         $locale = app()->getLocale();
 
         return Account::localizedNameSqlExpression($locale) . ' ' . $direction;
+    }
+
+    private function prepareAccountPayload(array $data): array
+    {
+        if (isset($data['name']) && is_array($data['name'])) {
+            $data['name'] = Account::normalizeLocalizedNameTranslations($data['name']);
+        }
+
+        if (! Account::supportsTypeColumn()) {
+            unset($data['type']);
+        }
+
+        if (! Account::supportsParentIdColumn()) {
+            unset($data['parent_id']);
+        }
+
+        return $data;
     }
 }

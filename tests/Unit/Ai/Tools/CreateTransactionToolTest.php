@@ -132,14 +132,66 @@ class CreateTransactionToolTest extends TestCase
         $this->assertStringContains('Fruit Market', $result);
     }
 
+    public function test_it_resolves_account_name_references_before_validation(): void
+    {
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Savings', 'ar' => null],
+            'type' => Account::TYPE_ASSET,
+            'currency' => 'EGP',
+        ]);
+        $destinationAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Electricity Bills', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
+            'currency' => 'EGP',
+        ]);
+
+        $result = $this->tool->handle(new Request([
+            'amount' => 1650,
+            'from_account_id' => 'Savings Account',
+            'to_account_id' => 'Electricity Bills',
+            'note' => 'Electricity bill for two months',
+        ]));
+
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
+
+        $this->assertStringContains('Transaction created successfully', $result);
+        $this->assertEquals($sourceAccount->id, $transaction->from_account_id);
+        $this->assertEquals($destinationAccount->id, $transaction->to_account_id);
+        $this->assertEquals('Electricity bill for two months', $transaction->note);
+    }
+
+    public function test_it_returns_a_recoverable_message_when_required_account_details_are_missing(): void
+    {
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Savings', 'ar' => null],
+            'type' => Account::TYPE_ASSET,
+        ]);
+
+        $result = $this->tool->handle(new Request([
+            'amount' => 1650,
+            'from_account_id' => $sourceAccount->id,
+            'note' => 'Electricity bill for two months',
+        ]));
+
+        $this->assertStringContains('Unable to create the transaction yet:', $result);
+        $this->assertStringContains('The to account id field is required.', $result);
+        $this->assertStringContains('ask_user_for_input', $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
     public function test_it_requires_source_and_destination_accounts(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('The from account id field is required.');
-
-        $this->tool->handle(new Request([
+        $result = $this->tool->handle(new Request([
             'amount' => 40,
         ]));
+
+        $this->assertStringContains('Unable to create the transaction yet:', $result);
+        $this->assertStringContains('The from account id field is required.', $result);
+        $this->assertStringContains('ask_user_for_input', $result);
+        $this->assertDatabaseCount('transactions', 0);
     }
 
     public function test_it_rejects_using_the_same_account_as_source_and_destination(): void
@@ -150,14 +202,16 @@ class CreateTransactionToolTest extends TestCase
             'name' => ['en' => 'Wallet', 'ar' => null],
         ]);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('The from account id and to account id must be different.');
-
-        $this->tool->handle(new Request([
+        $result = $this->tool->handle(new Request([
             'amount' => 12,
             'from_account_id' => $account->id,
             'to_account_id' => $account->id,
         ]));
+
+        $this->assertStringContains('Unable to create the transaction yet:', $result);
+        $this->assertStringContains('The from account id and to account id must be different.', $result);
+        $this->assertStringContains('list_accounts', $result);
+        $this->assertDatabaseCount('transactions', 0);
     }
 
     private function assertStringContains(string $needle, string $haystack): void

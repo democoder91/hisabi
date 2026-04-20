@@ -58,6 +58,8 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString('create_transfer', $instructions);
         $this->assertStringContainsString('edit_budget', $instructions);
         $this->assertStringContainsString('ask_user_for_input', $instructions);
+        $this->assertStringContainsString('If the user references an account by name instead of ID', $instructions);
+        $this->assertStringContainsString('If a write tool reports missing or invalid account details', $instructions);
         $this->assertStringContainsString('Do not invent transaction memos', $instructions);
         $this->assertStringContainsString('source-account to destination-account movements', $instructions);
         $this->assertStringContainsString('at least one account ID', $instructions);

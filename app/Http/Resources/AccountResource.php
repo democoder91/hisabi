@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Domains\Account\Models\Account;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,7 +17,7 @@ class AccountResource extends JsonResource
             'id' => $this->id,
             'name' => $this->getLocalizedName(),
             'name_translations' => $this->getSafeNameTranslations(),
-            'type' => $this->type,
+            'type' => $this->type ?? (Account::supportsTypeColumn() ? null : Account::TYPE_ASSET),
             'parentId' => $this->parent_id,
             'balance' => (float) $this->balance,
             'currency' => $this->currency,

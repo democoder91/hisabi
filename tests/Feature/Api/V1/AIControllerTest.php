@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Ai\Agents\HisabiAgent;
 use App\Ai\Exceptions\PendingUserInputToolCall;
+use App\Domains\Account\Models\Account;
 use App\Http\Commands\AI\ChatCommand\ChatCommand;
 use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
 use App\Http\Commands\AI\ChatCommand\ChatCommandResponse;
@@ -11,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Mockery;
 use Tests\TestCase;
@@ -102,6 +104,34 @@ class AIControllerTest extends TestCase
             'content' => 'Here is your spending summary.',
             'user_id' => $this->user->id,
         ]);
+    }
+
+    public function test_it_handles_ai_chat_requests_when_the_accounts_table_uses_the_legacy_schema(): void
+    {
+        Account::forgetCachedTypeColumnSupport();
+
+        Schema::shouldReceive('hasColumn')
+            ->with('accounts', 'type')
+            ->andReturn(false);
+
+        HisabiAgent::fake(['Here is your spending summary.']);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Show me my spending summary'],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('role', 'assistant')
+            ->assertJsonPath('content', 'Here is your spending summary.')
+            ->assertJsonPath('available_credits', 4);
+
+        $this->assertDatabaseCount('agent_conversations', 1);
+        $this->assertDatabaseCount('agent_conversation_messages', 2);
+
+        Account::forgetCachedTypeColumnSupport();
     }
 
     public function test_it_passes_user_prompt_to_agent(): void

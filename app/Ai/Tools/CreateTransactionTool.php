@@ -21,20 +21,30 @@ class CreateTransactionTool extends FinancialTool
         $input = $request->all();
         $this->normalizeOptionalTextFields($input, ['brand_name', 'note']);
 
-        $validated = $this->validateInput($input, [
-            'amount' => ['required', 'numeric', 'min:0'],
-            'from_account_id' => ['required', 'integer', 'different:to_account_id'],
-            'to_account_id' => ['required', 'integer'],
-            'brand_name' => ['nullable', 'string', 'max:255'],
-            'note' => ['nullable', 'string', 'max:1000'],
-            'date' => ['nullable', 'date'],
-        ]);
+        try {
+            $this->normalizeAccountReferenceInputs($input, $user, ['from_account_id', 'to_account_id'], true);
 
-        $fromAccount = $this->accessibleAccount((int) $validated['from_account_id'], $user, true);
-        $toAccount = $this->accessibleAccount((int) $validated['to_account_id'], $user, true);
+            $validated = $this->validateInput($input, [
+                'amount' => ['required', 'numeric', 'min:0'],
+                'from_account_id' => ['required', 'integer', 'different:to_account_id'],
+                'to_account_id' => ['required', 'integer'],
+                'brand_name' => ['nullable', 'string', 'max:255'],
+                'note' => ['nullable', 'string', 'max:1000'],
+                'date' => ['nullable', 'date'],
+            ]);
 
-        if ((int) $fromAccount->id === (int) $toAccount->id) {
-            throw new RuntimeException('The source and destination accounts must be different.');
+            $fromAccount = $this->accessibleAccount((int) $validated['from_account_id'], $user, true);
+            $toAccount = $this->accessibleAccount((int) $validated['to_account_id'], $user, true);
+
+            if ((int) $fromAccount->id === (int) $toAccount->id) {
+                throw new RuntimeException('The source and destination accounts must be different.');
+            }
+        } catch (RuntimeException $exception) {
+            return $this->recoverableToolFailure(
+                'create the transaction',
+                $exception,
+                'Use list_accounts to resolve account IDs or ask the user for the missing account details with ask_user_for_input before retrying create_transaction.',
+            );
         }
 
         $resolvedNote = $validated['note'] ?? null;

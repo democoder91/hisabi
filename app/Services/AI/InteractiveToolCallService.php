@@ -703,7 +703,7 @@ class InteractiveToolCallService
             ->when($excludedAccountId !== null, fn($query) => $query->where('id', '!=', $excludedAccountId))
             ->orderByRaw(Account::localizedNameSqlExpression(app()->getLocale()) . ' ASC')
             ->orderBy('id')
-            ->get(['id', 'name', 'type', 'user_id']);
+            ->get($this->accountOptionColumns(includeName: true));
 
         return $accounts->map(function (Account $account): array {
             $translations = $account->getSafeNameTranslations();
@@ -717,7 +717,7 @@ class InteractiveToolCallService
                 'label' => $label,
                 'value' => (string) $account->id,
                 'meta' => [
-                    'account_type' => (string) $account->type,
+                    'account_type' => (string) ($account->type ?? Account::TYPE_ASSET),
                     'owner_id' => (string) $account->user_id,
                     'label_candidates' => $labelCandidates,
                 ],
@@ -741,7 +741,7 @@ class InteractiveToolCallService
         /** @var \Illuminate\Support\Collection<int, Account> $accounts */
         $accounts = Account::query()
             ->whereIn('id', $accountIds)
-            ->get(['id', 'type', 'user_id'])
+            ->get($this->accountOptionColumns(includeName: false))
             ->keyBy('id');
 
         return array_map(static function (array $option) use ($accounts): array {
@@ -758,12 +758,29 @@ class InteractiveToolCallService
             }
 
             $meta = is_array($option['meta'] ?? null) ? $option['meta'] : [];
-            $meta['account_type'] = (string) $account->type;
+            $meta['account_type'] = (string) ($account->type ?? Account::TYPE_ASSET);
             $meta['owner_id'] = (string) $account->user_id;
             $option['meta'] = $meta;
 
             return $option;
         }, $options);
+    }
+
+    private function accountOptionColumns(bool $includeName): array
+    {
+        $columns = ['id'];
+
+        if ($includeName) {
+            $columns[] = 'name';
+        }
+
+        if (Account::supportsTypeColumn()) {
+            $columns[] = 'type';
+        }
+
+        $columns[] = 'user_id';
+
+        return $columns;
     }
 
     private function normalizeSubmittedOptionValue(string $value, array $question): string

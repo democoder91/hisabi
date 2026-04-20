@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from 'react-i18next';
 
 import { updateTransaction, deleteTransaction } from "../../Api";
@@ -18,6 +18,18 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
+const mergeCurrentAccount = (accounts, currentAccount) => {
+    if (!currentAccount) {
+        return accounts;
+    }
+
+    if (accounts.some((item) => item.id === currentAccount.id)) {
+        return accounts;
+    }
+
+    return [currentAccount, ...accounts];
+};
+
 export default function Edit({ transaction, accounts, onUpdate, onDelete, onClose }) {
     const { t } = useTranslation();
     const [amount, setAmount] = useState(0);
@@ -31,9 +43,16 @@ export default function Edit({ transaction, accounts, onUpdate, onDelete, onClos
         return accounts.filter((item) => item.canEditTransactions);
     }, [accounts]);
 
-    const destinationAccountOptions = useMemo(() => {
-        return editableAccounts.filter((item) => item.id !== fromAccount?.id);
+    const sourceAccountOptions = useMemo(() => {
+        return mergeCurrentAccount(editableAccounts, fromAccount);
     }, [editableAccounts, fromAccount]);
+
+    const destinationAccountOptions = useMemo(() => {
+        return mergeCurrentAccount(
+            editableAccounts.filter((item) => item.id !== fromAccount?.id),
+            toAccount && toAccount.id !== fromAccount?.id ? toAccount : null,
+        );
+    }, [editableAccounts, fromAccount, toAccount]);
 
     const selectedCurrency = fromAccount?.currency || toAccount?.currency || transaction?.currency || getAppCurrency();
 
@@ -133,7 +152,7 @@ export default function Edit({ transaction, accounts, onUpdate, onDelete, onClos
                         <div>
                             <Combobox
                                 label={t('transaction.sourceAccount')}
-                                items={editableAccounts}
+                                items={sourceAccountOptions}
                                 initialSelectedItem={fromAccount}
                                 disabled={!canEdit}
                                 onChange={(item) => canEdit && setFromAccount(item)}

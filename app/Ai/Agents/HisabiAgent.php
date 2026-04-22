@@ -24,7 +24,7 @@ use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider('zai')]
+#[Provider('openai')]
 #[MaxSteps(5)]
 class HisabiAgent implements Agent, Conversational, HasTools
 {

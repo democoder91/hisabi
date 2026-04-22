@@ -119,26 +119,29 @@ class HisabiAgentTest extends TestCase
         HisabiAgent::assertPrompted(fn($prompt) => str_contains($prompt->prompt, 'expenses'));
     }
 
-    public function test_agent_uses_zai_chat_completions_endpoint(): void
+    public function test_agent_uses_openai_responses_endpoint(): void
     {
-        $configuredModel = (string) config('ai.providers.zai.models.text.default');
-
         Http::fake([
-            'https://api.z.ai/api/paas/v4/chat/completions' => Http::response([
-                'id' => 'chatcmpl-test',
-                'model' => $configuredModel,
-                'choices' => [[
-                    'index' => 0,
-                    'message' => [
-                        'role' => 'assistant',
-                        'content' => 'Hello from ZAI',
-                    ],
-                    'finish_reason' => 'stop',
+            'https://api.openai.com/v1/responses' => Http::response([
+                'id' => 'resp-test',
+                'status' => 'completed',
+                'model' => 'gpt-4o',
+                'output' => [[
+                    'id' => 'msg-test',
+                    'type' => 'message',
+                    'status' => 'completed',
+                    'role' => 'assistant',
+                    'content' => [[
+                        'type' => 'output_text',
+                        'text' => 'Hello from OpenAI',
+                        'annotations' => [],
+                    ]],
                 ]],
                 'usage' => [
-                    'prompt_tokens' => 10,
-                    'completion_tokens' => 3,
-                    'total_tokens' => 13,
+                    'input_tokens' => 10,
+                    'output_tokens' => 3,
+                    'input_tokens_details' => ['cached_tokens' => 0],
+                    'output_tokens_details' => ['reasoning_tokens' => 0],
                 ],
             ], 200),
         ]);
@@ -147,11 +150,10 @@ class HisabiAgentTest extends TestCase
 
         $response = (new HisabiAgent($user))->prompt('Say hello');
 
-        $this->assertSame('Hello from ZAI', $response->text);
+        $this->assertSame('Hello from OpenAI', $response->text);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://api.z.ai/api/paas/v4/chat/completions'
-                && $request['model'] === config('ai.providers.zai.models.text.default');
+            return $request->url() === 'https://api.openai.com/v1/responses';
         });
     }
 }

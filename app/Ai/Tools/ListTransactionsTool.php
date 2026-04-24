@@ -111,31 +111,40 @@ class ListTransactionsTool extends FinancialTool
         return [
             'transaction_id' => $schema->integer()
                 ->description('Optional exact transaction ID to retrieve.')
+                ->required()
                 ->nullable(),
             'account_id' => $schema->integer()
                 ->description('Optional filter for any transaction involving this account.')
+                ->required()
                 ->nullable(),
             'from_account_id' => $schema->integer()
                 ->description('Optional source account ID filter.')
+                ->required()
                 ->nullable(),
             'to_account_id' => $schema->integer()
                 ->description('Optional destination account ID filter.')
+                ->required()
                 ->nullable(),
             'transaction_type' => $schema->string()
                 ->description('Optional transaction direction filter.')
                 ->enum([Transaction::TYPE_DEBIT, Transaction::TYPE_CREDIT])
+                ->required()
                 ->nullable(),
             'date_from' => $schema->string()
                 ->description('Optional start date filter in YYYY-MM-DD format.')
+                ->required()
                 ->nullable(),
             'date_to' => $schema->string()
                 ->description('Optional end date filter in YYYY-MM-DD format.')
+                ->required()
                 ->nullable(),
             'search' => $schema->string()
                 ->description('Optional search term that matches the note or amount.')
+                ->required()
                 ->nullable(),
             'limit' => $schema->integer()
                 ->description('Maximum number of transactions to return. Defaults to 10, max 25.')
+                ->required()
                 ->nullable(),
         ];
     }

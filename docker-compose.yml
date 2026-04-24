@@ -50,6 +50,7 @@ services:
             - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
             - caddy-data:/data
             - caddy-config:/config
+            - /var/www/portfolio:/var/www/portfolio:ro
 
     db:
         image: mysql:8.0

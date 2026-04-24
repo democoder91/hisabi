@@ -89,18 +89,23 @@ class EditTransactionTool extends FinancialTool
                 ->required(),
             'amount' => $schema->number()
                 ->description('Optional new transaction amount.')
+                ->required()
                 ->nullable(),
             'from_account_id' => $schema->integer()
                 ->description('Optional replacement source account ID. The user must be allowed to edit transactions on it.')
+                ->required()
                 ->nullable(),
             'to_account_id' => $schema->integer()
                 ->description('Optional replacement destination account ID. The user must be allowed to edit transactions on it.')
+                ->required()
                 ->nullable(),
             'note' => $schema->string()
                 ->description('Optional replacement note. Use null to clear it.')
+                ->required()
                 ->nullable(),
             'date' => $schema->string()
                 ->description('Optional replacement date in YYYY-MM-DD format.')
+                ->required()
                 ->nullable(),
         ];
     }

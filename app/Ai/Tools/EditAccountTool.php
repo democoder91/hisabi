@@ -13,7 +13,7 @@ class EditAccountTool extends FinancialTool
 {
     public function description(): Stringable|string
     {
-        return 'Edit an existing account that the authenticated user owns. Use this to rename an account or adjust its balance. If the user does not know the account ID, list accounts first.';
+        return 'Edit an existing account that the authenticated user owns. Use this to rename an account, adjust its balance, or change its type (asset, liability, equity, income, expense). If the user does not know the account ID, list accounts first.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -74,18 +74,23 @@ class EditAccountTool extends FinancialTool
                 ->required(),
             'name_en' => $schema->string()
                 ->description('Optional new English name for the account.')
+                ->required()
                 ->nullable(),
             'name_ar' => $schema->string()
                 ->description('Optional new Arabic translation for the account name. Use null to clear it.')
+                ->required()
                 ->nullable(),
             'balance' => $schema->number()
                 ->description('Optional replacement balance for the account.')
+                ->required()
                 ->nullable(),
             'type' => $schema->string()
                 ->description('Optional new account type. One of: asset, liability, equity, income, expense.')
+                ->required()
                 ->nullable(),
             'parent_id' => $schema->integer()
                 ->description('Optional ID of a parent account. Pass null to remove the current parent.')
+                ->required()
                 ->nullable(),
         ];
     }

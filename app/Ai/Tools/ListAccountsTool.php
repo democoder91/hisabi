@@ -50,9 +50,11 @@ class ListAccountsTool extends FinancialTool
         return [
             'search' => $schema->string()
                 ->description('Optional search term for the account name.')
+                ->required()
                 ->nullable(),
             'limit' => $schema->integer()
                 ->description('Maximum number of accounts to return. Defaults to 10, max 25.')
+                ->required()
                 ->nullable(),
         ];
     }

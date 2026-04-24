@@ -131,37 +131,47 @@ class EditBudgetTool extends FinancialTool
                 ->required(),
             'name_en' => $schema->string()
                 ->description('Optional new English name for the budget.')
+                ->required()
                 ->nullable(),
             'name_ar' => $schema->string()
                 ->description('Optional new Arabic translation for the budget. Use null to clear it.')
+                ->required()
                 ->nullable(),
             'amount' => $schema->number()
                 ->description('Optional new budget amount.')
+                ->required()
                 ->nullable(),
             'currency' => $schema->string()
                 ->description('Optional replacement 3-letter currency code. Defaults to the existing budget currency when omitted.')
                 ->enum(Currency::values())
+                ->required()
                 ->nullable(),
             'start_at' => $schema->string()
                 ->description('Optional new start date in YYYY-MM-DD format.')
+                ->required()
                 ->nullable(),
             'end_at' => $schema->string()
                 ->description('Optional new end date in YYYY-MM-DD format. Required when the resulting recurrence is CUSTOM.')
+                ->required()
                 ->nullable(),
             'saving' => $schema->boolean()
                 ->description('Optional updated savings flag.')
+                ->required()
                 ->nullable(),
             'period' => $schema->integer()
                 ->description('Optional updated recurrence period length.')
+                ->required()
                 ->nullable(),
             'reoccurrence' => $schema->string()
                 ->description('Optional updated recurrence type.')
                 ->enum([Budget::CUSTOM, Budget::DAILY, Budget::WEEKLY, Budget::MONTHLY, Budget::YEARLY])
+                ->required()
                 ->nullable(),
             'account_ids' => $schema->array()
                 ->description('Optional replacement list of account IDs for the budget.')
                 ->items($schema->integer())
                 ->min(1)
+                ->required()
                 ->nullable(),
         ];
     }

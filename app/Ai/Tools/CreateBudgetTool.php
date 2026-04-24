@@ -76,6 +76,7 @@ class CreateBudgetTool extends FinancialTool
                 ->required(),
             'name_ar' => $schema->string()
                 ->description('Optional Arabic translation of the budget name.')
+                ->required()
                 ->nullable(),
             'amount' => $schema->number()
                 ->description('The total budget amount. Must be greater than 0.')
@@ -83,15 +84,18 @@ class CreateBudgetTool extends FinancialTool
             'currency' => $schema->string()
                 ->description('Optional 3-letter currency code for the budget. Defaults to the user preferred currency.')
                 ->enum(Currency::values())
+                ->required()
                 ->nullable(),
             'start_at' => $schema->string()
                 ->description('Budget start date in YYYY-MM-DD format.')
                 ->required(),
             'end_at' => $schema->string()
                 ->description('Budget end date in YYYY-MM-DD format. Required when reoccurrence is CUSTOM.')
+                ->required()
                 ->nullable(),
             'saving' => $schema->boolean()
                 ->description('Whether this is a savings budget.')
+                ->required()
                 ->nullable(),
             'period' => $schema->integer()
                 ->description('The recurrence period length, for example 1 for monthly.')

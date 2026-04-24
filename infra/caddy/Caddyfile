@@ -1,6 +1,6 @@
 nexosoft.online {
     encode gzip zstd
-    reverse_proxy nginx:80
+    reverse_proxy localhost:80
 }
 
 portfolio.nexosoft.online {

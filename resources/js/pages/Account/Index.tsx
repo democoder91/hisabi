@@ -174,6 +174,15 @@ export default function Index({ auth }: { auth: any }) {
             ),
         },
         {
+            accessorKey: 'type',
+            header: t('account.type'),
+            cell: ({ row }) => (
+                <Badge variant="secondary" className="text-[10px] capitalize">
+                    {t(`account.type_${row.original.type ?? 'asset'}`)}
+                </Badge>
+            ),
+        },
+        {
             id: 'sharing',
             header: t('account.sharingTab'),
             cell: ({ row }) => {

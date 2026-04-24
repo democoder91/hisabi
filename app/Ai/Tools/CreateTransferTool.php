@@ -67,9 +67,11 @@ class CreateTransferTool extends FinancialTool
                 ->required(),
             'note' => $schema->string()
                 ->description('Optional note to include on the transfer entry.')
+                ->required()
                 ->nullable(),
             'date' => $schema->string()
                 ->description('Optional transfer date in YYYY-MM-DD format. Defaults to today.')
+                ->required()
                 ->nullable(),
         ];
     }

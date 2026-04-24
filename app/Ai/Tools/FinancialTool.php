@@ -389,9 +389,10 @@ abstract class FinancialTool implements Tool
         $permission = $account->isOwnedBy($user) ? 'owner' : ($account->permissionLevelFor($user) ?? 'view');
 
         return sprintf(
-            '#%d %s | balance %s | transactions %d | permission %s',
+            '#%d %s | type %s | balance %s | transactions %d | permission %s',
             $account->id,
             $account->getLocalizedName() ?? 'Unnamed account',
+            $account->type ?? Account::TYPE_ASSET,
             $this->formatAmount($account->balance),
             (int) ($account->transactions_count ?? 0),
             $permission,

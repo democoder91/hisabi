@@ -80,12 +80,15 @@ class CreateTransactionTool extends FinancialTool
                 ->required(),
             'brand_name' => $schema->string()
                 ->description('The merchant, store, company, or source name. Optional - leave empty if no specific brand.')
+                ->required()
                 ->nullable(),
             'note' => $schema->string()
                 ->description('Optional note or description for the transaction')
+                ->required()
                 ->nullable(),
             'date' => $schema->string()
                 ->description('The transaction date in YYYY-MM-DD format. Optional - defaults to today.')
+                ->required()
                 ->nullable(),
         ];
     }

@@ -125,6 +125,7 @@ class InteractiveToolCallService
 
         $toolCalls = [[
             'id' => $interaction['tool_call_id'],
+            'result_id' => $interaction['tool_call_id'],
             'name' => self::TOOL_NAME,
             'arguments' => [
                 'questions' => $interaction['questions'],
@@ -187,6 +188,7 @@ class InteractiveToolCallService
             ->update([
                 'tool_results' => $this->encode([[
                     'id' => $interaction['tool_call_id'],
+                    'result_id' => $interaction['tool_call_id'],
                     'name' => self::TOOL_NAME,
                     'arguments' => [
                         'questions' => $interaction['questions'],
@@ -689,11 +691,16 @@ class InteractiveToolCallService
             $refreshedOptions[$currentOption['value']] ??= $currentOption;
         }
 
-        return array_values(array_map(function (array $option): array {
+        $result = array_values(array_map(function (array $option): array {
             unset($option['meta']['label_candidates']);
 
             return $option;
         }, $refreshedOptions));
+
+        $result = array_values(array_filter($result, fn(array $o): bool => ($o['value'] ?? '') !== '__create_new__'));
+        $result[] = $this->createNewAccountOption();
+
+        return $result;
     }
 
     private function currentAccountOptions(User $user, ?int $excludedAccountId): array
@@ -744,7 +751,7 @@ class InteractiveToolCallService
             ->get($this->accountOptionColumns(includeName: false))
             ->keyBy('id');
 
-        return array_map(static function (array $option) use ($accounts): array {
+        $enriched = array_map(static function (array $option) use ($accounts): array {
             $value = $option['value'] ?? null;
 
             if (! is_string($value) || ! ctype_digit($value)) {
@@ -764,6 +771,19 @@ class InteractiveToolCallService
 
             return $option;
         }, $options);
+
+        $enriched = array_values(array_filter($enriched, fn(array $o): bool => ($o['value'] ?? '') !== '__create_new__'));
+        $enriched[] = $this->createNewAccountOption();
+
+        return $enriched;
+    }
+
+    private function createNewAccountOption(): array
+    {
+        return [
+            'label' => '+ Create a new account',
+            'value' => '__create_new__',
+        ];
     }
 
     private function accountOptionColumns(bool $includeName): array

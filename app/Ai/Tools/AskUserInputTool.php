@@ -48,7 +48,9 @@ class AskUserInputTool implements Tool
             'type' => $schema->string()->required()->enum(['text', 'select', 'multiselect']),
             'options' => $schema->array()
                 ->items($optionSchema)
-                ->description('Required for select and multiselect questions. Each option should include a label and value.'),
+                ->description('Required for select and multiselect questions. Each option should include a label and value.')
+                ->required()
+                ->nullable(),
         ])->withoutAdditionalProperties();
 
         return [

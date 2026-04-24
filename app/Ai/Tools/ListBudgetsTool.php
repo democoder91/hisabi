@@ -60,13 +60,16 @@ class ListBudgetsTool extends FinancialTool
         return [
             'saving' => $schema->boolean()
                 ->description('Optional filter for savings budgets only.')
+                ->required()
                 ->nullable(),
             'reoccurrence' => $schema->string()
                 ->description('Optional recurrence filter.')
                 ->enum([Budget::CUSTOM, Budget::DAILY, Budget::WEEKLY, Budget::MONTHLY, Budget::YEARLY])
+                ->required()
                 ->nullable(),
             'limit' => $schema->integer()
                 ->description('Maximum number of budgets to return. Defaults to 10, max 25.')
+                ->required()
                 ->nullable(),
         ];
     }

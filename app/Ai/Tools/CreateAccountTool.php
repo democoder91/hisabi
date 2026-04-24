@@ -50,15 +50,18 @@ class CreateAccountTool extends FinancialTool
                 ->required(),
             'name_ar' => $schema->string()
                 ->description('Optional Arabic translation of the account name.')
+                ->required()
                 ->nullable(),
             'balance' => $schema->number()
                 ->description('The starting balance for the account. Can be 0.')
                 ->required(),
             'type' => $schema->string()
                 ->description('The account type. One of: asset, liability, equity, income, expense. Defaults to asset.')
+                ->required()
                 ->nullable(),
             'parent_id' => $schema->integer()
                 ->description('Optional ID of a parent account to nest this account under.')
+                ->required()
                 ->nullable(),
         ];
     }

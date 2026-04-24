@@ -126,6 +126,13 @@ return [
             'driver' => 'openai',
             'key' => env('OPENAI_API_KEY'),
             'url' => env('OPENAI_URL', 'https://api.openai.com/v1'),
+            'models' => [
+                'text' => [
+                    'default' => env('OPENAI_TEXT_MODEL', 'gpt-4o'),
+                    'cheapest' => env('OPENAI_TEXT_MODEL_CHEAP', 'gpt-4o-mini'),
+                    'smartest' => env('OPENAI_TEXT_MODEL_SMART', 'gpt-4o'),
+                ],
+            ],
         ],
 
         'openrouter' => [

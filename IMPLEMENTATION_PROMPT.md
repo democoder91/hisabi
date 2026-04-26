@@ -1,6 +1,10 @@
-# Task: Implement Multi-Account System for Laravel Finance App (Hisabi)
+# Task: Implement Multi-Account System for Laravel Finance App (Nexo)
 
-> **Historical note:** This document captures an earlier planning prompt. The current production schema **no longer includes Categories or Brands** — those tables were removed. Treat the schema and relationships listed below as historical context only. Refer to `INTRODUCTION.md` and the `app/Domains/{Account,Transaction,Budget}` source for the current model.
+> **Historical note:** This document captures an earlier planning prompt. It is not the source of truth for the current application state.
+
+> **Current-state note:** The application already ships account support, `/api/v1` resources, Linux-native hosting expectations with Nginx and Caddy, and locale support for English and Arabic. The current production schema **no longer includes Categories or Brands** as active domain concepts. Treat the schema and relationships listed below as historical context only. Verify all assumptions against `routes/`, `app/Domains/`, controllers, requests, and API collections before making implementation decisions.
+
+> **Documentation note:** If future work revives or changes any behavior described here, the relevant markdown files must be updated in the same change.
 
 ## Context
 You are working on a Laravel 12 finance tracking application that currently has a single-user design with NO tenant isolation. All models (Transaction, SMS, Budget, Account) are global and not scoped to users.

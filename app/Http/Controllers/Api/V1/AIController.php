@@ -87,7 +87,7 @@ class AIController extends Controller
             return $this->assistantFailureResponse(
                 $authenticatedUser,
                 'warning',
-                'Hisabi AI Chat Rate Limited',
+                'Nexo AI Chat Rate Limited',
                 $exception,
                 'The AI provider is temporarily rate limited. No changes were saved. Please try again in a moment.',
                 null,
@@ -96,7 +96,7 @@ class AIController extends Controller
             return $this->assistantFailureResponse(
                 $authenticatedUser,
                 'error',
-                'Hisabi AI Chat Error',
+                'Nexo AI Chat Error',
                 $exception,
                 'I apologize, but I encountered an error processing your request. No changes were saved. Please try again in a moment.',
                 null,
@@ -150,7 +150,7 @@ class AIController extends Controller
             return $this->assistantFailureResponse(
                 $authenticatedUser,
                 'warning',
-                'Hisabi AI Tool Response Rate Limited',
+                'Nexo AI Tool Response Rate Limited',
                 $exception,
                 'The AI provider is temporarily rate limited. Your answers were not lost. Please try again in a moment.',
                 $conversationId,
@@ -159,7 +159,7 @@ class AIController extends Controller
             return $this->assistantFailureResponse(
                 $authenticatedUser,
                 'error',
-                'Hisabi AI Tool Response Error',
+                'Nexo AI Tool Response Error',
                 $exception,
                 'I apologize, but I encountered an error processing your answers. Please try again in a moment.',
                 $conversationId,

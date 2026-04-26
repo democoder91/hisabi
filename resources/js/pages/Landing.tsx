@@ -1,9 +1,11 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ArrowRightIcon,
     ChartLineUpIcon,
     DeviceMobileCameraIcon,
+    GlobeHemisphereWestIcon,
     RobotIcon,
     ShieldCheckIcon,
 } from '@phosphor-icons/react';
@@ -12,9 +14,25 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import ApplicationLogo from '@/components/Global/ApplicationLogo';
+import { initI18n } from '@/i18n';
 
 export default function Landing() {
     const { t } = useTranslation();
+    const { locale = 'en' } = usePage<{ locale?: string; direction?: string }>().props as {
+        locale?: string;
+        direction?: string;
+    };
+    const [activeLocale, setActiveLocale] = useState(locale);
+
+    useEffect(() => {
+        setActiveLocale(locale);
+    }, [locale]);
+
+    useEffect(() => {
+        initI18n(activeLocale);
+        document.documentElement.lang = activeLocale;
+        document.documentElement.dir = activeLocale === 'ar' ? 'rtl' : 'ltr';
+    }, [activeLocale]);
 
     const featureCards = [
         {
@@ -72,11 +90,16 @@ export default function Landing() {
         },
     ];
 
+    const isArabic = activeLocale === 'ar';
+    const activeDirection = isArabic ? 'rtl' : 'ltr';
+    const navAlignmentClass = isArabic ? 'sm:flex-row-reverse' : 'sm:flex-row';
+    const heroGridClass = isArabic ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]';
+
     return (
         <>
             <Head title={t('landing.metaTitle')} />
 
-            <div className="relative min-h-screen overflow-hidden bg-background">
+            <div className="relative min-h-screen overflow-hidden bg-background" dir={activeDirection}>
                 <div className="absolute inset-x-0 top-0 h-[34rem] bg-linear-to-b from-brand/15 via-highlight/20 to-transparent" />
                 <div className="absolute -top-20 left-1/2 size-[30rem] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl" />
                 <div className="absolute right-0 top-48 size-72 rounded-full bg-highlight/30 blur-3xl" />
@@ -84,12 +107,31 @@ export default function Landing() {
                 <main className="relative">
                     <section className="px-4 py-6 sm:px-6 lg:px-8">
                         <div className="mx-auto max-w-7xl">
-                            <nav className="flex flex-col gap-4 rounded-full border bg-background/80 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                            <nav className={`flex flex-col gap-4 rounded-full border bg-background/80 px-4 py-3 backdrop-blur sm:items-center sm:justify-between ${navAlignmentClass}`}>
                                 <div className="flex items-center gap-3">
                                     <ApplicationLogo />
                                 </div>
 
-                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+                                    <div className="flex items-center gap-1 rounded-full border bg-background/90 p-1">
+                                        <span className="px-2 text-xs text-muted-foreground">
+                                            <GlobeHemisphereWestIcon size={14} />
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveLocale('en')}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${activeLocale === 'en' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                        >
+                                            EN
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveLocale('ar')}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${activeLocale === 'ar' ? 'bg-primary text-primary-foreground font-arabic' : 'text-muted-foreground hover:text-foreground font-arabic'}`}
+                                        >
+                                            AR
+                                        </button>
+                                    </div>
                                     <Button variant="ghost" asChild>
                                         <Link href={route('login')}>{t('auth.login')}</Link>
                                     </Button>
@@ -102,7 +144,7 @@ export default function Landing() {
                     </section>
 
                     <section className="px-4 pb-14 pt-6 sm:px-6 lg:px-8 lg:pt-10">
-                        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+                        <div className={`mx-auto grid max-w-7xl items-center gap-10 ${heroGridClass}`}>
                             <div className="space-y-8">
                                 <Badge variant="secondary" className="rounded-full px-4 py-1.5 text-xs uppercase tracking-[0.3em]">
                                     {t('landing.badge')}

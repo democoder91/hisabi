@@ -2,6 +2,12 @@
 
 Track dashboard enhancement tasks. Each task is independent and can be implemented by AI agents.
 
+> **Current platform facts:** Nexo now runs primarily on a Linux-native stack with Nginx and Caddy, exposes a live `/api/v1` surface for accounts, transactions, budgets, metrics, settings, SMS, and AI, and already has localization infrastructure for English and Arabic.
+
+> **Landing gap:** the public landing page still needs to be refreshed to reflect the current product surface and make the `en` / `ar` language experience explicit.
+
+> **Documentation rule:** when any dashboard capability below is implemented or changed, update the affected markdown files in the same change so product docs do not drift from the shipped behavior.
+
 > **Note:** The current product does **not** ship Categories or Brands. Any task below that references categorical breakdowns, brand/merchant detection, or category-based alerts is blocked until those concepts are reintroduced or replaced with an equivalent classification mechanism (for example, transaction notes/descriptions or budget membership).
 
 ## Status Legend

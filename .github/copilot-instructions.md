@@ -43,6 +43,11 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Documentation Files
 - You must only create documentation files if explicitly requested by the user.
+- When a feature, API route, deployment path, localization behavior, or major UI flow changes, you must update the affected markdown files in the same change.
+- Do not trust existing markdown by default. Verify documentation updates against the codebase, route files, controllers, frontend pages, and API collections.
+- Review and update these files when relevant: `README.md`, `INTRODUCTION.md`, `tasks.md`, `DASHBOARD_IMPROVEMENTS.md`, `IMPLEMENTATION_PROMPT.md`, and this instructions file.
+- The current deployment reality is Linux-native with Nginx and Caddy as the primary path. Treat Docker assets as secondary or historical unless the user explicitly asks for Docker.
+- The application already supports `en` and `ar` locale infrastructure, but the landing page may lag behind the current product surface and language expectations; keep docs explicit about that until the UI is updated.
 
 
 === boost rules ===

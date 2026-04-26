@@ -101,6 +101,39 @@ class FinanceCrudToolsTest extends TestCase
         $this->assertFalse($insertQueries->contains(fn (string $query): bool => str_contains(strtolower($query), 'parent_id')));
     }
 
+    public function test_list_accounts_tool_finds_liability_accounts_by_name_without_type_filter(): void
+    {
+        $creditCard = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Credit Card', 'ar' => null],
+            'type' => Account::TYPE_LIABILITY,
+            'balance' => 1234.56,
+        ]);
+
+        $output = (new ListAccountsTool())->handle(new Request([
+            'search' => 'credit card',
+        ]));
+
+        $this->assertStringContainsString('Credit Card', $output);
+        $this->assertStringContainsString((string) $creditCard->id, $output);
+    }
+
+    public function test_list_accounts_tool_filters_out_liability_when_type_asset_is_requested(): void
+    {
+        Account::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => ['en' => 'Credit Card', 'ar' => null],
+            'type' => Account::TYPE_LIABILITY,
+        ]);
+
+        $output = (new ListAccountsTool())->handle(new Request([
+            'search' => 'credit card',
+            'type' => Account::TYPE_ASSET,
+        ]));
+
+        $this->assertStringContainsString('No accounts found', $output);
+    }
+
     public function test_budget_tools_can_create_list_and_edit_budgets(): void
     {
         $food = Account::factory()->create([

@@ -150,8 +150,7 @@ it('does not select the type column when refreshing account options for a legacy
     $user = User::factory()->create();
 
     Schema::shouldReceive('hasColumn')
-        ->with('accounts', 'type')
-        ->andReturn(false);
+        ->andReturnUsing(fn(string $table, string $column): bool => $column !== 'type');
 
     $account = Account::factory()->create([
         'user_id' => $user->id,

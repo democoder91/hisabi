@@ -2,22 +2,22 @@
 
 ## Overview
 
-Hisabi is a self-hosted personal finance application built for people who want a clear picture of their money without giving up control of their data. The product combines transaction tracking, budgeting, category management, account-level audit history, SMS transaction intake, analytics, and AI-assisted financial workflows in one Laravel application.
+Hisabi is a self-hosted personal finance application built for people who want a clear picture of their money without giving up control of their data. The product combines transaction tracking, budgeting, account-level audit history, SMS transaction intake, analytics, and AI-assisted financial workflows in one Laravel application.
 
 ## What The Product Does
 
 - Tracks accounts, balances, and transaction history.
-- Organizes spending and income with categories and budgets.
+- Organizes spending and income with budgets that target specific accounts.
 - Generates dashboard metrics and visual reports.
 - Parses bank SMS messages into transaction records.
 - Records account audit activity for create, update, and delete events.
-- Provides AI-assisted finance tooling through the built-in AI endpoints and UI.
+- Provides AI-assisted finance tooling, including semantic search across accounts, transactions, and budgets.
 
 ## Core User Flow
 
 1. A visitor lands on the public marketing page at `/`.
 2. After registration or login, the user is redirected to the dashboard.
-3. From the dashboard, the user moves into accounts, transactions, budgets, categories, and settings.
+3. From the dashboard, the user moves into accounts, transactions, budgets, and settings.
 4. Data-heavy pages rely on API endpoints under `/api/v1` and render through Inertia-powered React pages.
 
 ## Technical Stack
@@ -32,9 +32,8 @@ Hisabi is a self-hosted personal finance application built for people who want a
 
 - Dashboard: high-level financial insights and charts.
 - Accounts: balances, sharing, and audit trail.
-- Transactions: searchable and filterable ledger with category and account context.
-- Budgets: recurring or custom budget tracking.
-- Categories: grouped transaction classification.
+- Transactions: searchable and filterable ledger scoped to the user's accounts.
+- Budgets: recurring or custom budget tracking, attached to one or more accounts.
 - Settings: profile and preference management.
 
 ## Project Structure Snapshot

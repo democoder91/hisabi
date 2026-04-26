@@ -2,6 +2,8 @@
 
 Track dashboard enhancement tasks. Each task is independent and can be implemented by AI agents.
 
+> **Note:** The current product does **not** ship Categories or Brands. Any task below that references categorical breakdowns, brand/merchant detection, or category-based alerts is blocked until those concepts are reintroduced or replaced with an equivalent classification mechanism (for example, transaction notes/descriptions or budget membership).
+
 ## Status Legend
 - ❌ Not Started
 - 🟡 In Progress

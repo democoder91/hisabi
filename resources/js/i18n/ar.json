@@ -253,6 +253,7 @@
         "ownedOnly": "المملوكة فقط",
         "sharedOnly": "المشتركة فقط",
         "allCurrencies": "كل العملات",
+        "allTypes": "كل الأنواع",
         "detailsTab": "التفاصيل",
         "sharingTab": "المشاركة",
         "sharedBy": "تمت المشاركة بواسطة {{name}}",

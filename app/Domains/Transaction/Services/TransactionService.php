@@ -4,6 +4,7 @@ namespace App\Domains\Transaction\Services;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Category\Models\Category;
+use App\Domains\Search\Services\SemanticSearchService;
 use App\Domains\Transaction\Models\Transaction;
 use App\Scopes\OwnedAccountScope;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -21,14 +22,41 @@ class TransactionService
             ->allowedFilters([
                 AllowedFilter::callback('search', function ($query, $value) {
                     $search = trim((string) $value);
+
+                    if ($search === '') {
+                        return;
+                    }
+
                     $like = "%{$search}%";
-                    $locale = Auth::user()?->locale ?? app()->getLocale();
+                    $user = Auth::user();
+                    $semantic = $user ? app(SemanticSearchService::class) : null;
+                    $transactionIds = $semantic ? $semantic->searchTransactionIds($user, $search, 500) : [];
+                    $accountIds = $semantic ? $semantic->searchAccountIds($user, $search, 100) : [];
+
+                    $locale = $user?->locale ?? app()->getLocale();
                     $nameExpression = Account::localizedNameSqlExpression($locale);
 
-                    $query->where(function ($builder) use ($like, $nameExpression) {
-                        $builder->where('amount', 'LIKE', $like)
-                            ->orWhere('note', 'LIKE', $like)
-                            ->orWhereHas('account', function ($accountQuery) use ($nameExpression, $like) {
+                    $query->where(function ($builder) use (
+                        $like,
+                        $nameExpression,
+                        $transactionIds,
+                        $accountIds,
+                    ) {
+                        if ($transactionIds !== []) {
+                            $builder->orWhereIn('id', $transactionIds);
+                        } else {
+                            $builder->orWhere('note', 'LIKE', $like)
+                                ->orWhere('description', 'LIKE', $like);
+                        }
+
+                        $builder->orWhere('amount', 'LIKE', $like);
+
+                        if ($accountIds !== []) {
+                            $builder->orWhereIn('account_id', $accountIds)
+                                ->orWhereIn('from_account_id', $accountIds)
+                                ->orWhereIn('to_account_id', $accountIds);
+                        } else {
+                            $builder->orWhereHas('account', function ($accountQuery) use ($nameExpression, $like) {
                                 $accountQuery->whereRaw("{$nameExpression} LIKE ?", [$like]);
                             })
                             ->orWhereHas('fromAccount', function ($accountQuery) use ($nameExpression, $like) {
@@ -37,6 +65,7 @@ class TransactionService
                             ->orWhereHas('toAccount', function ($accountQuery) use ($nameExpression, $like) {
                                 $accountQuery->whereRaw("{$nameExpression} LIKE ?", [$like]);
                             });
+                        }
                     });
                 }),
                 AllowedFilter::callback('account_id', function ($query, $value) {

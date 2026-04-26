@@ -1,7 +1,9 @@
 # Task: Implement Multi-Account System for Laravel Finance App (Hisabi)
 
+> **Historical note:** This document captures an earlier planning prompt. The current production schema **no longer includes Categories or Brands** — those tables were removed. Treat the schema and relationships listed below as historical context only. Refer to `INTRODUCTION.md` and the `app/Domains/{Account,Transaction,Budget}` source for the current model.
+
 ## Context
-You are working on a Laravel 12 finance tracking application that currently has a single-user design with NO tenant isolation. All models (Category, Brand, Transaction, SMS, Budget) are global and not scoped to users.
+You are working on a Laravel 12 finance tracking application that currently has a single-user design with NO tenant isolation. All models (Transaction, SMS, Budget, Account) are global and not scoped to users.
 
 ## Tech Stack
 - **Backend**: Laravel 12, PHP 8.2+, MySQL

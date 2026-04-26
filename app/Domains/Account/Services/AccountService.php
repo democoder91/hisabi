@@ -4,6 +4,7 @@ namespace App\Domains\Account\Services;
 
 use App\Domains\Account\Models\Account;
 use App\Domains\Account\Models\AccountShare;
+use App\Domains\Search\Services\SemanticSearchService;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,14 +22,32 @@ class AccountService
         $query = QueryBuilder::for($this->accessibleQuery())
             ->allowedFilters([
                 AllowedFilter::callback('search', function (Builder $query, $value) {
-                    $search = "%{$value}%";
+                    $term = trim((string) $value);
 
-                    $query->where(function (Builder $builder) use ($search) {
-                        $builder->whereRaw(Account::localizedNameSqlExpression('en', false) . ' LIKE ?', [$search])
-                            ->orWhereRaw(Account::localizedNameSqlExpression('ar', false) . ' LIKE ?', [$search]);
+                    if ($term === '') {
+                        return;
+                    }
+
+                    $user = Auth::user();
+                    $matchedIds = $user
+                        ? app(SemanticSearchService::class)->searchAccountIds($user, $term, 200)
+                        : [];
+
+                    if ($matchedIds !== []) {
+                        $query->whereIn('id', $matchedIds);
+
+                        return;
+                    }
+
+                    $like = "%{$term}%";
+
+                    $query->where(function (Builder $builder) use ($like) {
+                        $builder->whereRaw(Account::localizedNameSqlExpression('en', false) . ' LIKE ?', [$like])
+                            ->orWhereRaw(Account::localizedNameSqlExpression('ar', false) . ' LIKE ?', [$like]);
                     });
                 }),
                 AllowedFilter::exact('currency'),
+                AllowedFilter::exact('type'),
                 AllowedFilter::callback('access', function (Builder $query, mixed $value) {
                     if ($value === 'owned') {
                         $query->where('user_id', Auth::id());

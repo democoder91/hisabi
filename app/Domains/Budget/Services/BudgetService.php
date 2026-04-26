@@ -4,9 +4,12 @@ namespace App\Domains\Budget\Services;
 
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Budget\Models\BudgetAccount;
+use App\Domains\Search\Services\SemanticSearchService;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class BudgetService
@@ -15,6 +18,34 @@ class BudgetService
     {
         return QueryBuilder::for(Budget::class)
             ->with($this->relations())
+            ->allowedFilters([
+                AllowedFilter::callback('search', function (Builder $query, $value) {
+                    $term = trim((string) $value);
+
+                    if ($term === '') {
+                        return;
+                    }
+
+                    $user = Auth::user();
+                    $matchedIds = $user
+                        ? app(SemanticSearchService::class)->searchBudgetIds($user, $term, 200)
+                        : [];
+
+                    if ($matchedIds !== []) {
+                        $query->whereIn('id', $matchedIds);
+
+                        return;
+                    }
+
+                    $like = "%{$term}%";
+
+                    $query->where(function (Builder $builder) use ($like) {
+                        $builder->where('name', 'LIKE', $like);
+                    });
+                }),
+                AllowedFilter::exact('saving'),
+                AllowedFilter::exact('reoccurrence'),
+            ])
             ->allowedSorts(['id', 'amount', 'start_at'])
             ->get();
     }

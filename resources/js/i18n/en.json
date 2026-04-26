@@ -252,6 +252,7 @@
         "ownedOnly": "Owned only",
         "sharedOnly": "Shared only",
         "allCurrencies": "All currencies",
+        "allTypes": "All types",
         "detailsTab": "Details",
         "sharingTab": "Sharing",
         "sharedBy": "Shared by {{name}}",

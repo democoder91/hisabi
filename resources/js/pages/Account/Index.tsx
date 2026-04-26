@@ -25,6 +25,7 @@ declare const route: any;
 type AccountFilters = {
     currency: string;
     access: string;
+    type: string;
 };
 
 type CurrencyOption = {
@@ -40,6 +41,7 @@ export default function Index({ auth }: { auth: any }) {
     const initialFilters = {
         currency: urlParams.get('currency') || '',
         access: urlParams.get('access') || '',
+        type: urlParams.get('type') || '',
     };
     const [accounts, setAccounts] = useState<any[]>([]);
     const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
@@ -107,6 +109,12 @@ export default function Index({ auth }: { auth: any }) {
             url.searchParams.delete('access');
         }
 
+        if (nextFilters.type) {
+            url.searchParams.set('type', nextFilters.type);
+        } else {
+            url.searchParams.delete('type');
+        }
+
         window.history.pushState({}, '', url);
     };
 
@@ -133,7 +141,7 @@ export default function Index({ auth }: { auth: any }) {
     };
 
     const localizedAccounts = useMemo(() => withLocalizedNames(accounts, activeLocale), [accounts, activeLocale]);
-    const hasActiveFilters = Boolean(searchQuery || filters.currency || filters.access);
+    const hasActiveFilters = Boolean(searchQuery || filters.currency || filters.access || filters.type);
 
     const columns = useMemo<ColumnDef<any>[]>(() => [
         {
@@ -258,6 +266,19 @@ export default function Index({ auth }: { auth: any }) {
                                     <SelectItem value="ALL">{t('account.allAccess')}</SelectItem>
                                     <SelectItem value="owned">{t('account.ownedOnly')}</SelectItem>
                                     <SelectItem value="shared">{t('account.sharedOnly')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.type || 'ALL'} onValueChange={(value) => handleFilterChange('type', value)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('account.type')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">{t('account.allTypes')}</SelectItem>
+                                    <SelectItem value="asset">{t('account.type_asset')}</SelectItem>
+                                    <SelectItem value="liability">{t('account.type_liability')}</SelectItem>
+                                    <SelectItem value="equity">{t('account.type_equity')}</SelectItem>
+                                    <SelectItem value="income">{t('account.type_income')}</SelectItem>
+                                    <SelectItem value="expense">{t('account.type_expense')}</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Select value={filters.currency || 'ALL'} onValueChange={(value) => handleFilterChange('currency', value)}>

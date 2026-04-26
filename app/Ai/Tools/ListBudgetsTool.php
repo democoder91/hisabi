@@ -3,6 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Domains\Budget\Models\Budget;
+use App\Domains\Search\Services\SemanticSearchService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Ai\Tools\Request;
@@ -17,11 +18,12 @@ class ListBudgetsTool extends FinancialTool
 
     public function handle(Request $request): Stringable|string
     {
-        $this->authenticatedUser();
+        $user = $this->authenticatedUser();
         $input = $request->all();
         $this->uppercaseIfPresent($input, ['reoccurrence']);
 
         $validated = $this->validateInput($input, [
+            'search' => ['nullable', 'string', 'max:255'],
             'saving' => ['nullable', 'boolean'],
             'reoccurrence' => ['nullable', 'string', Rule::in([
                 Budget::CUSTOM,
@@ -33,6 +35,7 @@ class ListBudgetsTool extends FinancialTool
             'limit' => ['nullable', 'integer', 'min:1', 'max:25'],
         ]);
 
+        $limit = $this->normalizeLimit($validated['limit'] ?? null);
         $query = Budget::query()->with('accounts');
 
         if (array_key_exists('saving', $validated)) {
@@ -43,10 +46,31 @@ class ListBudgetsTool extends FinancialTool
             $query->where('reoccurrence', $validated['reoccurrence']);
         }
 
-        $budgets = $query
-            ->orderByDesc('start_at')
-            ->limit($this->normalizeLimit($validated['limit'] ?? null))
-            ->get();
+        $search = isset($validated['search']) ? trim((string) $validated['search']) : '';
+        $orderedIds = null;
+
+        if ($search !== '') {
+            $matchedIds = app(SemanticSearchService::class)->searchBudgetIds($user, $search, $limit * 4);
+
+            if ($matchedIds !== []) {
+                $orderedIds = $matchedIds;
+                $query->whereIn('id', $matchedIds);
+            } else {
+                $this->applyLocalizedSearch($query, 'name', $search);
+                $query->orderByDesc('start_at');
+            }
+        } else {
+            $query->orderByDesc('start_at');
+        }
+
+        $budgets = $query->limit($limit)->get();
+
+        if ($orderedIds !== null) {
+            $position = array_flip($orderedIds);
+            $budgets = $budgets
+                ->sortBy(fn (Budget $budget) => $position[$budget->id] ?? PHP_INT_MAX)
+                ->values();
+        }
 
         if ($budgets->isEmpty()) {
             return 'No budgets found for the current filters.';
@@ -58,6 +82,10 @@ class ListBudgetsTool extends FinancialTool
     public function schema(JsonSchema $schema): array
     {
         return [
+            'search' => $schema->string()
+                ->description('Optional search term that matches the budget name (supports semantic and partial matching).')
+                ->required()
+                ->nullable(),
             'saving' => $schema->boolean()
                 ->description('Optional filter for savings budgets only.')
                 ->required()

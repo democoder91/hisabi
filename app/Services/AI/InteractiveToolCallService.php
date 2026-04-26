@@ -125,7 +125,7 @@ class InteractiveToolCallService
 
         $toolCalls = [[
             'id' => $interaction['tool_call_id'],
-            'result_id' => $interaction['tool_call_id'],
+            'result_id' => $interaction['tool_call_result_id'],
             'name' => self::TOOL_NAME,
             'arguments' => [
                 'questions' => $interaction['questions'],
@@ -149,10 +149,13 @@ class InteractiveToolCallService
 
         $this->touchConversation($conversationId);
 
+        $metaString = $this->encode(['interaction' => $interaction]);
+        $refreshedInteraction = $this->pendingInteractionFromConversation($conversationId, $user, $metaString);
+
         return [
             'conversation_id' => $conversationId,
             'content' => $pendingToolCall->content,
-            'interaction' => $interaction,
+            'interaction' => $refreshedInteraction ?? $interaction,
         ];
     }
 
@@ -188,7 +191,7 @@ class InteractiveToolCallService
             ->update([
                 'tool_results' => $this->encode([[
                     'id' => $interaction['tool_call_id'],
-                    'result_id' => $interaction['tool_call_id'],
+                    'result_id' => $interaction['tool_call_result_id'] ?? $interaction['tool_call_id'],
                     'name' => self::TOOL_NAME,
                     'arguments' => [
                         'questions' => $interaction['questions'],
@@ -249,6 +252,7 @@ class InteractiveToolCallService
             'status' => self::STATUS_PENDING,
             'tool_name' => (string) ($interaction['tool_name'] ?? self::TOOL_NAME),
             'tool_call_id' => $toolCallId,
+            'tool_call_result_id' => (string) ($interaction['tool_call_result_id'] ?? $toolCallId),
             'questions' => $questions,
         ];
     }

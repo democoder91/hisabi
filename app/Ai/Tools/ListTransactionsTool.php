@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Domains\Search\Services\SemanticSearchService;
 use App\Domains\Transaction\Models\Transaction;
 use App\Scopes\OwnedAccountScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -78,18 +79,35 @@ class ListTransactionsTool extends FinancialTool
         }
 
         if (! empty($validated['search'])) {
-            $search = '%' . trim($validated['search']) . '%';
-            $plainSearch = trim($validated['search']);
+            $rawSearch = trim((string) $validated['search']);
+            $like = '%' . $rawSearch . '%';
+            $semantic = app(SemanticSearchService::class);
 
-            $query->where(function ($builder) use ($search, $plainSearch) {
-                $builder->where('note', 'like', $search)
-                    ->orWhere('amount', 'like', $search)
-                    ->orWhereHas('fromAccount', function ($accountQuery) use ($plainSearch) {
-                        $this->applyLocalizedSearch($accountQuery, 'name', $plainSearch);
+            $transactionIds = $semantic->searchTransactionIds($user, $rawSearch, 200);
+            $accountIds = $semantic->searchAccountIds($user, $rawSearch, 50);
+
+            $query->where(function ($builder) use ($like, $rawSearch, $transactionIds, $accountIds) {
+                if ($transactionIds !== []) {
+                    $builder->orWhereIn('id', $transactionIds);
+                } else {
+                    $builder->orWhere('note', 'like', $like)
+                        ->orWhere('description', 'like', $like);
+                }
+
+                $builder->orWhere('amount', 'like', $like);
+
+                if ($accountIds !== []) {
+                    $builder->orWhereIn('from_account_id', $accountIds)
+                        ->orWhereIn('to_account_id', $accountIds)
+                        ->orWhereIn('account_id', $accountIds);
+                } else {
+                    $builder->orWhereHas('fromAccount', function ($accountQuery) use ($rawSearch) {
+                        $this->applyLocalizedSearch($accountQuery, 'name', $rawSearch);
                     })
-                    ->orWhereHas('toAccount', function ($accountQuery) use ($plainSearch) {
-                        $this->applyLocalizedSearch($accountQuery, 'name', $plainSearch);
+                    ->orWhereHas('toAccount', function ($accountQuery) use ($rawSearch) {
+                        $this->applyLocalizedSearch($accountQuery, 'name', $rawSearch);
                     });
+                }
             });
         }
 

@@ -31,7 +31,7 @@ return new class extends Migration
             }
         });
 
-        if (Schema::hasColumn('accounts', 'type') && ! collect(\DB::select("SHOW INDEX FROM accounts WHERE Key_name = 'accounts_user_id_type_index'"))->count()) {
+        if (Schema::hasColumn('accounts', 'type') && ! Schema::hasIndex('accounts', 'accounts_user_id_type_index')) {
             Schema::table('accounts', function (Blueprint $table) {
                 $table->index(['user_id', 'type'], 'accounts_user_id_type_index');
             });

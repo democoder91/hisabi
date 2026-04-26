@@ -372,7 +372,11 @@ class AIControllerTest extends TestCase
 
         $this->assertSame('ask_user_for_input', $toolCalls[0]['name']);
         $this->assertSame('account_id', $toolCalls[0]['arguments']['questions'][0]['id']);
+        $this->assertStringStartsWith('fc_', $toolCalls[0]['id']);
+        $this->assertStringStartsWith('call_', $toolCalls[0]['result_id']);
         $this->assertSame('pending', $meta['interaction']['status']);
+        $this->assertStringStartsWith('fc_', $meta['interaction']['tool_call_id']);
+        $this->assertStringStartsWith('call_', $meta['interaction']['tool_call_result_id']);
     }
 
     public function test_it_resumes_a_pending_tool_response_without_deducting_an_additional_credit(): void
@@ -663,7 +667,8 @@ class AIControllerTest extends TestCase
     private function seedPendingToolResponseConversation(array $questions): string
     {
         $conversationId = (string) str()->uuid();
-        $toolCallId = (string) str()->uuid();
+        $toolCallId = 'fc_' . bin2hex(random_bytes(25));
+        $toolCallResultId = 'call_' . str()->random(24);
 
         DB::table('agent_conversations')->insert([
             'id' => $conversationId,
@@ -683,6 +688,7 @@ class AIControllerTest extends TestCase
             'attachments' => '[]',
             'tool_calls' => json_encode([[
                 'id' => $toolCallId,
+                'result_id' => $toolCallResultId,
                 'name' => 'ask_user_for_input',
                 'arguments' => [
                     'questions' => $questions,
@@ -695,6 +701,7 @@ class AIControllerTest extends TestCase
                     'status' => 'pending',
                     'tool_name' => 'ask_user_for_input',
                     'tool_call_id' => $toolCallId,
+                    'tool_call_result_id' => $toolCallResultId,
                     'questions' => $questions,
                 ],
             ]),

@@ -51,3 +51,38 @@ it('filters accounts by currency and access level', function () {
         ->assertJsonPath('data.0.currency', 'USD')
         ->assertJsonPath('data.0.permissionLevel', Account::PERMISSION_VIEW);
 });
+
+it('filters accounts by type', function () {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    $assetAccount = Account::factory()->create([
+        'user_id' => $user->id,
+        'type' => Account::TYPE_ASSET,
+        'name' => ['en' => 'Savings'],
+    ]);
+
+    Account::factory()->create([
+        'user_id' => $user->id,
+        'type' => Account::TYPE_EXPENSE,
+        'name' => ['en' => 'Groceries'],
+    ]);
+
+    Account::factory()->create([
+        'user_id' => $user->id,
+        'type' => Account::TYPE_INCOME,
+        'name' => ['en' => 'Salary'],
+    ]);
+
+    actingAs($user);
+
+    $response = getJson('/api/v1/accounts?filter[type]=asset');
+    $response->assertOk()
+        ->assertJsonPath('paginatorInfo.total', 1)
+        ->assertJsonPath('data.0.id', $assetAccount->id)
+        ->assertJsonPath('data.0.type', Account::TYPE_ASSET);
+
+    $noResultsResponse = getJson('/api/v1/accounts?filter[type]=liability');
+    $noResultsResponse->assertOk()
+        ->assertJsonPath('paginatorInfo.total', 0);
+});

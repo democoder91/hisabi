@@ -32,6 +32,10 @@ export const getAccounts = async (page, searchQuery = '', filters = {}) => {
         params.append('filter[currency]', filters.currency);
     }
 
+    if (filters.type) {
+        params.append('filter[type]', filters.type);
+    }
+
     if (filters.access) {
         params.append('filter[access]', filters.access);
     }

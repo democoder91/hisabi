@@ -1,0 +1,13 @@
+.git/
+node_modules/
+vendor/
+bootstrap/cache/
+public/build/
+public/storage/
+storage/debugbar/
+storage/framework/
+storage/logs/
+test-results/
+graphify-out/
+.github/copilot-instructions.md
+.env

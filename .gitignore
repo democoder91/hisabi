@@ -6,6 +6,7 @@ coverage
 /public/build
 /public/hot
 /public/storage
+/graphify-out
 /storage/*.key
 /storage/pail
 /vendor

@@ -12,7 +12,7 @@ class CreateTransactionTool extends FinancialTool
 {
     public function description(): Stringable|string
     {
-        return 'Create a new financial transaction between a source account and a destination account. Use this when the user wants to record spending, income, savings, or investment activity as a single ledger entry. Prefer create_transfer for simple internal moves between editable accounts that already share a currency.';
+        return 'Create a new financial transaction between a source account and a destination account. Use this when the user wants to record spending, income, savings, or investment activity as a single ledger entry. Destination account IDs may come from choose_transaction_accounts, but the source account must still be collected or resolved separately. Prefer create_transfer for simple internal moves between editable accounts that already share a currency.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -43,7 +43,7 @@ class CreateTransactionTool extends FinancialTool
             return $this->recoverableToolFailure(
                 'create the transaction',
                 $exception,
-                'Use list_accounts to resolve account IDs or ask the user for the missing account details with ask_user_for_input before retrying create_transaction.',
+                'Use list_accounts to resolve explicit account IDs, use choose_transaction_accounts for memo-based destination inference, or ask the user for the missing account details with ask_user_for_input before retrying create_transaction.',
             );
         }
 

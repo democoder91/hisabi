@@ -4,6 +4,7 @@ namespace Tests\Unit\Ai\Agents;
 
 use App\Ai\Agents\HisabiAgent;
 use App\Ai\Tools\AskUserInputTool;
+use App\Ai\Tools\ChooseTransactionAccountsTool;
 use App\Ai\Tools\CreateAccountTool;
 use App\Ai\Tools\CreateBudgetTool;
 use App\Ai\Tools\CreateTransferTool;
@@ -32,6 +33,7 @@ class HisabiAgentTest extends TestCase
         $this->assertSame([
             CreateAccountTool::class,
             CreateTransactionTool::class,
+            ChooseTransactionAccountsTool::class,
             CreateTransferTool::class,
             CreateBudgetTool::class,
             EditAccountTool::class,
@@ -55,9 +57,12 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString("User's Financial Summary", $instructions);
         $this->assertStringContainsString('create_account', $instructions);
         $this->assertStringContainsString('create_transaction', $instructions);
+        $this->assertStringContainsString('choose_transaction_accounts', $instructions);
         $this->assertStringContainsString('create_transfer', $instructions);
         $this->assertStringContainsString('edit_budget', $instructions);
         $this->assertStringContainsString('ask_user_for_input', $instructions);
+        $this->assertStringContainsString('collect or confirm the source account separately first', $instructions);
+        $this->assertStringContainsString('If any selector result returns `account_id` as null, use `ask_user_for_input`', $instructions);
         $this->assertStringContainsString('If the user references an account by name instead of ID', $instructions);
         $this->assertStringContainsString('If a write tool reports missing or invalid account details', $instructions);
         $this->assertStringContainsString('Do not invent transaction memos', $instructions);

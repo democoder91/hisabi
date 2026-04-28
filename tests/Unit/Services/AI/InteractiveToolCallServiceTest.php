@@ -146,6 +146,61 @@ it('canonicalizes legacy accounts multiselect ids and refreshes current account 
         ->and($interaction['questions'][0]['options'][1]['meta']['legacy_values'])->toBe(['6']);
 });
 
+it('hydrates current account options for custom account question ids', function () {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    $transportationAccount = Account::factory()->create([
+        'user_id' => $user->id,
+        'name' => [
+            'en' => 'Transportation',
+            'ar' => null,
+        ],
+        'type' => Account::TYPE_EXPENSE,
+    ]);
+
+    $cashAccount = Account::factory()->create([
+        'user_id' => $user->id,
+        'name' => [
+            'en' => 'Cash',
+            'ar' => null,
+        ],
+        'type' => Account::TYPE_ASSET,
+    ]);
+
+    $interaction = app(InteractiveToolCallService::class)->pendingInteractionFromConversation(
+        (string) Str::uuid(),
+        $user,
+        json_encode([
+            'interaction' => [
+                'status' => InteractiveToolCallService::STATUS_PENDING,
+                'tool_name' => InteractiveToolCallService::TOOL_NAME,
+                'tool_call_id' => 'tool-call-custom-account-id',
+                'questions' => [
+                    [
+                        'id' => 'transportation_account_id',
+                        'label' => 'Select the account for "Transportation" expenses:',
+                        'type' => 'select',
+                        'options' => [
+                            ['label' => 'Create a new account', 'value' => '__create_new__'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    );
+
+    expect($interaction)->not->toBeNull()
+        ->and($interaction['questions'][0]['id'])->toBe('transportation_account_id')
+        ->and(collect($interaction['questions'][0]['options'])->pluck('value')->all())->toBe([
+            (string) $cashAccount->id,
+            (string) $transportationAccount->id,
+            '__create_new__',
+        ])
+        ->and(collect($interaction['questions'][0]['options'])->firstWhere('value', (string) $transportationAccount->id)['meta']['account_type'])->toBe(Account::TYPE_EXPENSE)
+        ->and(collect($interaction['questions'][0]['options'])->firstWhere('value', (string) $cashAccount->id)['meta']['account_type'])->toBe(Account::TYPE_ASSET);
+});
+
 it('does not select the type column when refreshing account options for a legacy schema', function () {
     $user = User::factory()->create();
 

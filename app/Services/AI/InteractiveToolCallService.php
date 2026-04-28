@@ -845,7 +845,11 @@ class InteractiveToolCallService
 
     private function isAccountQuestionId(string $questionId): bool
     {
-        return in_array($questionId, self::ACCOUNT_QUESTION_IDS, true);
+        if (in_array($questionId, self::ACCOUNT_QUESTION_IDS, true)) {
+            return true;
+        }
+
+        return Str::endsWith($questionId, ['_account_id', '_account_ids']);
     }
 
     private function validateDistinctTransactionAccounts(array $normalizedAnswers, array &$errors): void

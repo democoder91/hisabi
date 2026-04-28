@@ -152,4 +152,27 @@ return [
         ],
     ],
 
+    'costs' => [
+        'currency' => env('AI_COST_CURRENCY', 'USD'),
+
+        'providers' => [
+            'openai' => [
+                'gpt-4o' => [
+                    'input_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_INPUT_PER_MILLION', 2.50),
+                    'output_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_OUTPUT_PER_MILLION', 10.00),
+                    'cache_write_input_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_CACHE_WRITE_PER_MILLION', 2.50),
+                    'cache_read_input_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_CACHE_READ_PER_MILLION', 1.25),
+                    'reasoning_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_REASONING_PER_MILLION', 0),
+                ],
+                'gpt-4o-mini' => [
+                    'input_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_MINI_INPUT_PER_MILLION', 0.15),
+                    'output_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_MINI_OUTPUT_PER_MILLION', 0.60),
+                    'cache_write_input_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_MINI_CACHE_WRITE_PER_MILLION', 0.15),
+                    'cache_read_input_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_MINI_CACHE_READ_PER_MILLION', 0.075),
+                    'reasoning_per_million' => (float) env('AI_COST_OPENAI_GPT_4O_MINI_REASONING_PER_MILLION', 0),
+                ],
+            ],
+        ],
+    ],
+
 ];

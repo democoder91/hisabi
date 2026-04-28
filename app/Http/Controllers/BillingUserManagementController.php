@@ -8,6 +8,7 @@ use App\Models\BillingGrantAudit;
 use App\Models\BillingProduct;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\AI\ConversationCostService;
 use App\Services\BillingCatalogService;
 use App\Services\BillingGrantService;
 use Illuminate\Http\RedirectResponse;
@@ -17,14 +18,11 @@ use Inertia\Response;
 
 class BillingUserManagementController extends Controller
 {
-    private BillingCatalogService $billingCatalogService;
-    private BillingGrantService $billingGrantService;
-
-    public function __construct(BillingCatalogService $billingCatalogService, BillingGrantService $billingGrantService)
-    {
-        $this->billingCatalogService = $billingCatalogService;
-        $this->billingGrantService = $billingGrantService;
-    }
+    public function __construct(
+        private BillingCatalogService $billingCatalogService,
+        private BillingGrantService $billingGrantService,
+        private ConversationCostService $conversationCostService,
+    ) {}
 
     public function index(BillingUserIndexRequest $request): Response
     {
@@ -45,8 +43,12 @@ class BillingUserManagementController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        $conversationTotals = $this->conversationCostService->totalCostForUsers(
+            $paginator->getCollection()->pluck('id')->all(),
+        );
+
         return Inertia::render('Billing/Users', [
-            'users' => $this->transformUsers($paginator),
+            'users' => $this->transformUsers($paginator, $conversationTotals),
             'grantOptions' => [
                 'creditPackages' => $this->billingCatalogService->creditPackages()
                     ->map(fn (BillingProduct $product): array => $this->transformGrantOption($product))
@@ -66,7 +68,28 @@ class BillingUserManagementController extends Controller
                 'total' => $paginator->total(),
                 'hasMorePages' => $paginator->hasMorePages(),
             ],
+            'conversationCostCurrency' => $this->conversationCostService->currency(),
             'recentGrantAudits' => $this->recentGrantAudits(),
+        ]);
+    }
+
+    public function showConversationCosts(User $user): Response
+    {
+        $breakdown = $this->conversationCostService->conversationBreakdownForUser($user);
+
+        return Inertia::render('Billing/UserConversationCosts', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'conversationCostCurrency' => $breakdown['currency'],
+            'summary' => [
+                'totalCost' => $breakdown['totalCost'],
+                'totalTurns' => $breakdown['totalTurns'],
+                'conversationCount' => $breakdown['conversationCount'],
+            ],
+            'conversations' => $breakdown['conversations'],
         ]);
     }
 
@@ -84,10 +107,10 @@ class BillingUserManagementController extends Controller
         return redirect()->back();
     }
 
-    private function transformUsers(LengthAwarePaginator $paginator): array
+    private function transformUsers(LengthAwarePaginator $paginator, array $conversationTotals): array
     {
         return $paginator->getCollection()
-            ->map(function (User $user): array {
+            ->map(function (User $user) use ($conversationTotals): array {
                 $subscription = $user->subscriptions
                     ->sortByDesc(fn (Subscription $item): int => $item->renews_at ? (int) $item->renews_at->getTimestamp() : 0)
                     ->first();
@@ -99,6 +122,7 @@ class BillingUserManagementController extends Controller
                     'availableCredits' => (int) $user->available_credits,
                     'trialEndsAt' => $user->trial_ends_at ? $user->trial_ends_at->toISOString() : null,
                     'isSuper' => $user->isSuperUser(),
+                    'totalConversationCost' => (float) ($conversationTotals[$user->id] ?? 0.0),
                     'subscription' => $subscription ? [
                         'planName' => $subscription->plan_name,
                         'status' => $subscription->status,

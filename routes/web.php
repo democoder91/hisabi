@@ -49,6 +49,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('super')->group(function () {
         Route::get('/billing/manage', [BillingManagementController::class, 'index'])->name('billing.manage');
         Route::get('/billing/manage/users', [BillingUserManagementController::class, 'index'])->name('billing.manage.users');
+        Route::get('/billing/manage/users/{user}/conversation-costs', [BillingUserManagementController::class, 'showConversationCosts'])->name('billing.manage.users.conversation-costs');
         Route::post('/billing/manage/users/{user}/grants', [BillingUserManagementController::class, 'store'])->name('billing.manage.users.grants.store');
         Route::put('/billing/manage/currency', [BillingManagementController::class, 'updateCurrency'])->name('billing.manage.currency.update');
         Route::post('/billing/manage/credit-packages', [BillingCreditPackageController::class, 'store'])->name('billing.manage.credit-packages.store');

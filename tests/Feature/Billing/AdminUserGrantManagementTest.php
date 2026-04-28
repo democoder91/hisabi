@@ -5,6 +5,7 @@ use App\Models\BillingProduct;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -15,6 +16,13 @@ uses(RefreshDatabase::class);
 
 it('allows super users to open the billing user access page', function () {
     config()->set('inertia.testing.ensure_pages_exist', false);
+    config()->set('ai.costs.providers.openai.gpt-4o', [
+        'input_per_million' => 1,
+        'output_per_million' => 2,
+        'cache_write_input_per_million' => 0,
+        'cache_read_input_per_million' => 0,
+        'reasoning_per_million' => 0,
+    ]);
 
     /** @var User $superUser */
     $superUser = User::factory()->create([
@@ -24,6 +32,25 @@ it('allows super users to open the billing user access page', function () {
     /** @var User $targetUser */
     $targetUser = User::factory()->create();
 
+    createConversationWithCosts($targetUser, 'Budget plan', 'conversation-budget', [
+        [
+            'role' => 'user',
+            'content' => 'How much did I spend?',
+        ],
+        [
+            'role' => 'assistant',
+            'content' => 'You spent 500 AED.',
+            'usage' => [
+                'prompt_tokens' => 1000,
+                'completion_tokens' => 500,
+            ],
+            'meta' => [
+                'provider' => 'openai',
+                'model' => 'gpt-4o',
+            ],
+        ],
+    ]);
+
     actingAs($superUser);
 
     get(route('billing.manage.users'))
@@ -32,9 +59,102 @@ it('allows super users to open the billing user access page', function () {
             ->component('Billing/Users')
             ->has('users', 2)
             ->where('users.0.email', $targetUser->email)
+            ->where('users.0.totalConversationCost', 0.002)
+            ->where('conversationCostCurrency', 'USD')
             ->has('grantOptions.creditPackages')
             ->has('grantOptions.subscriptionPlans')
             ->where('pagination.total', 2));
+});
+
+it('shows conversation cost details for a selected user', function () {
+    config()->set('inertia.testing.ensure_pages_exist', false);
+    config()->set('ai.costs.providers.openai.gpt-4o', [
+        'input_per_million' => 1,
+        'output_per_million' => 2,
+        'cache_write_input_per_million' => 0,
+        'cache_read_input_per_million' => 0,
+        'reasoning_per_million' => 0,
+    ]);
+
+    /** @var User $superUser */
+    $superUser = User::factory()->create([
+        'is_super' => true,
+    ]);
+
+    /** @var User $targetUser */
+    $targetUser = User::factory()->create();
+
+    createConversationWithCosts($targetUser, 'Plan groceries', 'conversation-groceries', [
+        [
+            'role' => 'user',
+            'content' => 'Summarize my grocery spending',
+        ],
+        [
+            'role' => 'assistant',
+            'content' => 'Groceries were 200 AED.',
+            'usage' => [
+                'prompt_tokens' => 1000,
+                'completion_tokens' => 500,
+            ],
+            'meta' => [
+                'provider' => 'openai',
+                'model' => 'gpt-4o',
+            ],
+        ],
+        [
+            'role' => 'user',
+            'content' => 'What about restaurants?',
+        ],
+        [
+            'role' => 'assistant',
+            'content' => 'Restaurants were 100 AED.',
+            'usage' => [
+                'prompt_tokens' => 500,
+                'completion_tokens' => 250,
+            ],
+            'meta' => [
+                'provider' => 'openai',
+                'model' => 'gpt-4o-2024-08-06',
+            ],
+        ],
+    ]);
+
+    createConversationWithCosts($targetUser, 'Travel budget', 'conversation-travel', [
+        [
+            'role' => 'user',
+            'content' => 'Create a travel budget',
+        ],
+        [
+            'role' => 'assistant',
+            'content' => 'Here is a travel budget.',
+            'usage' => [
+                'prompt_tokens' => 1000,
+                'completion_tokens' => 500,
+            ],
+            'meta' => [
+                'provider' => 'openai',
+                'model' => 'gpt-4o',
+            ],
+        ],
+    ]);
+
+    actingAs($superUser);
+
+    get(route('billing.manage.users.conversation-costs', $targetUser))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Billing/UserConversationCosts')
+            ->where('user.email', $targetUser->email)
+            ->where('summary.totalCost', 0.005)
+            ->where('summary.totalTurns', 3)
+            ->where('summary.conversationCount', 2)
+            ->has('conversations', 2)
+            ->where('conversations.0.id', 'conversation-groceries')
+            ->where('conversations.0.turns', 2)
+            ->where('conversations.0.cost', 0.003)
+            ->where('conversations.1.id', 'conversation-travel')
+            ->where('conversations.1.turns', 1)
+            ->where('conversations.1.cost', 0.002));
 });
 
 it('forbids non super users from opening the billing user access page', function () {
@@ -129,3 +249,32 @@ it('extends an existing subscription when a super user grants a subscription pla
     expect($audit->new_values['subscription']['plan_name'])->toBe($subscriptionPlan->localizedName($targetUser->locale));
     expect($audit->new_values['available_credits'])->toBe(10 + (int) $subscriptionPlan->credits);
 });
+
+function createConversationWithCosts(User $user, string $title, string $conversationId, array $messages): void
+{
+    DB::table('agent_conversations')->insert([
+        'id' => $conversationId,
+        'user_id' => $user->id,
+        'title' => $title,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    foreach ($messages as $index => $message) {
+        DB::table('agent_conversation_messages')->insert([
+            'id' => sprintf('%s-message-%d', $conversationId, $index + 1),
+            'conversation_id' => $conversationId,
+            'user_id' => $user->id,
+            'agent' => 'App\\Ai\\Agents\\HisabiAgent',
+            'role' => $message['role'],
+            'content' => $message['content'],
+            'attachments' => '[]',
+            'tool_calls' => '[]',
+            'tool_results' => '[]',
+            'usage' => json_encode($message['usage'] ?? []) ?: '[]',
+            'meta' => json_encode($message['meta'] ?? []) ?: '[]',
+            'created_at' => now()->addSeconds($index),
+            'updated_at' => now()->addSeconds($index),
+        ]);
+    }
+}

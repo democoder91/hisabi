@@ -33,6 +33,7 @@ interface BillingUser {
     availableCredits: number;
     trialEndsAt: string | null;
     isSuper: boolean;
+    totalConversationCost: number;
     subscription: {
         planName: string;
         status: string;
@@ -94,6 +95,7 @@ interface BillingUsersProps {
         total: number;
         hasMorePages: boolean;
     };
+    conversationCostCurrency: string;
     recentGrantAudits: GrantAuditEntry[];
 }
 
@@ -112,6 +114,14 @@ function formatMoney(amount: number, currency: string): string {
         style: 'currency',
         currency,
         maximumFractionDigits: 2,
+    }).format(amount);
+}
+
+function formatConversationCost(amount: number, currency: string): string {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: amount >= 1 ? 4 : 6,
     }).format(amount);
 }
 
@@ -137,6 +147,7 @@ export default function BillingUsers({
     grantOptions,
     filters,
     pagination,
+    conversationCostCurrency,
     recentGrantAudits,
 }: BillingUsersProps) {
     const { t } = useTranslation();
@@ -243,6 +254,14 @@ export default function BillingUsers({
                         <p className="font-medium">{row.original.name}</p>
                         {row.original.isSuper && <Badge variant="secondary">{t('billing.superAdminLabel')}</Badge>}
                     </div>
+                    <Link
+                        className="inline-flex w-fit text-xs font-medium text-primary underline-offset-4 hover:underline"
+                        href={route('billing.manage.users.conversation-costs', row.original.id)}
+                    >
+                        {t('billing.viewConversationCosts', {
+                            amount: formatConversationCost(row.original.totalConversationCost, conversationCostCurrency),
+                        })}
+                    </Link>
                     <p className="text-muted-foreground">{row.original.email}</p>
                 </div>
             ),
@@ -273,7 +292,7 @@ export default function BillingUsers({
                 </div>
             ),
         },
-    ], [t]);
+    ], [conversationCostCurrency, t]);
 
     const header = (
         <div className="space-y-1">

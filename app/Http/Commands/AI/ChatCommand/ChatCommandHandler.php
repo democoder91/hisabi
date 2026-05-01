@@ -16,7 +16,7 @@ class ChatCommandHandler
     {
         [$agent] = $this->resolveAgent($command->conversationId);
 
-        $response = $agent->prompt($this->extractPrompt($command->messages));
+        $response = $agent->prompt($this->extractPrompt($command->messages), $command->attachments);
 
         return $this->buildResponse($response);
     }

@@ -8,11 +8,14 @@ use App\Domains\Account\Models\Account;
 use App\Http\Commands\AI\ChatCommand\ChatCommand;
 use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
 use App\Http\Commands\AI\ChatCommand\ChatCommandResponse;
+use App\Models\UploadedFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile as HttpUploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Mockery;
 use Tests\TestCase;
@@ -150,6 +153,38 @@ class AIControllerTest extends TestCase
         );
     }
 
+    public function test_it_passes_uploaded_receipts_to_the_agent_as_prompt_attachments(): void
+    {
+        Storage::fake('local');
+        HisabiAgent::fake(['Receipt reviewed.']);
+
+        $uploadResponse = $this->actingAs($this->user)
+            ->post('/api/v1/ai/uploads', [
+                'file' => HttpUploadedFile::fake()->create('receipt.pdf', 400, 'application/pdf'),
+                'purpose' => 'receipt',
+            ]);
+
+        $uploadId = $uploadResponse->json('upload.id');
+
+        $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => 'Read this receipt and summarize it.',
+                        'upload_ids' => [$uploadId],
+                    ],
+                ],
+            ])
+            ->assertOk();
+
+        HisabiAgent::assertPrompted(function ($prompt): bool {
+            return str_contains($prompt->prompt, 'Read this receipt and summarize it.')
+                && count($prompt->attachments) === 1
+                && $prompt->attachments[0] instanceof \Laravel\Ai\Files\StoredDocument;
+        });
+    }
+
     public function test_it_continues_an_existing_conversation(): void
     {
         HisabiAgent::fake([
@@ -210,6 +245,76 @@ class AIControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertIsArray($response->json('suggestions'));
         $this->assertNotEmpty($response->json('suggestions'));
+    }
+
+    public function test_it_attaches_pending_uploads_to_the_latest_user_message(): void
+    {
+        Storage::fake('local');
+        HisabiAgent::fake(['Receipt captured.']);
+
+        $uploadResponse = $this->actingAs($this->user)
+            ->post('/api/v1/ai/uploads', [
+                'file' => HttpUploadedFile::fake()->image('receipt.png'),
+                'purpose' => 'receipt',
+            ]);
+
+        $uploadId = $uploadResponse->json('upload.id');
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => 'Create a transaction from this receipt',
+                        'upload_ids' => [$uploadId],
+                    ],
+                ],
+            ]);
+
+        $conversationId = $response->json('conversation_id');
+
+        $response->assertOk()
+            ->assertJsonPath('content', 'Receipt captured.');
+
+        $userMessageId = DB::table('agent_conversation_messages')
+            ->where('conversation_id', $conversationId)
+            ->where('role', 'user')
+            ->value('id');
+
+        $this->assertDatabaseHas('uploaded_files', [
+            'id' => $uploadId,
+            'user_id' => $this->user->id,
+            'attachable_type' => 'App\\Models\\AgentConversationMessage',
+            'attachable_id' => $userMessageId,
+        ]);
+    }
+
+    public function test_it_rejects_upload_ids_that_are_not_owned_by_the_authenticated_user(): void
+    {
+        Storage::fake('local');
+        $otherUser = User::factory()->create();
+
+        $uploadResponse = $this->actingAs($otherUser)
+            ->post('/api/v1/ai/uploads', [
+                'file' => HttpUploadedFile::fake()->image('receipt.png'),
+                'purpose' => 'receipt',
+            ]);
+
+        $uploadId = $uploadResponse->json('upload.id');
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => 'Use this receipt',
+                        'upload_ids' => [$uploadId],
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['messages.0.upload_ids.0']);
     }
 
     public function test_it_rejects_a_conversation_id_owned_by_another_user(): void

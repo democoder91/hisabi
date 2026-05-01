@@ -9,6 +9,7 @@ use App\Http\Commands\AI\ChatCommand\ChatCommandHandler;
 use App\Http\Requests\Api\V1\AIChatRequest;
 use App\Http\Requests\Api\V1\AIToolResponseRequest;
 use App\Models\User;
+use App\Services\AI\AiChatUploadService;
 use App\Services\AI\InteractiveToolCallService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -23,12 +24,16 @@ class AIController extends Controller
 
     private InteractiveToolCallService $interactiveToolCallService;
 
+    private AiChatUploadService $aiChatUploadService;
+
     public function __construct(
         ChatCommandHandler $chatCommandHandler,
-        InteractiveToolCallService $interactiveToolCallService
+        InteractiveToolCallService $interactiveToolCallService,
+        AiChatUploadService $aiChatUploadService
     ) {
         $this->chatCommandHandler = $chatCommandHandler;
         $this->interactiveToolCallService = $interactiveToolCallService;
+        $this->aiChatUploadService = $aiChatUploadService;
     }
 
     public function chat(AIChatRequest $request): JsonResponse
@@ -43,6 +48,7 @@ class AIController extends Controller
                 $user = User::query()
                     ->lockForUpdate()
                     ->findOrFail($authenticatedUser->id);
+                $uploadIds = $this->aiChatUploadService->requestedUploadIds($validated['messages']);
 
                 $creditResponse = $this->deductPromptCredit($user);
 
@@ -53,18 +59,27 @@ class AIController extends Controller
                 $command = new ChatCommand(
                     $validated['messages'],
                     $validated['conversation_id'] ?? null,
+                    $this->aiChatUploadService->promptAttachments($user, $uploadIds),
                 );
 
-                return $this->responseWithCredits(
-                    $this->chatCommandHandler->handle($command)->toResponse(),
+                $response = $this->chatCommandHandler->handle($command)->toResponse();
+                $conversationId = $response->getData(true)['conversation_id'] ?? null;
+
+                $this->aiChatUploadService->attachUploadsToLatestUserMessage(
                     $user,
+                    $conversationId,
+                    $this->lastUserPrompt($validated['messages']),
+                    $uploadIds,
                 );
+
+                return $this->responseWithCredits($response, $user);
             }, 3);
         } catch (PendingUserInputToolCall $exception) {
             return DB::transaction(function () use ($validated, $authenticatedUser, $exception): JsonResponse {
                 $user = User::query()
                     ->lockForUpdate()
                     ->findOrFail($authenticatedUser->id);
+                $uploadIds = $this->aiChatUploadService->requestedUploadIds($validated['messages']);
 
                 $creditResponse = $this->deductPromptCredit($user);
 
@@ -77,6 +92,13 @@ class AIController extends Controller
                     $this->lastUserPrompt($validated['messages']),
                     $validated['conversation_id'] ?? null,
                     $exception,
+                );
+
+                $this->aiChatUploadService->attachUploadsToLatestUserMessage(
+                    $user,
+                    $pendingState['conversation_id'],
+                    $this->lastUserPrompt($validated['messages']),
+                    $uploadIds,
                 );
 
                 return $this->pendingAssistantResponse($user, $pendingState['content'], $pendingState['conversation_id'], $pendingState['interaction']);

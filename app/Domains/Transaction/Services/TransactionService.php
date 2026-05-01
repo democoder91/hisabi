@@ -165,6 +165,7 @@ class TransactionService
             'currency' => strtoupper((string) ($fromAccount->currency ?? $transaction?->currency ?? config('hisabi.currency'))),
             'note' => array_key_exists('note', $data) ? $data['note'] : $transaction?->note,
             'description' => array_key_exists('note', $data) ? $data['note'] : $transaction?->description,
+            'meta' => array_key_exists('meta', $data) ? $data['meta'] : $transaction?->meta,
             'date' => $timestamp,
             'created_at' => $timestamp,
         ];

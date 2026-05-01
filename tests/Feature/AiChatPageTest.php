@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Account\Models\Account;
+use App\Models\UploadedFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -96,6 +97,70 @@ it('shows the authenticated user conversations and selected thread', function ()
             ->has('activeConversation.messages', 2)
             ->where('activeConversation.messages.0.role', 'user')
             ->where('activeConversation.messages.1.content', 'Coffee was your top expense last week.'));
+});
+
+it('includes uploaded files when reopening a conversation', function () {
+    config()->set('inertia.testing.ensure_pages_exist', false);
+
+    $user = User::factory()->create();
+    $conversationId = (string) Str::uuid();
+    $messageId = (string) Str::uuid();
+    $now = now();
+
+    DB::table('agent_conversations')->insert([
+        'id' => $conversationId,
+        'user_id' => $user->id,
+        'title' => 'Receipt review',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    DB::table('agent_conversation_messages')->insert([
+        'id' => $messageId,
+        'conversation_id' => $conversationId,
+        'user_id' => $user->id,
+        'agent' => 'App\\Ai\\Agents\\HisabiAgent',
+        'role' => 'user',
+        'content' => 'Please scan this receipt.',
+        'attachments' => '[]',
+        'tool_calls' => '[]',
+        'tool_results' => '[]',
+        'usage' => '[]',
+        'meta' => '[]',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    UploadedFile::query()->create([
+        'user_id' => $user->id,
+        'attachable_type' => 'App\\Models\\AgentConversationMessage',
+        'attachable_id' => $messageId,
+        'purpose' => 'receipt',
+        'disk' => 'local',
+        'path' => 'private/ai-uploads/test/receipt.png',
+        'original_name' => 'receipt.png',
+        'extension' => 'png',
+        'mime_type' => 'image/png',
+        'size_bytes' => 1024,
+        'visibility' => 'private',
+        'custom_attributes' => [
+            'source' => 'seed',
+        ],
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    actingAs($user);
+
+    get(route('ai.chat', ['conversation_id' => $conversationId]))
+        ->assertOk()
+        ->assertInertia(fn(AssertableInertia $page) => $page
+            ->component('Ai/Index')
+            ->where('activeConversation.id', $conversationId)
+            ->where('activeConversation.messages.0.uploads.0.purpose', 'receipt')
+            ->where('activeConversation.messages.0.uploads.0.mime_type', 'image/png')
+            ->where('activeConversation.messages.0.uploads.0.file_type_family', 'image')
+            ->where('activeConversation.messages.0.uploads.0.custom_attributes.source', 'seed'));
 });
 
 it('returns not found when a user opens another users conversation', function () {

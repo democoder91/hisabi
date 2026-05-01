@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\Settings\CurrencySettingsController;
 use App\Http\Controllers\Api\V1\SmsController;
 use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\AiUploadController;
 use App\Http\Controllers\Api\V1\TranscriptionController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Middleware\SetLocale;
@@ -62,6 +63,8 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/ai/chat', [AIController::class, 'chat']);
         Route::post('/ai/chat/{conversationId}/tool-response', [AIController::class, 'toolResponse']);
+        Route::post('/ai/uploads', [AiUploadController::class, 'store'])->name('api.ai.uploads.store');
+        Route::get('/ai/uploads/{uploadedFile}', [AiUploadController::class, 'show'])->name('api.ai.uploads.show');
         Route::post('/ai/transcribe', [TranscriptionController::class, 'transcribe']);
         Route::post('/ai/transcribe/token', [TranscriptionController::class, 'token']);
         Route::get('/settings', [SettingsController::class, 'show']);

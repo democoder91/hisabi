@@ -5,6 +5,7 @@ namespace Tests\Unit\Ai\Tools;
 use App\Ai\Tools\CreateTransactionTool;
 use App\Domains\Account\Models\Account;
 use App\Domains\Transaction\Models\Transaction;
+use App\Models\UploadedFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Tools\Request;
@@ -212,6 +213,67 @@ class CreateTransactionToolTest extends TestCase
         $this->assertStringContains('The from account id and to account id must be different.', $result);
         $this->assertStringContains('list_accounts', $result);
         $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_it_persists_receipt_metadata_and_links_the_uploaded_file(): void
+    {
+        $sourceAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_ASSET,
+            'currency' => 'EUR',
+            'name' => ['en' => 'Main Wallet', 'ar' => null],
+        ]);
+        $destinationAccount = Account::factory()->create([
+            'user_id' => $this->user->id,
+            'type' => Account::TYPE_EXPENSE,
+            'currency' => 'EUR',
+            'name' => ['en' => 'Dining', 'ar' => null],
+        ]);
+        $upload = UploadedFile::query()->create([
+            'user_id' => $this->user->id,
+            'purpose' => 'receipt',
+            'disk' => 'local',
+            'path' => 'private/ai-uploads/test/receipt.png',
+            'original_name' => 'receipt.png',
+            'extension' => 'png',
+            'mime_type' => 'image/png',
+            'size_bytes' => 2048,
+            'visibility' => 'private',
+            'custom_attributes' => [],
+        ]);
+
+        $result = $this->tool->handle(new Request([
+            'amount' => 86.20,
+            'from_account_id' => $sourceAccount->id,
+            'to_account_id' => $destinationAccount->id,
+            'brand_name' => 'Cafe 21',
+            'date' => '2026-04-29',
+            'receipt' => [
+                'upload_ids' => [$upload->id],
+                'tax_amount' => 6.20,
+                'total_amount' => 86.20,
+                'merchant' => 'Cafe 21',
+                'confidence' => 0.93,
+                'document_type' => 'receipt',
+            ],
+        ]));
+
+        $transaction = Transaction::withoutGlobalScopes()->latest('id')->first();
+        $upload = $upload->fresh();
+
+        $this->assertStringContains('Transaction created successfully', $result);
+        $this->assertSame([
+            'receipt' => [
+                'upload_ids' => [$upload->id],
+                'tax_amount' => 6.2,
+                'total_amount' => 86.2,
+                'merchant' => 'Cafe 21',
+                'confidence' => 0.93,
+                'document_type' => 'receipt',
+            ],
+        ], $transaction->meta);
+        $this->assertSame($transaction->id, $upload->custom_attributes['linked_transaction_id']);
+        $this->assertSame(6.2, $upload->custom_attributes['receipt']['tax_amount']);
     }
 
     private function assertStringContains(string $needle, string $haystack): void

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AiChatIndexRequest;
+use App\Models\AgentConversation;
 use App\Models\User;
+use App\Services\AI\AiChatUploadService;
 use App\Services\AI\InteractiveToolCallService;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -13,10 +15,14 @@ class AiChatController extends Controller
 {
     private InteractiveToolCallService $interactiveToolCallService;
 
+    private AiChatUploadService $aiChatUploadService;
+
     public function __construct(
-        InteractiveToolCallService $interactiveToolCallService
+        InteractiveToolCallService $interactiveToolCallService,
+        AiChatUploadService $aiChatUploadService
     ) {
         $this->interactiveToolCallService = $interactiveToolCallService;
+        $this->aiChatUploadService = $aiChatUploadService;
     }
 
     public function index(AiChatIndexRequest $request): Response
@@ -55,31 +61,22 @@ class AiChatController extends Controller
 
     private function activeConversation(string $conversationId, User $user): array
     {
-        $conversation = DB::table('agent_conversations')
+        $conversation = AgentConversation::query()
             ->where('id', $conversationId)
             ->where('user_id', $user->id)
-            ->first([
-                'id',
-                'title',
-                'updated_at',
-            ]);
+            ->with(['messages' => function ($query) {
+                $query->with('uploadedFiles')->orderBy('created_at');
+            }])
+            ->first(['id', 'title', 'updated_at']);
 
         abort_if($conversation === null, 404);
 
-        $messages = DB::table('agent_conversation_messages')
-            ->where('conversation_id', $conversationId)
-            ->orderBy('created_at')
-            ->get([
-                'id',
-                'role',
-                'content',
-                'meta',
-                'created_at',
-            ])
-            ->map(fn(object $message): array => [
+        $messages = $conversation->messages
+            ->map(fn($message): array => [
                 'id' => $message->id,
                 'role' => $message->role,
                 'content' => $message->content,
+                'uploads' => $this->aiChatUploadService->payloadsForMessage($message),
                 'interaction' => $message->role === 'assistant'
                     ? $this->interactiveToolCallService->pendingInteractionFromConversation($conversationId, $user, $message->meta)
                     : null,

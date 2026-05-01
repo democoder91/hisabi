@@ -8,11 +8,15 @@ class ChatCommand
 
     public ?string $conversationId;
 
+    public array $attachments;
+
     public function __construct(
         array $messages,
-        ?string $conversationId = null
+        ?string $conversationId = null,
+        array $attachments = []
     ) {
         $this->messages = $messages;
         $this->conversationId = $conversationId;
+        $this->attachments = $attachments;
     }
 }

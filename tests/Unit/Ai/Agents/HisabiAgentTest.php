@@ -66,6 +66,9 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString('If the user references an account by name instead of ID', $instructions);
         $this->assertStringContainsString('If a write tool reports missing or invalid account details', $instructions);
         $this->assertStringContainsString('Do not invent transaction memos', $instructions);
+        $this->assertStringContainsString('uploaded receipt or bill files', $instructions);
+        $this->assertStringContainsString('extract the merchant, total amount spent, tax amount', $instructions);
+        $this->assertStringContainsString('pass receipt metadata into `create_transaction`', $instructions);
         $this->assertStringContainsString('source-account to destination-account movements', $instructions);
         $this->assertStringContainsString('at least one account ID', $instructions);
         $this->assertStringContainsString('Explain how the Hisabi application works', $instructions);

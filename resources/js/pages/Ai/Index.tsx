@@ -1,9 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
-import { Clock3Icon, MenuIcon, MessageSquareIcon, PlusIcon, SparklesIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Clock3Icon, FileTextIcon, MenuIcon, MessageSquareIcon, PaperclipIcon, PlusIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { chat, submitToolResponse } from '@/Api/ai';
+import { chat, submitToolResponse, uploadAiFile } from '@/Api/ai';
 import AIFinancialWidget from '@/components/Global/AIFinancialWidget';
 import AIChartRenderer from '@/components/Global/AIChartRenderer';
 import InteractiveChatForm, { PendingInteraction } from '@/components/Global/InteractiveChatForm';
@@ -29,6 +29,7 @@ interface StoredMessage {
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    uploads?: ChatUpload[];
     interaction?: PendingInteraction | null;
     createdAt: string;
 }
@@ -44,11 +45,33 @@ interface ChatMessage {
     id: string;
     content: string;
     role: 'user' | 'assistant';
+    uploads?: ChatUpload[];
     createdAt?: string;
     charts?: unknown[];
     components?: unknown[];
     suggestions?: string[];
     interaction?: PendingInteraction | null;
+}
+
+interface ChatUpload {
+    id: number;
+    purpose: string;
+    original_name: string;
+    extension?: string | null;
+    mime_type: string;
+    size_bytes: number;
+    file_type_family: 'image' | 'pdf' | 'file';
+    is_previewable: boolean;
+    preview_url: string;
+    download_url: string;
+    custom_attributes?: Record<string, unknown>;
+    created_at?: string;
+}
+
+interface PendingUpload {
+    localId: string;
+    file: File;
+    previewUrl: string | null;
 }
 
 interface ChatPageProps {
@@ -64,6 +87,8 @@ interface ChatPageProps {
 }
 
 const conversationTitleLimit = 52;
+const acceptedUploadTypes = 'image/png,image/jpeg,image/webp,application/pdf';
+const acceptedMimeTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf']);
 
 const buildConversationTitle = (prompt: string, fallbackTitle: string): string => {
     const normalizedPrompt = prompt.trim().replace(/\s+/g, ' ');
@@ -83,6 +108,7 @@ const mapStoredMessage = (storedMessage: StoredMessage, emptyAssistantReply: str
     id: storedMessage.id,
     role: storedMessage.role,
     content: storedMessage.content || (storedMessage.role === 'assistant' ? emptyAssistantReply : ''),
+    uploads: storedMessage.uploads ?? [],
     createdAt: storedMessage.createdAt,
     charts: [],
     components: [],
@@ -100,6 +126,7 @@ const buildAssistantMessage = (response: {
     id: createLocalMessageId('assistant'),
     role: 'assistant',
     content: response.content || emptyAssistantReply,
+    uploads: [],
     createdAt: new Date().toISOString(),
     charts: response.charts || [],
     components: response.components || [],
@@ -122,6 +149,10 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
     const [availableCredits, setAvailableCredits] = useState(auth.user.available_credits ?? 0);
     const [needsCredits, setNeedsCredits] = useState(!isSuperUser && (auth.user.available_credits ?? 0) < 1);
     const [interactionError, setInteractionError] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const pendingUploadsRef = useRef<PendingUpload[]>([]);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
         const emptyAssistantReply = t('ai.emptyAssistantReply');
 
@@ -129,7 +160,27 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
     });
 
     useEffect(() => {
+        pendingUploadsRef.current = pendingUploads;
+    }, [pendingUploads]);
+
+    useEffect(() => {
+        return () => {
+            pendingUploadsRef.current.forEach((upload) => {
+                if (upload.previewUrl) {
+                    URL.revokeObjectURL(upload.previewUrl);
+                }
+            });
+        };
+    }, []);
+
+    useEffect(() => {
         const emptyAssistantReply = t('ai.emptyAssistantReply');
+
+        pendingUploadsRef.current.forEach((upload) => {
+            if (upload.previewUrl) {
+                URL.revokeObjectURL(upload.previewUrl);
+            }
+        });
 
         setConversationItems(conversations);
         setSelectedConversationId(activeConversation?.id ?? null);
@@ -139,6 +190,8 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
         setLoading(false);
         setNeedsCredits(false);
         setInteractionError(null);
+        setUploadError(null);
+        setPendingUploads([]);
     }, [activeConversation, conversations, t]);
 
     useEffect(() => {
@@ -179,6 +232,73 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
     const mobileSheetSide = direction === 'rtl' ? 'right' : 'left';
     const chatDisabled = loading || hasPendingInteraction || (!isSuperUser && availableCredits < 1);
 
+    const clearPendingUploads = () => {
+        pendingUploads.forEach((upload) => {
+            if (upload.previewUrl) {
+                URL.revokeObjectURL(upload.previewUrl);
+            }
+        });
+
+        setPendingUploads([]);
+    };
+
+    const removePendingUpload = (localId: string) => {
+        setPendingUploads((currentUploads) => currentUploads.filter((upload) => {
+            if (upload.localId !== localId) {
+                return true;
+            }
+
+            if (upload.previewUrl) {
+                URL.revokeObjectURL(upload.previewUrl);
+            }
+
+            return false;
+        }));
+    };
+
+    const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(event.target.files ?? []);
+
+        if (files.length === 0) {
+            return;
+        }
+
+        const invalidFile = files.find((file) => !acceptedMimeTypes.has(file.type));
+
+        if (invalidFile) {
+            setUploadError(t('ai.unsupportedUpload'));
+            event.target.value = '';
+            return;
+        }
+
+        setUploadError(null);
+        setPendingUploads((currentUploads) => [
+            ...currentUploads,
+            ...files.map((file) => ({
+                localId: createLocalMessageId('upload'),
+                file,
+                previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+            })),
+        ]);
+        event.target.value = '';
+    };
+
+    const uploadPendingFiles = async (): Promise<ChatUpload[]> => {
+        if (pendingUploads.length === 0) {
+            return [];
+        }
+
+        const uploadedFiles = await Promise.all(pendingUploads.map(async (pendingUpload) => {
+            const response = await uploadAiFile(pendingUpload.file, 'ai-chat', {
+                original_mime_type: pendingUpload.file.type,
+            });
+
+            return response.upload as ChatUpload;
+        }));
+
+        return uploadedFiles;
+    };
+
     const updateConversationList = (conversationId: string, prompt: string) => {
         setConversationItems((currentConversations) => {
             const existingConversation = currentConversations.find((conversation) => conversation.id === conversationId);
@@ -200,32 +320,41 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
 
         const prompt = message.trim();
 
-        if (prompt === '' || loading) {
+        if ((prompt === '' && pendingUploads.length === 0) || loading) {
             return;
         }
 
-        const userMessage: ChatMessage = {
-            id: createLocalMessageId('user'),
-            role: 'user',
-            content: prompt,
-            createdAt: new Date().toISOString(),
-            charts: [],
-            components: [],
-            suggestions: [],
-        };
-
-        const nextHistory = [...chatHistory, userMessage];
-
-        setChatHistory(nextHistory);
-        setMessage('');
+        setUploadError(null);
         setNeedsCredits(false);
         setLoading(true);
 
+        let nextHistory = chatHistory;
+
         try {
+            const uploadedFiles = await uploadPendingFiles();
+            const userMessage: ChatMessage = {
+                id: createLocalMessageId('user'),
+                role: 'user',
+                content: prompt,
+                uploads: uploadedFiles,
+                createdAt: new Date().toISOString(),
+                charts: [],
+                components: [],
+                suggestions: [],
+            };
+            nextHistory = [...chatHistory, userMessage];
+
+            setChatHistory(nextHistory);
+            setMessage('');
+            clearPendingUploads();
+
             const aiResponse = await chat(
-                nextHistory.map((entry) => ({
+                nextHistory.map((entry, index) => ({
                     role: entry.role,
                     content: entry.content,
+                    ...(index === nextHistory.length - 1 && entry.role === 'user' && entry.uploads && entry.uploads.length > 0
+                        ? { upload_ids: entry.uploads.map((upload) => upload.id) }
+                        : {}),
                 })),
                 selectedConversationId,
             );
@@ -253,6 +382,10 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                     message?: string;
                 };
             };
+
+            if (chatError.status === 422) {
+                setUploadError(chatError.payload?.message || t('ai.uploadFailed'));
+            }
 
             if (!isSuperUser && chatError.status === 402) {
                 const remainingCredits = chatError.payload?.available_credits ?? 0;
@@ -530,6 +663,44 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                                                 )}
                                                             </div>
 
+                                                            {entry.uploads && entry.uploads.length > 0 && (
+                                                                <div className="flex flex-wrap gap-3">
+                                                                    {entry.uploads.map((upload) => (
+                                                                        upload.file_type_family === 'image' ? (
+                                                                            <a
+                                                                                key={`${entry.id}-upload-${upload.id}`}
+                                                                                className="group block overflow-hidden rounded-2xl border border-border/70 bg-background/80"
+                                                                                href={upload.preview_url}
+                                                                                rel="noreferrer"
+                                                                                target="_blank"
+                                                                            >
+                                                                                <img
+                                                                                    alt={upload.original_name}
+                                                                                    className="h-32 w-32 object-cover transition-transform group-hover:scale-[1.02]"
+                                                                                    src={upload.preview_url}
+                                                                                />
+                                                                            </a>
+                                                                        ) : (
+                                                                            <a
+                                                                                key={`${entry.id}-upload-${upload.id}`}
+                                                                                className="flex min-w-56 items-center gap-3 rounded-2xl border border-border/70 bg-background/80 px-4 py-3 text-sm text-foreground transition-colors hover:border-primary/30"
+                                                                                href={upload.preview_url}
+                                                                                rel="noreferrer"
+                                                                                target="_blank"
+                                                                            >
+                                                                                <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                                                                    <FileTextIcon className="size-5" />
+                                                                                </div>
+                                                                                <div className="min-w-0">
+                                                                                    <p className="truncate font-medium">{upload.original_name}</p>
+                                                                                    <p className="text-xs text-muted-foreground">{t('ai.pdfAttachmentLabel')}</p>
+                                                                                </div>
+                                                                            </a>
+                                                                        )
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
                                                             {!isUserMessage && entry.charts && entry.charts.length > 0 && (
                                                                 <div className="space-y-4">
                                                                     {entry.charts.map((chart, index) => (
@@ -588,6 +759,12 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                         </div>
                                     )}
 
+                                    {uploadError && (
+                                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-100">
+                                            {uploadError}
+                                        </div>
+                                    )}
+
                                     {!hasPendingInteraction && (
                                         <div className="flex flex-wrap gap-2">
                                             {currentSuggestions.map((suggestion) => (
@@ -603,7 +780,50 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                         </div>
                                     )}
 
+                                    {pendingUploads.length > 0 && (
+                                        <div className="flex flex-wrap gap-3">
+                                            {pendingUploads.map((upload) => (
+                                                <div key={upload.localId} className="relative overflow-hidden rounded-2xl border border-border/70 bg-background/80">
+                                                    {upload.previewUrl ? (
+                                                        <img
+                                                            alt={upload.file.name}
+                                                            className="h-28 w-28 object-cover"
+                                                            src={upload.previewUrl}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-28 w-56 items-center gap-3 px-4 text-sm text-foreground">
+                                                            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                                                <FileTextIcon className="size-5" />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="truncate font-medium">{upload.file.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{t('ai.pdfAttachmentLabel')}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <button
+                                                        aria-label={t('ai.removeUpload')}
+                                                        className="absolute right-2 top-2 inline-flex size-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:bg-background"
+                                                        onClick={() => removePendingUpload(upload.localId)}
+                                                        type="button"
+                                                    >
+                                                        <XIcon className="size-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <PromptInput className="overflow-hidden rounded-[28px] border-border/80 bg-background shadow-lg shadow-black/5" onSubmit={handleSubmit}>
+                                        <input
+                                            accept={acceptedUploadTypes}
+                                            className="hidden"
+                                            multiple
+                                            onChange={handleFileSelection}
+                                            ref={fileInputRef}
+                                            type="file"
+                                        />
                                         <PromptInputTextarea
                                             disabled={chatDisabled}
                                             onChange={(event) => setMessage(event.target.value)}
@@ -612,14 +832,24 @@ export default function AiIndex({ auth, conversations, activeConversation }: Cha
                                         />
                                         <PromptInputToolbar className="px-2 py-2">
                                             <div className="flex items-center gap-2">
+                                                <Button
+                                                    disabled={chatDisabled}
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    size="icon"
+                                                    type="button"
+                                                    variant="outline"
+                                                >
+                                                    <PaperclipIcon className="size-4" />
+                                                </Button>
                                                 <VoiceRecorder
                                                     disabled={chatDisabled}
                                                     onTranscript={(text) => setMessage(text)}
                                                 />
                                                 <span className="hidden text-xs text-muted-foreground sm:inline">{t('ai.inputHelper')}</span>
+                                                <span className="hidden text-xs text-muted-foreground md:inline">{t('ai.uploadHelper')}</span>
                                             </div>
                                             <PromptInputSubmit
-                                                disabled={loading || hasPendingInteraction || message.trim() === '' || (!isSuperUser && availableCredits < 1)}
+                                                disabled={loading || hasPendingInteraction || (message.trim() === '' && pendingUploads.length === 0) || (!isSuperUser && availableCredits < 1)}
                                                 status={loading ? 'streaming' : 'idle'}
                                             />
                                         </PromptInputToolbar>

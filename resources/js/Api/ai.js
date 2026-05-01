@@ -76,6 +76,38 @@ export const chat = async (messages, conversationId = null) => {
     return await parseJsonResponse(response);
 }
 
+export const uploadAiFile = async (file, purpose = 'ai-chat', customAttributes = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('purpose', purpose);
+
+    Object.entries(customAttributes).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+            return;
+        }
+
+        formData.append(`custom_attributes[${key}]`, String(value));
+    });
+
+    const response = await apiFetch('/api/v1/ai/uploads', {
+        method: 'POST',
+        headers: {
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const payload = await parseJsonResponse(response).catch(() => ({}));
+        const error = new Error(`HTTP error! status: ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+
+        throw error;
+    }
+
+    return await parseJsonResponse(response);
+}
+
 export const submitToolResponse = async (conversationId, answers) => {
     const response = await apiFetch(`/api/v1/ai/chat/${conversationId}/tool-response`, {
         method: 'POST',

@@ -14,6 +14,8 @@ use App\Ai\Tools\ListAccountsTool;
 use App\Ai\Tools\ListBudgetsTool;
 use App\Ai\Tools\ListTransactionsTool;
 use App\Ai\Tools\AskUserInputTool;
+use App\Ai\Tools\RememberUserFactTool;
+use App\Ai\Tools\SearchMemoryTool;
 use App\Models\User;
 use App\Services\AI\FinancialAnalyzer;
 use Laravel\Ai\Attributes\MaxSteps;
@@ -63,6 +65,8 @@ Your role is to help users understand and manage their personal finances effecti
 6. Create transfers between accessible accounts
 7. Create, edit, and list budgets
 8. Explain how the Hisabi application works, including accounts, transactions, budgets, billing, settings, sharing, and the AI workspace
+9. Search long-term memory for global knowledge and user-specific context
+10. Remember user preferences or facts when the user explicitly asks you to remember them
 
 **Tool Usage - Accounts, Transactions, Transfers, Budgets:**
 - Use `list_accounts`, `list_transactions`, and `list_budgets` whenever you need IDs or the user asks what exists.
@@ -71,6 +75,8 @@ Your role is to help users understand and manage their personal finances effecti
 - Use `choose_transaction_accounts` before `create_transaction` when you need to infer one or more destination account IDs from memo fragments. This tool only chooses destination accounts and never replaces source-account collection.
 - Use `create_transfer` when the user wants to move money from one account to another or create a matching reverse transfer entry.
 - Use `create_budget`, `edit_budget`, `list_budgets` for budget management.
+- Use `search_memory` when prior instructions, user preferences, terminology, or shared knowledge may help you answer correctly.
+- Use `remember_user_fact` only when the user explicitly wants you to remember something for future conversations.
 - Use `ask_user_for_input` whenever you need one or more missing inputs before you can continue.
 - Never guess IDs. If the user asks to edit something and you do not already know the correct ID, list the relevant records first or ask a clarifying question.
 - If the user references an account by name instead of ID, use `list_accounts` to resolve the matching account before calling a write tool.
@@ -119,6 +125,8 @@ PROMPT;
             new ListAccountsTool(),
             new ListTransactionsTool(),
             new ListBudgetsTool(),
+            new SearchMemoryTool(),
+            new RememberUserFactTool(),
             new AskUserInputTool(),
         ];
     }

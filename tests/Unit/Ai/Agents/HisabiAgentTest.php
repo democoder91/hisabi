@@ -15,6 +15,8 @@ use App\Ai\Tools\EditTransactionTool;
 use App\Ai\Tools\ListAccountsTool;
 use App\Ai\Tools\ListBudgetsTool;
 use App\Ai\Tools\ListTransactionsTool;
+use App\Ai\Tools\RememberUserFactTool;
+use App\Ai\Tools\SearchMemoryTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -42,6 +44,8 @@ class HisabiAgentTest extends TestCase
             ListAccountsTool::class,
             ListTransactionsTool::class,
             ListBudgetsTool::class,
+            SearchMemoryTool::class,
+            RememberUserFactTool::class,
             AskUserInputTool::class,
         ], array_map(static fn($tool) => get_class($tool), $tools));
     }
@@ -60,6 +64,8 @@ class HisabiAgentTest extends TestCase
         $this->assertStringContainsString('choose_transaction_accounts', $instructions);
         $this->assertStringContainsString('create_transfer', $instructions);
         $this->assertStringContainsString('edit_budget', $instructions);
+        $this->assertStringContainsString('search_memory', $instructions);
+        $this->assertStringContainsString('remember_user_fact', $instructions);
         $this->assertStringContainsString('ask_user_for_input', $instructions);
         $this->assertStringContainsString('collect or confirm the source account separately first', $instructions);
         $this->assertStringContainsString('If any selector result returns `account_id` as null, use `ask_user_for_input`', $instructions);

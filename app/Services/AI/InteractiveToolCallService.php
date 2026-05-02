@@ -30,6 +30,8 @@ class InteractiveToolCallService
         'account' => 'account_id',
         'accounts' => 'account_ids',
         'budget' => 'budget_id',
+        'confirm_destination_account' => 'to_account_id',
+        'confirm_source_account' => 'from_account_id',
         'destination_account' => 'to_account_id',
         'from_account' => 'from_account_id',
         'source_account' => 'from_account_id',
@@ -714,7 +716,9 @@ class InteractiveToolCallService
             ->when($excludedAccountId !== null, fn($query) => $query->where('id', '!=', $excludedAccountId))
             ->orderByRaw(Account::localizedNameSqlExpression(app()->getLocale()) . ' ASC')
             ->orderBy('id')
-            ->get($this->accountOptionColumns(includeName: true));
+            ->get($this->accountOptionColumns(includeName: true))
+            ->filter(fn (Account $account): bool => $account->canBeEditedBy($user))
+            ->values();
 
         return $accounts->map(function (Account $account): array {
             $translations = $account->getSafeNameTranslations();
@@ -846,6 +850,10 @@ class InteractiveToolCallService
     private function isAccountQuestionId(string $questionId): bool
     {
         if (in_array($questionId, self::ACCOUNT_QUESTION_IDS, true)) {
+            return true;
+        }
+
+        if (Str::startsWith($questionId, ['destination_account_', 'source_account_'])) {
             return true;
         }
 

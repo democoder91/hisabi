@@ -101,4 +101,50 @@ class ChooseTransactionAccountsToolTest extends TestCase
             ],
         ], $decoded);
     }
+
+    public function test_it_excludes_view_only_shared_accounts_from_the_candidate_payload(): void
+    {
+        $editableSharedOwner = User::factory()->create();
+        $viewOnlySharedOwner = User::factory()->create();
+
+        $editableSharedAccount = Account::factory()->create([
+            'user_id' => $editableSharedOwner->id,
+            'name' => ['en' => 'Editable Groceries', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
+        ]);
+        $editableSharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_EDIT]);
+
+        $viewOnlySharedAccount = Account::factory()->create([
+            'user_id' => $viewOnlySharedOwner->id,
+            'name' => ['en' => 'View Only Groceries', 'ar' => null],
+            'type' => Account::TYPE_EXPENSE,
+        ]);
+        $viewOnlySharedAccount->sharedUsers()->attach($this->user->id, ['permission_level' => Account::PERMISSION_VIEW]);
+
+        TransactionAccountChoiceAgent::fake([
+            function (string $prompt) use ($editableSharedAccount, $viewOnlySharedAccount): array {
+                $this->assertStringContainsString('Editable Groceries', $prompt);
+                $this->assertStringContainsString('"id":'.$editableSharedAccount->id, $prompt);
+                $this->assertStringNotContainsString('View Only Groceries', $prompt);
+                $this->assertStringNotContainsString('"id":'.$viewOnlySharedAccount->id, $prompt);
+
+                return [
+                    'matches' => [
+                        [
+                            'memo' => 'Groceries run',
+                            'account_id' => $editableSharedAccount->id,
+                        ],
+                    ],
+                ];
+            },
+        ])->preventStrayPrompts();
+
+        $result = $this->tool->handle(new Request([
+            'memos' => ['Groceries run'],
+        ]));
+
+        $decoded = json_decode($result, true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame($editableSharedAccount->id, $decoded['matches'][0]['account_id']);
+    }
 }

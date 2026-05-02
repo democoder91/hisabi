@@ -6,6 +6,7 @@ use App\BusinessLogic\SmsParser;
 use App\Domains\Account\Models\Account;
 use App\Domains\Budget\Models\Budget;
 use App\Domains\Transaction\Models\Transaction;
+use App\Services\AI\SanitizingDatabaseConversationStore;
 use Illuminate\Support\ServiceProvider;
 use App\BusinessLogic\SmsTemplateDetector;
 use App\BusinessLogic\ReportManager;
@@ -18,6 +19,7 @@ use App\Observers\AccountSearchObserver;
 use App\Observers\BudgetSearchObserver;
 use App\Observers\TransactionObserver;
 use App\Observers\TransactionSearchObserver;
+use Laravel\Ai\Contracts\ConversationStore;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SmsTemplateDetectorContract::class, SmsTemplateDetector::class);
         $this->app->bind(SmsTransactionProcessorContract::class, SmsTransactionProcessor::class);
         $this->app->bind(ReportManagerContract::class, ReportManager::class);
+        $this->app->bind(ConversationStore::class, SanitizingDatabaseConversationStore::class);
     }
 
     /**

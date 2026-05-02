@@ -26,6 +26,8 @@ class ChooseTransactionAccountsTool extends FinancialTool
                 ->accessibleTo($user)
                 ->orderByRaw(Account::localizedNameSqlExpression(app()->getLocale()) . ' ASC')
                 ->get()
+                ->filter(fn (Account $account): bool => $account->canBeEditedBy($user))
+                ->values()
                 ->map(fn (Account $account): array => [
                     'id' => (int) $account->id,
                     'name' => $account->getLocalizedName() ?? 'Unnamed account',

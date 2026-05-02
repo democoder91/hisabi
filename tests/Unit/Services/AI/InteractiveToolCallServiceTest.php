@@ -201,6 +201,105 @@ it('hydrates current account options for custom account question ids', function 
         ->and(collect($interaction['questions'][0]['options'])->firstWhere('value', (string) $cashAccount->id)['meta']['account_type'])->toBe(Account::TYPE_ASSET);
 });
 
+it('canonicalizes confirm source account questions and refreshes them to current editable account ids', function () {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    Account::factory()->create();
+
+    $cashAccount = Account::factory()->create([
+        'user_id' => $user->id,
+        'name' => [
+            'en' => 'Cash Account',
+            'ar' => null,
+        ],
+        'type' => Account::TYPE_ASSET,
+    ]);
+
+    $interaction = app(InteractiveToolCallService::class)->pendingInteractionFromConversation(
+        (string) Str::uuid(),
+        $user,
+        json_encode([
+            'interaction' => [
+                'status' => InteractiveToolCallService::STATUS_PENDING,
+                'tool_name' => InteractiveToolCallService::TOOL_NAME,
+                'tool_call_id' => 'tool-call-confirm-source-account',
+                'questions' => [
+                    [
+                        'id' => 'confirm_source_account',
+                        'label' => 'Please confirm the source account for these transactions.',
+                        'type' => 'select',
+                        'options' => [
+                            ['label' => 'Cash Account', 'value' => '1'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    );
+
+    expect($interaction)->not->toBeNull()
+        ->and($interaction['questions'][0]['id'])->toBe('from_account_id')
+        ->and($interaction['questions'][0]['options'][0]['value'])->toBe((string) $cashAccount->id)
+        ->and($interaction['questions'][0]['options'][0]['meta']['legacy_values'])->toBe(['1'])
+        ->and($interaction['questions'][0]['options'][0]['meta']['account_type'])->toBe(Account::TYPE_ASSET);
+});
+
+it('refreshes memo-specific destination account prompts with current editable accounts only', function () {
+    /** @var User $user */
+    $user = User::factory()->create();
+
+    $editableDestination = Account::factory()->create([
+        'user_id' => $user->id,
+        'name' => [
+            'en' => 'Food & Groceries',
+            'ar' => null,
+        ],
+        'type' => Account::TYPE_EXPENSE,
+    ]);
+
+    $owner = User::factory()->create();
+    $viewOnlyDestination = Account::factory()->create([
+        'user_id' => $owner->id,
+        'name' => [
+            'en' => 'Food & Groceries Shared',
+            'ar' => null,
+        ],
+        'type' => Account::TYPE_EXPENSE,
+    ]);
+    $viewOnlyDestination->sharedUsers()->attach($user->id, ['permission_level' => Account::PERMISSION_VIEW]);
+
+    $interaction = app(InteractiveToolCallService::class)->pendingInteractionFromConversation(
+        (string) Str::uuid(),
+        $user,
+        json_encode([
+            'interaction' => [
+                'status' => InteractiveToolCallService::STATUS_PENDING,
+                'tool_name' => InteractiveToolCallService::TOOL_NAME,
+                'tool_call_id' => 'tool-call-destination-account-memo',
+                'questions' => [
+                    [
+                        'id' => 'destination_account_khal_wa_shay',
+                        'label' => 'Please select a destination account for khal wa shay.',
+                        'type' => 'select',
+                        'options' => [
+                            ['label' => 'Food & Groceries', 'value' => '54'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    );
+
+    $optionValues = collect($interaction['questions'][0]['options'])->pluck('value')->all();
+
+    expect($interaction)->not->toBeNull()
+        ->and($interaction['questions'][0]['id'])->toBe('destination_account_khal_wa_shay')
+        ->and($optionValues)->toContain((string) $editableDestination->id)
+        ->and($optionValues)->not->toContain((string) $viewOnlyDestination->id)
+        ->and(last($optionValues))->toBe('__create_new__');
+});
+
 it('does not select the type column when refreshing account options for a legacy schema', function () {
     $user = User::factory()->create();
 

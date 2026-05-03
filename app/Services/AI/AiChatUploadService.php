@@ -5,6 +5,7 @@ namespace App\Services\AI;
 use App\Models\AgentConversationMessage;
 use App\Models\UploadedFile;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Files\Document;
 use Laravel\Ai\Files\Image;
 
@@ -78,7 +79,10 @@ class AiChatUploadService
             ->get()
             ->map(function (UploadedFile $upload) {
                 if (str_starts_with($upload->mime_type, 'image/')) {
-                    return Image::fromStorage($upload->path, $upload->disk)->as($upload->original_name);
+                    return Image::fromPath(
+                        Storage::disk($upload->disk)->path($upload->path),
+                        $upload->mime_type,
+                    )->as($upload->original_name);
                 }
 
                 return Document::fromStorage($upload->path, $upload->disk)->as($upload->original_name);

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Ai\Files\LocalImage;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Mockery;
 use Tests\TestCase;
@@ -183,6 +184,52 @@ class AIControllerTest extends TestCase
                 && count($prompt->attachments) === 1
                 && $prompt->attachments[0] instanceof \Laravel\Ai\Files\StoredDocument;
         });
+    }
+
+    public function test_it_passes_uploaded_images_to_the_agent_with_the_original_mime_type(): void
+    {
+        Storage::fake('local');
+        HisabiAgent::fake(['Image reviewed.']);
+
+        $uploadResponse = $this->actingAs($this->user)
+            ->post('/api/v1/ai/uploads', [
+                'file' => HttpUploadedFile::fake()->create('receipt.jpg', 400, 'image/jpeg'),
+                'purpose' => 'receipt',
+            ]);
+
+        $uploadId = $uploadResponse->json('upload.id');
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/v1/ai/chat', [
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => 'Describe this image.',
+                        'upload_ids' => [$uploadId],
+                    ],
+                ],
+            ]);
+
+        $response->assertOk();
+
+        HisabiAgent::assertPrompted(function ($prompt): bool {
+            if (! str_contains($prompt->prompt, 'Describe this image.') || count($prompt->attachments) !== 1) {
+                return false;
+            }
+
+            $attachment = $prompt->attachments[0];
+
+            return $attachment instanceof LocalImage
+                && $attachment->mimeType() === 'image/jpeg'
+                && $attachment->name() === 'receipt.jpg';
+        });
+    }
+
+    public function test_uploaded_files_use_string_attachable_ids_for_uuid_conversation_messages(): void
+    {
+        $columnType = Schema::getColumnType('uploaded_files', 'attachable_id');
+
+        $this->assertContains($columnType, ['string', 'varchar', 'text']);
     }
 
     public function test_it_continues_an_existing_conversation(): void
